@@ -48,6 +48,18 @@ The **Rules** tab answers "why didn't my tour show?": for every tour on the prov
 [display rule](../display-rules/) — audience, schedule, once, max shows, cooldown, snooze — with
 whether it passes and why, plus buttons to start a tour if eligible and to reset impressions.
 
+### Element picker
+
+**Pick element**, then click anything on the page: devtools suggests the most stable way to target
+it — an existing `anchor()`, a `data-tour` / `data-testid`, a meaningful `id` or accessible name,
+and only then a structural path — and gives you a step snippet to copy. Picking never triggers the
+element (links don't navigate, buttons don't fire). <kbd>Esc</kbd> cancels.
+
+### Export
+
+**Export JSON** downloads a snapshot of every tour's state, the manager's queue and the event log —
+attach it to a bug report.
+
 ## Usable during modal tours
 
 The panel carries the `data-tour-keep` attribute: modal tours don't make it `inert`, and tour

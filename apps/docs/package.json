@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter @awesome-tour/registry build && astro dev --port 4321",
-    "build": "pnpm --filter @awesome-tour/registry build && astro build && pagefind --site dist",
+    "dev": "pnpm --filter @awesome-tour/registry build && mkdir -p public/schema && cp ../../packages/core/schema/tour.schema.json public/schema/ && astro dev --port 4321",
+    "build": "pnpm --filter @awesome-tour/registry build && mkdir -p public/schema && cp ../../packages/core/schema/tour.schema.json public/schema/ && astro build && pagefind --site dist",
     "preview": "astro preview --port 4322",
     "typecheck": "astro check"
   },

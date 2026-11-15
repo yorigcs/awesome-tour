@@ -1,0 +1,61 @@
+---
+title: Migrating
+description: Move from react-joyride, Shepherd or driver.js with a codemod that rewrites your steps and marks what needs a human.
+sidebar:
+  order: 21
+---
+
+import { Aside } from '~/components/mdx';
+
+`@awesome-tour/codemod` rewrites step definitions in place and leaves
+`// TODO(awesome-tour): …` comments where a manual change is needed — usually the component that
+renders the tour, which becomes yours to style.
+
+```sh
+npx @awesome-tour/codemod joyride src/      # react-joyride
+npx @awesome-tour/codemod shepherd src/     # shepherd.js / react-shepherd
+npx @awesome-tour/codemod driver src/       # driver.js
+```
+
+Add `--dry --print` to preview without writing. It runs on `.js`, `.jsx`, `.ts` and `.tsx` files.
+
+<Aside type="caution">Commit or stash first — the codemod edits files in place.</Aside>
+
+## What it maps
+
+| react-joyride                | awesome-tour                                   |
+| ---------------------------- | ---------------------------------------------- |
+| `target: 'body'` / `placement: 'center'` | no `target` (centered step)         |
+| `target`                     | `target`                                       |
+| `content` (string)           | `description`                                  |
+| `content` (JSX)              | `content`                                      |
+| `placement: 'bottom-start'`  | `side: 'bottom', align: 'start'`               |
+| `spotlightClicks`            | `interactive`                                  |
+| `data`                       | `meta`                                         |
+| `styles`, `floaterProps`, `locale`… | TODO — style your `Tour.*` parts / use `messages` |
+
+| Shepherd                              | awesome-tour                          |
+| ------------------------------------- | ------------------------------------- |
+| `text`                                | `description` (or `content`)          |
+| `attachTo: { element, on }`           | `target`, `side`, `align`             |
+| `advanceOn: { selector, event }`      | `advanceOn: { target, event }`        |
+| `showOn` / `beforeShowPromise`        | `when` / `beforeEnter`                |
+| `canClickTarget` / `scrollTo`         | `interactive` / `scroll`              |
+| `buttons`                             | TODO — `Tour.Prev` / `Tour.Next` / `Tour.Close` |
+
+| driver.js                                          | awesome-tour                     |
+| -------------------------------------------------- | -------------------------------- |
+| `element`                                          | `target`                         |
+| `popover: { title, description, side, align }`     | `title`, `description`, `side`, `align` |
+| `onHighlightStarted` / `onDeselected`              | `beforeEnter` / `afterLeave`     |
+| `onNextClick` / `onPrevClick`                      | TODO — `beforeLeave` / `advanceOn` |
+
+Every rewritten step gets an `id` (`step-1`, `step-2`… unless it had one) — rename them to
+something meaningful: ids show up in analytics, persistence and devtools.
+
+## Then
+
+1. Wrap the steps in `createTour({ id, steps })`.
+2. Render `<Tour.Root tour={tour}>` with your UI — or `npx shadcn@latest add @awesome-tour/tour`
+   and use `<TourPopover />`.
+3. Replace callbacks with `tour.on(…)` events or the [analytics plugin](../analytics/).

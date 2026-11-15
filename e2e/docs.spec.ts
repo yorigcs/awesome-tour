@@ -58,6 +58,7 @@ const DEMO_PAGES = [
   'guides/announcements',
   'guides/surveys',
   'guides/launcher',
+  'guides/json-tours',
   'registry/tour',
   'registry/checklist',
   'registry/hotspot',
@@ -104,6 +105,19 @@ test('display rules demo: audience blocks, then the signal starts the tour', asy
   await expect(page.getByRole('dialog')).toContainText('Download invoices');
   await page.getByRole('button', { name: 'Remind me in 10s' }).click();
   await expect(frame.getByRole('list', { name: 'Rule checks' })).toContainText('snoozed until');
+});
+
+test('tours as data: edits to the JSON are validated and built', async ({ page }) => {
+  await page.goto(`${DOCS}/guides/json-tours/`);
+  const frame = page.locator('[data-demo-frame]');
+  const editor = frame.getByRole('textbox', { name: 'Tour JSON' });
+  await editor.fill((await editor.inputValue()).replace('"From JSON"', '"Edited title"'));
+  await frame.getByRole('button', { name: 'Build & start' }).click();
+  await expect(page.getByRole('dialog')).toContainText('Edited title');
+  await page.keyboard.press('Escape');
+  await editor.fill('{ "id": "x", "steps": [{ "id": "a", "when": "nope" }] }');
+  await frame.getByRole('button', { name: 'Build & start' }).click();
+  await expect(frame.getByRole('alert')).toContainText('unknown action "nope"');
 });
 
 test('landing workbench swaps parts while the tour runs', async ({ page }) => {

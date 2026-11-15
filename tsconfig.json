@@ -2,12 +2,17 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "paths": {
+      "@awesome-tour/core/json": ["./packages/core/src/json.ts"],
+      "@awesome-tour/core/adapters": ["./packages/core/src/adapters.ts"],
       "@awesome-tour/core": ["./packages/core/src/index.ts"],
       "@awesome-tour/react/surfaces": ["./packages/react/src/surfaces.ts"],
       "@awesome-tour/react": ["./packages/react/src/index.ts"],
       "@awesome-tour/motion": ["./packages/motion/src/index.ts"],
       "@awesome-tour/three": ["./packages/three/src/index.ts"],
       "@awesome-tour/router/*": ["./packages/router/src/*.ts"],
+      "@awesome-tour/testing": ["./packages/testing/src/index.ts"],
+      "@awesome-tour/testing/react": ["./packages/testing/src/react.tsx"],
+      "@awesome-tour/testing/playwright": ["./packages/testing/src/playwright.ts"],
       "@awesome-tour/devtools": ["./packages/devtools/src/index.ts"],
       "@/*": ["./registry/src/*"]
     }

@@ -1,0 +1,37 @@
+{
+  "name": "@awesome-tour/codemod",
+  "version": "0.1.0",
+  "description": "Codemods to migrate react-joyride, Shepherd and driver.js tours to awesome-tour.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "awesome-tour-codemod": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "tour",
+    "onboarding",
+    "codemod",
+    "jscodeshift",
+    "migration",
+    "react-joyride",
+    "shepherd",
+    "driver.js"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "jscodeshift": "^17.3.0"
+  },
+  "devDependencies": {
+    "@types/jscodeshift": "^17.3.0",
+    "@types/node": "^24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

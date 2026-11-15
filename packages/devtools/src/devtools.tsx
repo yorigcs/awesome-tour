@@ -15,6 +15,7 @@ import {
 } from '@awesome-tour/react';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
+import { type PickedTarget, stepSnippet, suggestTarget, usePicker } from './picker';
 import { css } from './styles';
 
 export interface TourDevtoolsProps {
@@ -203,6 +204,36 @@ export function TourDevtools({
     tours[0];
   const anyActive = tours.some((t) => t.getState().status === 'active');
 
+  const [picking, setPicking] = React.useState(false);
+  const [picked, setPicked] = React.useState<PickedTarget | null>(null);
+  const [copied, setCopied] = React.useState(false);
+  const hovered = usePicker(
+    picking,
+    (el) => {
+      setPicked(suggestTarget(el));
+      setPicking(false);
+      setCopied(false);
+    },
+    () => setPicking(false),
+  );
+  const exportState = () => {
+    const snapshot = {
+      exportedAt: new Date().toISOString(),
+      manager: managerState,
+      tours: tours.map((t) => {
+        const { targets: _targets, ...state } = t.getState();
+        return { id: t.id, version: t.version, state, steps: t.getSteps().map((st) => st.id) };
+      }),
+      events,
+    };
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `awesome-tour-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   if (!container) return null;
 
   return createPortal(
@@ -230,8 +261,56 @@ export function TourDevtools({
                         : `Checklists (${checklists.length})`}
                 </button>
               ))}
+              <button
+                type="button"
+                className="atd-tab"
+                aria-pressed={picking}
+                title="Click any element on the page to get a stable target for a step"
+                onClick={() => setPicking((p) => !p)}
+              >
+                {picking ? 'Picking… (Esc)' : 'Pick element'}
+              </button>
+              <button type="button" className="atd-tab" onClick={exportState}>
+                Export JSON
+              </button>
             </header>
             <div className="atd-body">
+              {picked && (
+                <section className="atd-section-block" aria-label="Picked element">
+                  <div className="atd-row">
+                    <span className="atd-section">Target</span>
+                    <span
+                      className="atd-pill"
+                      data-tone={picked.quality === 'structural' ? 'warn' : 'ok'}
+                    >
+                      {picked.quality}
+                    </span>
+                    <button
+                      type="button"
+                      className="atd-btn"
+                      onClick={() => {
+                        void navigator.clipboard
+                          ?.writeText(stepSnippet(picked))
+                          .then(() => setCopied(true));
+                      }}
+                    >
+                      {copied ? 'Copied' : 'Copy step'}
+                    </button>
+                    <button type="button" className="atd-btn" onClick={() => setPicked(null)}>
+                      Clear
+                    </button>
+                  </div>
+                  <pre className="atd-pre" data-testid="picked-snippet">
+                    {stepSnippet(picked)}
+                  </pre>
+                  {picked.quality === 'structural' && (
+                    <p className="atd-muted">
+                      No stable hook on this element: add a data-tour attribute or a Tour.Anchor for
+                      a selector that survives refactors.
+                    </p>
+                  )}
+                </section>
+              )}
               {tab === 'tours' &&
                 (selected ? (
                   <>
@@ -270,6 +349,18 @@ export function TourDevtools({
                 ))}
             </div>
           </section>
+        )}
+        {picking && hovered && (
+          <div
+            className="atd-highlight"
+            aria-hidden="true"
+            style={{
+              top: hovered.top - 3,
+              left: hovered.left - 3,
+              width: hovered.width + 6,
+              height: hovered.height + 6,
+            }}
+          />
         )}
         <button
           type="button"

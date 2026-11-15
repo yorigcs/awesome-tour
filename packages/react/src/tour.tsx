@@ -1166,6 +1166,7 @@ const TourNext = React.forwardRef<HTMLButtonElement, PrimitiveProps<'button'>>(f
   return (
     <Primitive.button
       type="button"
+      data-tour-next=""
       data-last={isLast ? '' : undefined}
       disabled={blocked}
       data-disabled={blocked ? '' : undefined}
@@ -1185,6 +1186,7 @@ const TourPrev = React.forwardRef<HTMLButtonElement, PrimitiveProps<'button'>>(f
   return (
     <Primitive.button
       type="button"
+      data-tour-prev=""
       disabled={disabled ?? isFirst}
       data-disabled={(disabled ?? isFirst) ? '' : undefined}
       {...props}
@@ -1203,6 +1205,7 @@ const TourClose = React.forwardRef<HTMLButtonElement, PrimitiveProps<'button'>>(
   return (
     <Primitive.button
       type="button"
+      data-tour-close=""
       aria-label={props.children ? undefined : closeTour}
       {...props}
       ref={ref}
@@ -1219,6 +1222,7 @@ const TourSkip = React.forwardRef<HTMLButtonElement, PrimitiveProps<'button'>>(f
   return (
     <Primitive.button
       type="button"
+      data-tour-skip=""
       {...props}
       ref={ref}
       onClick={composeEventHandlers(onClick, () => tour.skip())}

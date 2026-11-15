@@ -1,0 +1,82 @@
+---
+title: Testing
+description: Test tours end to end with a Playwright fixture, and in unit tests with React Testing Library helpers, layout mocks and a memory router.
+sidebar:
+  order: 20
+---
+
+import { Tabs, TabItem } from '~/components/mdx';
+
+`@awesome-tour/testing` holds the helpers this project uses to test itself.
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+    ```sh
+    pnpm add -D @awesome-tour/testing
+    ```
+  </TabItem>
+  <TabItem label="npm">
+    ```sh
+    npm i -D @awesome-tour/testing
+    ```
+  </TabItem>
+</Tabs>
+
+## Playwright
+
+`@awesome-tour/testing/playwright` exports Playwright's `test` with a `tour` fixture. It works on
+the stable attributes the primitives render (`data-step`, `data-phase`, `data-tour-next`…), so it
+doesn't care about your copy or your styling.
+
+```ts
+import { expect, test } from '@awesome-tour/testing/playwright';
+
+test('onboarding', async ({ page, tour }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Start onboarding' }).click();
+  await tour.expectStep('welcome');
+  await tour.next();
+  await tour.expectStep('sidebar');
+  await tour.expectTarget('nav.sidebar');
+  await tour.expectNotObscuring('nav.sidebar'); // WCAG 2.4.11
+  await tour.close();
+  await tour.expectClosed();
+});
+```
+
+| Helper                        | Does                                                                 |
+| ----------------------------- | -------------------------------------------------------------------- |
+| `tour.dialog`                 | Locator for the step on screen.                                      |
+| `expectStep(id)`              | Waits for that step to be visible and ready (target resolved, scrolled). |
+| `expectClosed()`              | Waits until no step is on screen.                                    |
+| `expectTarget(target)`        | The element is highlighted (`data-tour-target`).                     |
+| `expectNotObscuring(target)`  | The card doesn't cover the element.                                  |
+| `next()` `prev()` `close()` `skip()` | Click the matching button in the step.                        |
+
+Not using the fixture? `tourHelpers(page)` returns the same object.
+
+## Unit tests (Vitest, Jest)
+
+```tsx
+import { createMemoryRouter, mockLayout, waitForStep, waitForTourEnd } from '@awesome-tour/testing';
+import { renderWithTour } from '@awesome-tour/testing/react';
+
+test('multi-page onboarding', async () => {
+  const router = createMemoryRouter('/');
+  const { manager } = renderWithTour(<App />, { tours: [onboarding], router });
+  mockLayout({ '#search': { x: 100, y: 40, width: 240, height: 36 } }); // jsdom has no layout
+
+  await act(() => manager.start('onboarding'));
+  await waitForStep(onboarding, 'search');
+  await act(() => onboarding.next());
+  expect(router.history).toEqual(['/', '/settings']);
+});
+```
+
+| Helper                                | Does                                                         |
+| ------------------------------------- | ------------------------------------------------------------ |
+| `renderWithTour(ui, options)`         | RTL `render` inside a `TourProvider` (`tours`, `router`, `messages`, `impressions`); returns the `manager` too. |
+| `waitForStep(tour, id)`               | Resolves when the step is shown and ready; rejects with the current state on timeout. |
+| `waitForTourEnd(tour)`                | Resolves with the final status.                              |
+| `mockRect(el, rect)` / `mockLayout(map)` | Give elements a layout (returns a restore function).      |
+| `createMemoryRouter(path)`            | A router adapter with a `history` you can assert on.         |

@@ -8,3 +8,4 @@ test-results
 .astro
 apps/docs/public/r
 .playwright-mcp
+apps/docs/public/schema

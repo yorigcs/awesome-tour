@@ -14,6 +14,12 @@ export default defineConfig({
     alias: {
       // The shadcn registry: the playground uses exactly what `npx shadcn add` installs.
       '@': fileURLToPath(new URL('../../registry/src', import.meta.url)),
+      '@awesome-tour/core/json': fileURLToPath(
+        new URL('../../packages/core/src/json.ts', import.meta.url),
+      ),
+      '@awesome-tour/core/adapters': fileURLToPath(
+        new URL('../../packages/core/src/adapters.ts', import.meta.url),
+      ),
       '@awesome-tour/core': src('core'),
       '@awesome-tour/react/surfaces': fileURLToPath(
         new URL('../../packages/react/src/surfaces.ts', import.meta.url),

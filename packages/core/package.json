@@ -19,10 +19,32 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./json": {
+      "import": {
+        "types": "./dist/json.d.ts",
+        "default": "./dist/json.js"
+      },
+      "require": {
+        "types": "./dist/json.d.cts",
+        "default": "./dist/json.cjs"
+      }
+    },
+    "./adapters": {
+      "import": {
+        "types": "./dist/adapters.d.ts",
+        "default": "./dist/adapters.js"
+      },
+      "require": {
+        "types": "./dist/adapters.d.cts",
+        "default": "./dist/adapters.cjs"
+      }
+    },
+    "./schema.json": "./schema/tour.schema.json",
     "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "schema"
   ],
   "keywords": [
     "tour",

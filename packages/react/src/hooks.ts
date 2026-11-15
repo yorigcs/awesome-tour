@@ -175,7 +175,18 @@ export function useTourAnchor<T extends Element = HTMLElement>(
   return React.useCallback(
     (node: T | null) => {
       cleanup.current?.();
-      cleanup.current = node ? anchors.register(id, node) : null;
+      if (!node) {
+        cleanup.current = null;
+        return;
+      }
+      const unregister = anchors.register(id, node);
+      // Mark it like <Tour.Anchor> does: for styling, and for devtools' element picker.
+      const hadAttribute = node.hasAttribute('data-tour-anchor');
+      if (!hadAttribute) node.setAttribute('data-tour-anchor', id);
+      cleanup.current = () => {
+        unregister();
+        if (!hadAttribute) node.removeAttribute('data-tour-anchor');
+      };
     },
     [anchors, id],
   );

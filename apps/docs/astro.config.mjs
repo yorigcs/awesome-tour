@@ -20,6 +20,12 @@ export default defineConfig({
       dedupe: ['react', 'react-dom'],
       // Document the sources directly, like the playground does.
       alias: {
+        '@awesome-tour/core/json': fileURLToPath(
+          new URL('../../packages/core/src/json.ts', import.meta.url),
+        ),
+        '@awesome-tour/core/adapters': fileURLToPath(
+          new URL('../../packages/core/src/adapters.ts', import.meta.url),
+        ),
         '@awesome-tour/core': src('core'),
         '@awesome-tour/react/surfaces': fileURLToPath(
           new URL('../../packages/react/src/surfaces.ts', import.meta.url),

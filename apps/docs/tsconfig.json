@@ -6,6 +6,8 @@
     "jsx": "react-jsx",
     "jsxImportSource": "react",
     "paths": {
+      "@awesome-tour/core/json": ["../../packages/core/src/json.ts"],
+      "@awesome-tour/core/adapters": ["../../packages/core/src/adapters.ts"],
       "@awesome-tour/core": ["../../packages/core/src/index.ts"],
       "@awesome-tour/react/surfaces": ["../../packages/react/src/surfaces.ts"],
       "@awesome-tour/react": ["../../packages/react/src/index.ts"],

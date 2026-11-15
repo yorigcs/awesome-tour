@@ -5,6 +5,16 @@
     "limit": "10 kB"
   },
   {
+    "name": "@awesome-tour/core/json",
+    "path": "packages/core/dist/json.js",
+    "limit": "2 kB"
+  },
+  {
+    "name": "@awesome-tour/core/adapters",
+    "path": "packages/core/dist/adapters.js",
+    "limit": "1 kB"
+  },
+  {
     "name": "@awesome-tour/react",
     "path": "packages/react/dist/index.js",
     "limit": "19 kB",
@@ -37,7 +47,7 @@
   {
     "name": "@awesome-tour/devtools",
     "path": "packages/devtools/dist/index.js",
-    "limit": "6 kB",
+    "limit": "7 kB",
     "ignore": ["react", "react-dom", "@awesome-tour/react"]
   },
   {
