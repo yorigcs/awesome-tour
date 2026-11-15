@@ -25,11 +25,21 @@ Accessibility is built into the primitives, so it's on even when you restyle eve
 | ------------------- | -------------------------------------------------------------------------- |
 | <kbd>→</kbd>        | Next step (← in RTL). Ignored while typing in inputs.                      |
 | <kbd>←</kbd>        | Previous step (→ in RTL).                                                   |
+| <kbd>Home</kbd> / <kbd>End</kbd> | First / last visible step.                                    |
 | <kbd>Esc</kbd>      | Close the tour.                                                            |
 | <kbd>Tab</kbd>      | Moves through the card; in modal tours focus is trapped inside it.         |
 
 Turn them off with `keyboardNavigation={false}` and `closeOnEscape={false}` on `Tour.Root`, or
-intercept Escape with `onEscapeKeyDown` on `Tour.Content`.
+intercept Escape with `onEscapeKeyDown` on `Tour.Content`. Remap them with an object:
+`keyboardNavigation={{ next: ['ArrowRight', 'j'], prev: ['ArrowLeft', 'k'] }}`.
+
+## Focus not obscured
+
+WCAG 2.2 asks that the focused element is never hidden by author content (SC 2.4.11). The card is
+placed next to its target and flips or shifts to stay on screen without covering it; this is
+checked in our end-to-end tests at 200% zoom. If your layout is tight, give `Tour.Content` a
+`collisionPadding` and keep cards short. For long modal steps, `lockScroll` on `Tour.Root` stops
+the page from scrolling away underneath.
 
 ## Focus
 

@@ -68,11 +68,14 @@ There are three ways to choose the tour:
 | `modal`               | `boolean`                                                    | tour's `modal`           | Focus trap, `inert` outside, and an overlay that blocks clicks. A step's own `modal` wins.                        |
 | `targetInteraction`   | `boolean`                                                    | —                        | Let users interact with highlighted targets on every step. A step's own `interactive` wins.                       |
 | `dir`                 | `'ltr' \| 'rtl'`                                             | `'ltr'`                  | Reading direction. Flips arrow-key navigation and alignment.                                                      |
-| `keyboardNavigation`  | `boolean`                                                    | `true`                   | <kbd>←</kbd> / <kbd>→</kbd> move between steps.                                                                   |
+| `keyboardNavigation`  | `boolean \| Partial<TourKeyMap>`                            | `true`                   | <kbd>←</kbd> / <kbd>→</kbd> move between steps, <kbd>Home</kbd> / <kbd>End</kbd> jump to the first / last. Pass an object to remap: `{ next: ['ArrowRight', 'j'] }`. |
+| `lockScroll`          | `boolean`                                                    | `false`                  | Lock page scrolling while a modal step is open. The tour still scrolls each target into view.                     |
+| `viewTransition`      | `boolean`                                                    | `false`                  | Morph the card between steps with the View Transitions API (`view-transition-name: tour-content`). Skipped where unsupported and for reduced motion. |
+| `messages`            | `Partial<TourMessages>`                                      | inherited                | Translations for the strings the parts render. See [Internationalization](../../guides/i18n/).                   |
 | `closeOnEscape`       | `boolean`                                                    | `true`                   | <kbd>Esc</kbd> closes the tour.                                                                                   |
 | `closeOnOverlayClick` | `boolean`                                                    | `false`                  | Clicking the overlay closes the tour.                                                                             |
 | `restoreFocus`        | `boolean`                                                    | `true`                   | When the tour closes, return focus to the element that had it when the tour started.                              |
-| `announce`            | `false \| ({ state, step }) => string`                       | `"Step n of m"`          | Text for the polite live region on each step. `false` removes the region.                                         |
+| `announce`            | `false \| ({ state, step }) => string`                       | `messages.stepOf`        | Text for the polite live region on each step. `false` removes the region.                                         |
 
 A target is interactive when the first of these is set:
 
@@ -155,9 +158,15 @@ It also sets `aria-haspopup="dialog"`, `aria-expanded`, and `aria-controls` whil
 
 Renders its children into `document.body`, or into `container`. It renders nothing during SSR and the first client render.
 
-| Prop        | Type                               | Default         | Description          |
-| ----------- | ---------------------------------- | --------------- | -------------------- |
-| `container` | `Element \| DocumentFragment \| null` | `document.body` | Where to render.     |
+| Prop        | Type                                  | Default         | Description |
+| ----------- | ------------------------------------- | --------------- | ----------- |
+| `container` | `Element \| DocumentFragment \| null` | `document.body` | Where to render. |
+| `strategy`  | `'body' \| 'top-layer'`               | `'body'`        | `top-layer` renders inside a manual popover in the browser's top layer: above every `z-index` and stacking context, and above modal `<dialog>`s opened before it. Falls back to `body` without the Popover API. |
+
+```tsx
+// A tour that must sit above a modal <dialog> or a z-index war you don't control:
+<Tour.Portal strategy="top-layer">…</Tour.Portal>
+```
 
 ## Overlay
 
@@ -169,6 +178,8 @@ Only the SVG path catches pointer events, so the wrapper never blocks the page b
 | ------------ | --------------------------------------------- | ------- | -------------------------------------------------------------------- |
 | `padding`    | `number \| Partial<Record<Side, number>>`     | `4`     | Space between the target and the edge of the cutout.                 |
 | `radius`     | `number`                                      | `4`     | Corner radius of the cutout. Clamped to half the cutout size.        |
+| `cutout`     | `'union' \| 'each'`                           | `'union'` | One cutout around all of the step's targets, or one per target (the page between them stays dimmed). |
+| `shape`      | `'rect' \| 'circle'`                          | `'rect'`  | Rounded rectangles, or circles around each cutout.                  |
 | `forceMount` | `boolean`                                     | —       | Keep it mounted while closed (for JS animation libraries).           |
 | `asChild`    | `boolean`                                     | `false` | Render the child element instead.                                    |
 

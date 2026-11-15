@@ -50,7 +50,8 @@ describe('navigation', () => {
     await tour.start();
     await tour.next();
     expect(tour.getState().stepId).toBe('d');
-    expect(tour.getState().progress.total).toBe(3); // async `when` counted as visible
+    // The async `when` settled to false while navigating: progress no longer counts it.
+    expect(tour.getState().progress.total).toBe(2);
   });
 
   it('branches with `next` and walks back through history', async () => {

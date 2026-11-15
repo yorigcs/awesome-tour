@@ -21,10 +21,12 @@ export {
   useChecklistItem,
 } from './checklist';
 export {
+  defaultKeyMap,
   type ReactStepDefinition,
   type StepRenderProps,
   TourContext,
   type TourContextValue,
+  type TourKeyMap,
   TourProvider,
   type TourProviderProps,
   useTourContext,
@@ -37,6 +39,7 @@ export {
   type UseTourResult,
   useStoreSelector,
   useTargetRect,
+  useTargetRects,
   useTour,
   useTourAnchor,
   useTourEvent,
@@ -55,10 +58,19 @@ export {
   type HotspotRootProps,
   useResolvedTarget,
 } from './hotspot';
+export {
+  defaultMessages,
+  MessagesScope,
+  type TourMessages,
+  type TourMessagesInput,
+  useTourMessages,
+} from './messages';
 export { type UseRouterAdapterOptions, useRouterAdapter } from './router';
 export {
+  type CutoutShape,
   getSpotlightPath,
   type IndicatorItem,
+  keyAction,
   type Padding,
   Portal,
   type PortalProps,

@@ -9,6 +9,7 @@ import {
   type TourState,
 } from '@awesome-tour/core';
 import * as React from 'react';
+import { MessagesScope, type TourMessagesInput } from './messages';
 import type { Align, Side } from './utils/positioner';
 
 /* -------------------------------------------------------------------------------------------------
@@ -54,6 +55,8 @@ export interface TourProviderProps {
   anchors?: AnchorRegistry;
   /** Bring your own manager (e.g. created outside React). */
   manager?: TourManager;
+  /** Translations for every string the primitives render (merged over the English defaults). */
+  messages?: TourMessagesInput;
   children?: React.ReactNode;
 }
 
@@ -66,6 +69,7 @@ export function TourProvider({
   router,
   anchors,
   manager: managerProp,
+  messages,
   children,
 }: TourProviderProps) {
   // Register initial tours synchronously so children can look them up on the first render.
@@ -87,7 +91,11 @@ export function TourProvider({
     () => ({ manager, anchors: anchors ?? defaultAnchors }),
     [manager, anchors],
   );
-  return <ProviderContext.Provider value={value}>{children}</ProviderContext.Provider>;
+  return (
+    <ProviderContext.Provider value={value}>
+      <MessagesScope messages={messages}>{children}</MessagesScope>
+    </ProviderContext.Provider>
+  );
 }
 
 export function useTourProvider(): ProviderContextValue | null {
@@ -137,6 +145,21 @@ export function createContentStore(): ContentStore {
   };
 }
 
+/** Keys (`KeyboardEvent.key`) per action. `next`/`prev` are mirrored in RTL. */
+export interface TourKeyMap {
+  next: readonly string[];
+  prev: readonly string[];
+  first: readonly string[];
+  last: readonly string[];
+}
+
+export const defaultKeyMap: TourKeyMap = {
+  next: ['ArrowRight'],
+  prev: ['ArrowLeft'],
+  first: ['Home'],
+  last: ['End'],
+};
+
 export interface TourContextValue {
   tour: Tour<any, any>;
   state: TourState;
@@ -147,7 +170,10 @@ export interface TourContextValue {
   /** Whether the user can interact with the highlighted target. */
   interactive: boolean;
   dir: 'ltr' | 'rtl';
-  keyboardNavigation: boolean;
+  /** Keys that drive the tour, or `null` when keyboard navigation is off. */
+  keyMap: TourKeyMap | null;
+  /** Morph between steps with the View Transitions API. */
+  viewTransition: boolean;
   closeOnEscape: boolean;
   closeOnOverlayClick: boolean;
   contentId: string;

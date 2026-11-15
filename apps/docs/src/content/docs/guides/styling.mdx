@@ -123,6 +123,30 @@ Give the overlay and content a `z-index` above your app's chrome:
 [data-tour-content-wrapper] { z-index: 1001; } /* the positioned wrapper around Tour.Content */
 ```
 
+Or skip the z-index war entirely: `<Tour.Portal strategy="top-layer">` renders the tour in the
+browser's top layer, above everything — including modal `<dialog>`s.
+
+## Cutouts
+
+`Tour.Overlay` draws one rounded cutout around all of a step's targets. `cutout="each"` cuts one
+hole per target so the page between them stays dimmed, and `shape="circle"` draws circles:
+
+```tsx
+<Tour.Overlay cutout="each" shape="circle" padding={8} />
+```
+
+## Morphing between steps
+
+`viewTransition` on `Tour.Root` wraps every step change in the View Transitions API: the card
+morphs from one target to the next. Style it like any view transition:
+
+```css
+::view-transition-group(tour-content) {
+  animation-duration: 280ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+```
+
 <Aside type="tip">
   With Tailwind, target states with data variants: `data-[state=closed]:animate-out`,
   `data-[side=top]:slide-in-from-bottom-2`.

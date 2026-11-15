@@ -5,6 +5,8 @@ import {
   inflateRect,
   isElement,
   isFromKeptElement,
+  lockScroll,
+  prefersReducedMotion,
   type RectLike,
   type StartOptions,
   type Tour as TourInstance,
@@ -15,14 +17,17 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import {
   createContentStore,
+  defaultKeyMap,
   type ReactStepDefinition,
   type StepRenderProps,
   TourContext,
   type TourContextValue,
+  type TourKeyMap,
   useTourContext,
   useTourProvider,
 } from './context';
-import { useTargetRect, useTourAnchor, useTourSelector } from './hooks';
+import { useTargetRect, useTargetRects, useTourAnchor, useTourSelector } from './hooks';
+import { MessagesScope, type TourMessagesInput, useTourMessages } from './messages';
 import { composeEventHandlers, useComposedRefs } from './utils/compose';
 import {
   getTabbables,
@@ -68,23 +73,32 @@ export interface TourRootProps<TData = any> {
   /** Let users interact with highlighted targets on every step. */
   targetInteraction?: boolean;
   dir?: 'ltr' | 'rtl';
-  /** ←/→ navigate between steps. Default: true. */
-  keyboardNavigation?: boolean;
+  /**
+   * Keyboard navigation: ←/→ for next/previous (mirrored in RTL), Home/End for first/last.
+   * `false` disables it; an object remaps keys (`{ next: ['ArrowRight', 'j'] }`). Default: true.
+   */
+  keyboardNavigation?: boolean | Partial<TourKeyMap>;
+  /** Lock page scrolling while a modal step is open (the tour still scrolls targets into view). */
+  lockScroll?: boolean;
+  /**
+   * Morph the card between steps with the View Transitions API (`view-transition-name:
+   * tour-content`). No-op where unsupported or with reduced motion. Default: false.
+   */
+  viewTransition?: boolean;
   /** Escape closes the tour. Default: true. */
   closeOnEscape?: boolean;
   /** Clicking the overlay closes the tour. Default: false. */
   closeOnOverlayClick?: boolean;
   /** Return focus to the previously focused element when the tour closes. Default: true. */
   restoreFocus?: boolean;
-  /** Screen reader announcement on step change. `false` disables it. */
+  /** Screen reader announcement on step change. `false` disables it. Default: `messages.stepOf`. */
   announce?:
     | false
     | ((info: { state: TourState; step: ReactStepDefinition | undefined }) => string);
+  /** Translations for the strings this tour's parts render (merged over inherited messages). */
+  messages?: TourMessagesInput;
   children?: React.ReactNode;
 }
-
-const defaultAnnounce: NonNullable<Exclude<TourRootProps['announce'], false>> = ({ state }) =>
-  `Step ${state.progress.current} of ${state.progress.total}`;
 
 function hasEventAdvance(step: ReactStepDefinition | undefined) {
   if (!step?.advanceOn) return false;
@@ -110,10 +124,13 @@ function TourRoot<TData = any>(props: TourRootProps<TData>) {
     targetInteraction,
     dir = 'ltr',
     keyboardNavigation = true,
+    lockScroll: lockScrollProp = false,
+    viewTransition = false,
     closeOnEscape = true,
     closeOnOverlayClick = false,
     restoreFocus = true,
-    announce = defaultAnnounce,
+    announce,
+    messages,
     children,
   } = props;
 
@@ -266,6 +283,28 @@ function TourRoot<TData = any>(props: TourRootProps<TData>) {
     [layers],
   );
 
+  /* Scroll lock -------------------------------------------------------------------------------*/
+  React.useEffect(() => {
+    if (!lockScrollProp || !open || !modal) return;
+    return lockScroll();
+  }, [lockScrollProp, open, modal]);
+
+  /* View transitions between steps ------------------------------------------------------------*/
+  React.useEffect(() => {
+    if (!viewTransition) return;
+    return tour.on('stepLeave', () => startStepTransition(tour));
+  }, [tour, viewTransition]);
+
+  const keyMap = React.useMemo<TourKeyMap | null>(
+    () =>
+      keyboardNavigation === false
+        ? null
+        : keyboardNavigation === true
+          ? defaultKeyMap
+          : { ...defaultKeyMap, ...keyboardNavigation },
+    [keyboardNavigation],
+  );
+
   const contentId = `tour-content${generatedId.replace(/:/g, '')}`;
   const value: TourContextValue = {
     tour,
@@ -275,7 +314,8 @@ function TourRoot<TData = any>(props: TourRootProps<TData>) {
     modal,
     interactive,
     dir,
-    keyboardNavigation,
+    keyMap,
+    viewTransition,
     closeOnEscape,
     closeOnOverlayClick,
     contentId,
@@ -286,17 +326,37 @@ function TourRoot<TData = any>(props: TourRootProps<TData>) {
     layersVersion,
   };
 
-  const message = open && announce ? announce({ state, step }) : '';
-
   return (
-    <TourContext.Provider value={value}>
-      {children}
-      {announce !== false && (
-        <div aria-live="polite" aria-atomic="true" style={visuallyHidden} data-tour-announcer="">
-          {message}
-        </div>
-      )}
-    </TourContext.Provider>
+    <MessagesScope messages={messages}>
+      <TourContext.Provider value={value}>
+        {children}
+        {announce !== false && (
+          <Announcer announce={announce} open={open} state={state} step={step} />
+        )}
+      </TourContext.Provider>
+    </MessagesScope>
+  );
+}
+
+function Announcer({
+  announce,
+  open,
+  state,
+  step,
+}: {
+  announce: TourRootProps['announce'];
+  open: boolean;
+  state: TourState;
+  step: ReactStepDefinition | undefined;
+}) {
+  const { stepOf } = useTourMessages();
+  const format =
+    announce ||
+    (({ state: s }: { state: TourState }) => stepOf(s.progress.current, s.progress.total));
+  return (
+    <div aria-live="polite" aria-atomic="true" style={visuallyHidden} data-tour-announcer="">
+      {open ? format({ state, step }) : ''}
+    </div>
   );
 }
 
@@ -385,12 +445,52 @@ const TourTrigger = React.forwardRef<HTMLButtonElement, TourTriggerProps>(functi
 export interface PortalProps {
   /** Where to render. Default: `document.body`. */
   container?: Element | DocumentFragment | null;
+  /**
+   * `body` (default): a regular portal, stacked with `z-index`. `top-layer`: render inside a
+   * manual popover in the browser's top layer, above every z-index and stacking context (and above
+   * modal `<dialog>`s opened before it). Falls back to `body` where the Popover API is missing.
+   */
+  strategy?: 'body' | 'top-layer';
   children?: React.ReactNode;
 }
 
-export function Portal({ container, children }: PortalProps) {
+const supportsPopover = () =>
+  typeof HTMLElement !== 'undefined' && 'showPopover' in HTMLElement.prototype;
+
+export function Portal({ container, strategy = 'body', children }: PortalProps) {
   const mounted = useIsMounted();
+  const [layer, setLayer] = React.useState<HTMLElement | null>(null);
+  useIsomorphicLayoutEffect(() => {
+    if (strategy !== 'top-layer' || !supportsPopover()) return;
+    const el = document.createElement('div');
+    el.setAttribute('popover', 'manual');
+    el.setAttribute('data-tour-top-layer', '');
+    // A zero-size box at the viewport origin: fixed-position children (overlay, positioned
+    // content) lay out against the viewport, and the layer itself never blocks clicks.
+    Object.assign(el.style, {
+      position: 'fixed',
+      inset: '0 auto auto 0',
+      width: '0',
+      height: '0',
+      margin: '0',
+      padding: '0',
+      border: '0',
+      background: 'transparent',
+      overflow: 'visible',
+      color: 'inherit',
+    });
+    (container ?? document.body).appendChild(el);
+    (el as HTMLElement & { showPopover(): void }).showPopover();
+    setLayer(el);
+    return () => {
+      el.remove();
+      setLayer(null);
+    };
+  }, [strategy, container]);
   if (!mounted) return null;
+  if (strategy === 'top-layer' && supportsPopover()) {
+    return layer ? createPortal(children, layer) : null;
+  }
   const target = container ?? globalThis.document?.body;
   return target ? createPortal(children, target) : null;
 }
@@ -401,17 +501,37 @@ export function Portal({ container, children }: PortalProps) {
 
 export type Padding = number | Partial<Record<Side, number>>;
 
-/** SVG path covering the whole viewport with a rounded-rect hole (even-odd fill). */
-export function getSpotlightPath(rect: RectLike | null, radius = 0): string {
-  const outer = 'M-99999 -99999H99999V99999H-99999Z';
-  if (!rect) return outer;
+export type CutoutShape = 'rect' | 'circle';
+
+function holePath(rect: RectLike, radius: number, shape: CutoutShape): string {
   const { x, y, width: w, height: h } = rect;
+  if (shape === 'circle') {
+    // The circle that circumscribes the rect, so the whole target stays visible.
+    const r = Math.hypot(w, h) / 2;
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    return `M${cx - r} ${cy}A${r} ${r} 0 1 0 ${cx + r} ${cy}A${r} ${r} 0 1 0 ${cx - r} ${cy}Z`;
+  }
   const r = Math.max(0, Math.min(radius, w / 2, h / 2));
   return (
-    `${outer}M${x + r} ${y}H${x + w - r}A${r} ${r} 0 0 1 ${x + w} ${y + r}V${y + h - r}` +
+    `M${x + r} ${y}H${x + w - r}A${r} ${r} 0 0 1 ${x + w} ${y + r}V${y + h - r}` +
     `A${r} ${r} 0 0 1 ${x + w - r} ${y + h}H${x + r}A${r} ${r} 0 0 1 ${x} ${y + h - r}` +
     `V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`
   );
+}
+
+/**
+ * SVG path covering the whole viewport with one hole per rect (even-odd fill): rounded rects by
+ * default, or circles around each rect with `shape: 'circle'`.
+ */
+export function getSpotlightPath(
+  rects: RectLike | readonly RectLike[] | null,
+  radius = 0,
+  shape: CutoutShape = 'rect',
+): string {
+  const outer = 'M-99999 -99999H99999V99999H-99999Z';
+  const list = rects == null ? [] : Array.isArray(rects) ? rects : [rects as RectLike];
+  return outer + list.map((r) => holePath(r, radius, shape)).join('');
 }
 
 /** Registers an element as a layer that stays interactive while a modal tour is open. */
@@ -432,6 +552,13 @@ export interface TourOverlayProps extends PrimitiveProps<'div'> {
   padding?: Padding;
   /** Cutout corner radius. Default: 4. */
   radius?: number;
+  /**
+   * `union` (default): one cutout around all targets of the step. `each`: one cutout per target,
+   * so the page between them stays dimmed.
+   */
+  cutout?: 'union' | 'each';
+  /** `rect` (default, rounded by `radius`) or `circle` around each cutout. */
+  shape?: CutoutShape;
   forceMount?: boolean;
 }
 
@@ -452,12 +579,31 @@ const TourOverlay = React.forwardRef<HTMLDivElement, TourOverlayProps>(function 
 });
 
 const TourOverlayImpl = React.forwardRef<HTMLDivElement, Omit<TourOverlayProps, 'forceMount'>>(
-  function TourOverlayImpl({ padding = 4, radius = 4, style, onClick, children, ...props }, ref) {
+  function TourOverlayImpl(
+    {
+      padding = 4,
+      radius = 4,
+      cutout: cutoutMode = 'union',
+      shape = 'rect',
+      style,
+      onClick,
+      children,
+      ...props
+    },
+    ref,
+  ) {
     const ctx = useTourContext('<Tour.Overlay>');
     const rect = useTargetRect();
+    const rects = useTargetRects(cutoutMode === 'each');
     const layerRef = useTourLayer();
     const composedRef = useComposedRefs(ref, layerRef as React.Ref<HTMLDivElement>);
     const cutout = rect ? inflateRect(rect, padding) : null;
+    const holes =
+      cutoutMode === 'each' && rects.length > 0
+        ? rects.map((r) => inflateRect(r, padding))
+        : cutout
+          ? [cutout]
+          : [];
     const handleClick = composeEventHandlers(onClick, () => {
       if (ctx.closeOnOverlayClick) ctx.tour.close();
     });
@@ -490,21 +636,23 @@ const TourOverlayImpl = React.forwardRef<HTMLDivElement, Omit<TourOverlayProps, 
           aria-hidden="true"
         >
           <path
-            d={getSpotlightPath(cutout, radius)}
+            d={getSpotlightPath(holes, radius, shape)}
             fillRule="evenodd"
             style={{ fill: 'var(--tour-overlay-color, rgb(0 0 0 / 0.5))', pointerEvents: 'auto' }}
             onClick={handleClick as unknown as React.MouseEventHandler<SVGPathElement>}
           />
-          {cutout && !ctx.interactive && (
-            <rect
-              x={cutout.x}
-              y={cutout.y}
-              width={cutout.width}
-              height={cutout.height}
-              fill="transparent"
-              style={{ pointerEvents: 'auto' }}
-            />
-          )}
+          {!ctx.interactive &&
+            holes.map((hole) => (
+              <rect
+                key={`${hole.x},${hole.y}`}
+                x={hole.x}
+                y={hole.y}
+                width={hole.width}
+                height={hole.height}
+                fill="transparent"
+                style={{ pointerEvents: 'auto' }}
+              />
+            ))}
         </svg>
         {children}
       </Primitive.div>
@@ -594,6 +742,49 @@ export interface TourContentProps
   onEscapeKeyDown?: (event: KeyboardEvent) => void;
 }
 
+/** Maps a key to a tour action. In RTL, the keys bound to next/prev swap (→ goes back). */
+export function keyAction(
+  keys: TourKeyMap,
+  key: string,
+  dir: 'ltr' | 'rtl' = 'ltr',
+): 'next' | 'prev' | 'first' | 'last' | null {
+  const mirror = (k: string) =>
+    dir === 'rtl' ? ({ ArrowLeft: 'ArrowRight', ArrowRight: 'ArrowLeft' }[k] ?? k) : k;
+  const pressed = mirror(key);
+  if (keys.next.includes(pressed)) return 'next';
+  if (keys.prev.includes(pressed)) return 'prev';
+  if (keys.first.includes(key)) return 'first';
+  if (keys.last.includes(key)) return 'last';
+  return null;
+}
+
+/**
+ * Wraps the next step commit in `document.startViewTransition`. The old frame is held only until
+ * the new step is ready (or 300ms, so a slow target never freezes the page).
+ */
+function startStepTransition(tour: TourInstance<any, any>) {
+  const doc = globalThis.document as
+    | (Document & { startViewTransition?: (cb: () => Promise<void>) => unknown })
+    | undefined;
+  if (!doc?.startViewTransition || prefersReducedMotion()) return;
+  doc.startViewTransition(
+    () =>
+      new Promise<void>((resolve) => {
+        const done = () => {
+          clearTimeout(timer);
+          off();
+          // Let React commit the new step before the "after" snapshot is taken.
+          requestAnimationFrame(() => resolve());
+        };
+        const timer = setTimeout(done, 300);
+        const off = tour.subscribe(() => {
+          const { phase, status } = tour.getState();
+          if (phase === 'ready' || status !== 'active') done();
+        });
+      }),
+  );
+}
+
 const TourContent = React.forwardRef<HTMLDivElement, TourContentProps>(function TourContent(
   { forceMount, ...props },
   ref,
@@ -674,21 +865,23 @@ const TourContentImpl = React.forwardRef<HTMLDivElement, Omit<TourContentProps, 
           }
           return;
         }
-        if (!ctx.keyboardNavigation || isEditable(event.target)) return;
+        const keys = ctx.keyMap;
+        if (!keys || isEditable(event.target)) return;
         if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-        const forward = dir === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
-        const backward = dir === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
-        if (event.key === forward) {
-          event.preventDefault();
-          void tour.next();
-        } else if (event.key === backward) {
-          event.preventDefault();
-          void tour.prev();
+        const action = keyAction(keys, event.key, dir);
+        if (!action) return;
+        event.preventDefault();
+        if (action === 'next') void tour.next();
+        else if (action === 'prev') void tour.prev();
+        else {
+          const visible = tour.getVisibleSteps();
+          const target = action === 'first' ? visible[0] : visible[visible.length - 1];
+          if (target && target.id !== tour.getState().stepId) void tour.goTo(target.id);
         }
       };
       document.addEventListener('keydown', onKey);
       return () => document.removeEventListener('keydown', onKey);
-    }, [open, tour, dir, ctx.closeOnEscape, ctx.keyboardNavigation, handleEscape]);
+    }, [open, tour, dir, ctx.closeOnEscape, ctx.keyMap, handleEscape]);
 
     // Modal: make everything else inert (targets and registered layers stay interactive).
     const { layers, layersVersion } = ctx;
@@ -783,7 +976,13 @@ const TourContentImpl = React.forwardRef<HTMLDivElement, Omit<TourContentProps, 
         ref={wrapperRef}
         data-tour-content-wrapper=""
         dir={dir}
-        style={{ ...wrapperStyle, ...cssVars }}
+        style={{
+          ...wrapperStyle,
+          ...cssVars,
+          ...(ctx.viewTransition
+            ? ({ viewTransitionName: 'tour-content' } as React.CSSProperties)
+            : {}),
+        }}
       >
         <ContentContext.Provider value={contentContext}>
           <Primitive.div
@@ -985,10 +1184,11 @@ const TourClose = React.forwardRef<HTMLButtonElement, PrimitiveProps<'button'>>(
   ref,
 ) {
   const { tour } = useTourContext('<Tour.Close>');
+  const { closeTour } = useTourMessages();
   return (
     <Primitive.button
       type="button"
-      aria-label={props.children ? undefined : 'Close tour'}
+      aria-label={props.children ? undefined : closeTour}
       {...props}
       ref={ref}
       onClick={composeEventHandlers(onClick, () => tour.close())}
@@ -1057,11 +1257,10 @@ export interface TourIndicatorsProps extends Omit<PrimitiveProps<'div'>, 'childr
 }
 
 const TourIndicators = React.forwardRef<HTMLDivElement, TourIndicatorsProps>(
-  function TourIndicators(
-    { children, navigable = true, getLabel = (i) => `Go to step ${i.index + 1}`, ...props },
-    ref,
-  ) {
+  function TourIndicators({ children, navigable = true, getLabel, ...props }, ref) {
     const { tour, state } = useTourContext('<Tour.Indicators>');
+    const messages = useTourMessages();
+    const labelFor = getLabel ?? ((i: IndicatorItem) => messages.goToStep(i.index + 1));
     // biome-ignore lint/correctness/useExhaustiveDependencies: recompute when the step or data changes
     const visible = React.useMemo(() => tour.getVisibleSteps(), [tour, state.stepId, state.data]);
     const activeIndex = visible.findIndex((s) => s.id === state.stepId);
@@ -1072,7 +1271,7 @@ const TourIndicators = React.forwardRef<HTMLDivElement, TourIndicatorsProps>(
       goTo: () => void tour.goTo(s.id),
     }));
     return (
-      <Primitive.div role="group" aria-label="Tour steps" {...props} ref={ref}>
+      <Primitive.div role="group" aria-label={messages.tourSteps} {...props} ref={ref}>
         {items.map((item) =>
           children ? (
             <React.Fragment key={item.id}>{children(item)}</React.Fragment>
@@ -1080,7 +1279,7 @@ const TourIndicators = React.forwardRef<HTMLDivElement, TourIndicatorsProps>(
             <button
               key={item.id}
               type="button"
-              aria-label={getLabel(item)}
+              aria-label={labelFor(item)}
               aria-current={item.status === 'active' ? 'step' : undefined}
               data-state={item.status}
               disabled={!navigable}

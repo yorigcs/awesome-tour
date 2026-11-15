@@ -5,6 +5,7 @@ import {
   type HotspotBeaconProps,
   type HotspotContentProps,
   type HotspotRootProps,
+  useTourMessages,
 } from '@awesome-tour/react';
 import { X } from 'lucide-react';
 import type * as React from 'react';
@@ -14,13 +15,17 @@ import { cn } from '@/lib/utils';
 /** A pulsing dot pinned to the target's corner. */
 function HotspotBeacon({
   className,
-  label = 'Show hint',
+  label,
   ...props
-}: HotspotBeaconProps & { /** Accessible name of the beacon button. */ label?: string }) {
+}: HotspotBeaconProps & {
+  /** Accessible name of the beacon button. Default: the `showHint` message. */
+  label?: string;
+}) {
+  const { showHint } = useTourMessages();
   return (
     <Hotspot.Beacon
       data-slot="hotspot-beacon"
-      aria-label={label}
+      aria-label={label ?? showHint}
       className={cn(
         'group/beacon z-40 flex size-4 cursor-pointer items-center justify-center rounded-full outline-none',
         'focus-visible:ring-[3px] focus-visible:ring-ring/50',
@@ -41,6 +46,7 @@ function HotspotCard({
   children,
   ...props
 }: HotspotContentProps) {
+  const { closeHint } = useTourMessages();
   return (
     <Hotspot.Portal>
       <Hotspot.Content
@@ -60,7 +66,7 @@ function HotspotCard({
           <Button
             variant="ghost"
             size="icon-xs"
-            aria-label="Close hint"
+            aria-label={closeHint}
             className="absolute top-2.5 right-2.5 text-muted-foreground"
           >
             <X />

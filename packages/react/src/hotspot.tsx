@@ -8,6 +8,7 @@ import {
 } from '@awesome-tour/core';
 import * as React from 'react';
 import { useTourProvider } from './context';
+import { MessagesScope, type TourMessagesInput, useTourMessages } from './messages';
 import { Portal } from './tour';
 import { composeEventHandlers, useComposedRefs } from './utils/compose';
 import { useCallbackRef, useIsomorphicLayoutEffect } from './utils/hooks';
@@ -79,6 +80,8 @@ export interface HotspotRootProps {
   open?: boolean;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Translations for the hint's accessible names. */
+  messages?: TourMessagesInput;
   children?: React.ReactNode;
 }
 
@@ -91,6 +94,7 @@ function HotspotRoot({
   open: openProp,
   defaultOpen = false,
   onOpenChange,
+  messages,
   children,
 }: HotspotRootProps) {
   const [uncontrolled, setUncontrolled] = React.useState(defaultOpen);
@@ -107,11 +111,13 @@ function HotspotRoot({
   const [beacon, setBeacon] = React.useState<HTMLElement | null>(null);
   const id = React.useId().replace(/:/g, '');
   return (
-    <HotspotContext.Provider
-      value={{ open, setOpen, targets, beacon, setBeacon, contentId: `hotspot${id}` }}
-    >
-      {children}
-    </HotspotContext.Provider>
+    <MessagesScope messages={messages}>
+      <HotspotContext.Provider
+        value={{ open, setOpen, targets, beacon, setBeacon, contentId: `hotspot${id}` }}
+      >
+        {children}
+      </HotspotContext.Provider>
+    </MessagesScope>
   );
 }
 
@@ -139,6 +145,7 @@ const HotspotBeacon = React.forwardRef<HTMLButtonElement, HotspotBeaconProps>(
     ref,
   ) {
     const ctx = useHotspot('<Hotspot.Beacon>');
+    const { showHint } = useTourMessages();
     const reference = React.useMemo(() => createVirtualTarget(ctx.targets), [ctx.targets]);
     const positioner = usePositioner(reference, {
       side,
@@ -163,7 +170,7 @@ const HotspotBeacon = React.forwardRef<HTMLButtonElement, HotspotBeaconProps>(
         aria-expanded={ctx.open}
         aria-controls={ctx.open ? ctx.contentId : undefined}
         aria-haspopup="dialog"
-        aria-label={props.children ? undefined : 'Show hint'}
+        aria-label={props.children ? undefined : showHint}
         data-state={ctx.open ? 'open' : 'closed'}
         data-tour-beacon=""
         {...props}
@@ -280,10 +287,11 @@ const HotspotContentImpl = React.forwardRef<
 const HotspotClose = React.forwardRef<HTMLButtonElement, PrimitiveProps<'button'>>(
   function HotspotClose({ onClick, ...props }, ref) {
     const ctx = useHotspot('<Hotspot.Close>');
+    const { closeHint } = useTourMessages();
     return (
       <Primitive.button
         type="button"
-        aria-label={props.children ? undefined : 'Close hint'}
+        aria-label={props.children ? undefined : closeHint}
         {...props}
         ref={ref}
         onClick={composeEventHandlers(onClick, () => {

@@ -33,5 +33,17 @@
     "path": "packages/devtools/dist/index.js",
     "limit": "6 kB",
     "ignore": ["react", "react-dom", "@awesome-tour/react"]
+  },
+  {
+    "name": "@awesome-tour/router (next)",
+    "path": "packages/router/dist/next.js",
+    "limit": "1 kB",
+    "ignore": ["react", "next", "@tanstack/react-router", "@awesome-tour/react"]
+  },
+  {
+    "name": "@awesome-tour/router (tanstack-router)",
+    "path": "packages/router/dist/tanstack-router.js",
+    "limit": "1 kB",
+    "ignore": ["react", "next", "@tanstack/react-router", "@awesome-tour/react"]
   }
 ]

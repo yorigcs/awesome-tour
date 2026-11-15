@@ -53,6 +53,7 @@ const DEMO_PAGES = [
   'guides/styling',
   'guides/animation',
   'guides/devtools',
+  'guides/i18n',
   'registry/tour',
   'registry/checklist',
   'registry/hotspot',
@@ -74,6 +75,15 @@ test('landing tour starts by itself once the diagram assembles, only on the firs
   await page.reload();
   await page.waitForTimeout(3500);
   await expect(dialog).toHaveCount(0);
+});
+
+test('i18n demo translates the primitives', async ({ page }) => {
+  await page.goto(`${DOCS}/guides/i18n/`);
+  await page.getByRole('button', { name: 'Iniciar tour' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('Navegação');
+  await expect(dialog.getByRole('button', { name: 'Fechar tour' })).toBeVisible();
+  await expect(page.locator('[data-tour-announcer]', { hasText: 'Passo 1 de 3' })).toHaveCount(1);
 });
 
 test('landing workbench swaps parts while the tour runs', async ({ page }) => {

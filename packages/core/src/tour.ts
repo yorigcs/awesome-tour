@@ -107,24 +107,52 @@ export function createTour<
     emitter.emit('error', { error, stepId: getState().stepId });
   };
 
+  /** Last settled result of each async `when`, so progress counts can use it synchronously. */
+  const asyncVisibility = new Map<TId, boolean>();
+
   async function isVisible(step: TStep, signal: AbortSignal): Promise<boolean> {
     if (!step.when) return true;
     try {
-      return Boolean(await step.when(context(step, signal)));
+      const visible = Boolean(await step.when(context(step, signal)));
+      asyncVisibility.set(step.id, visible);
+      return visible;
     } catch (error) {
       reportError(error);
       return false;
     }
   }
 
-  /** Steps whose `when` currently passes. Async predicates count as visible. */
+  /** Recompute `progress` after an async `when` settles differently than assumed. */
+  function refreshProgress() {
+    const { stepId, progress } = getState();
+    if (stepId == null) return;
+    const next = computeProgress(stepId);
+    if (next.current !== progress.current || next.total !== progress.total) {
+      store.setState({ progress: next });
+    }
+  }
+
+  /**
+   * Steps whose `when` currently passes. An async `when` counts with its last settled result
+   * (visible until it first settles); when it settles differently, `progress` is updated.
+   */
   function getVisibleSteps(): TStep[] {
     const signal = new AbortController().signal;
     return steps.filter((step) => {
       if (!step.when) return true;
       try {
         const result = step.when(context(step, signal));
-        return result instanceof Promise ? true : Boolean(result);
+        if (!(result instanceof Promise)) return Boolean(result);
+        result.then(
+          (value) => {
+            const visible = Boolean(value);
+            if (asyncVisibility.get(step.id) === visible) return;
+            asyncVisibility.set(step.id, visible);
+            refreshProgress();
+          },
+          () => {},
+        );
+        return asyncVisibility.get(step.id) ?? true;
       } catch {
         return false;
       }

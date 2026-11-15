@@ -6,6 +6,7 @@ import {
   type TourIndicatorsProps,
   type TourOverlayProps,
   type TourSpotlightProps,
+  useTourMessages,
   useTourState,
 } from '@awesome-tour/react';
 import { cva, type VariantProps } from 'class-variance-authority';
@@ -171,11 +172,14 @@ function TourCardHeader({ className, ...props }: React.ComponentProps<'div'>) {
 /** "Step 2 of 5" with a thin progress bar. Pass a render function to customize the label. */
 function TourCardProgress({
   className,
-  label = (current, total) => `Step ${current} of ${total}`,
+  label,
 }: {
   className?: string;
+  /** Default: the `stepOf` message ("Step 2 of 5", translatable via `messages`). */
   label?: (current: number, total: number) => React.ReactNode;
 }) {
+  const { stepOf } = useTourMessages();
+  const format = label ?? stepOf;
   return (
     <Tour.Progress
       data-slot="tour-card-progress"
@@ -184,7 +188,7 @@ function TourCardProgress({
       {({ current, total }) => (
         <>
           <span className="text-xs font-medium text-muted-foreground tabular-nums">
-            {label(current, total)}
+            {format(current, total)}
           </span>
           <span aria-hidden="true" className="h-1 w-full overflow-hidden rounded-full bg-muted">
             <span className="block h-full w-[calc(var(--tour-progress)*100%)] rounded-full bg-primary transition-[width] duration-300 ease-out" />
@@ -197,18 +201,20 @@ function TourCardProgress({
 
 function TourCardClose({
   className,
-  label = 'Close tour',
+  label,
 }: {
   className?: string;
+  /** Default: the `closeTour` message. */
   label?: string;
 }) {
+  const { closeTour } = useTourMessages();
   return (
     <Tour.Close asChild>
       <Button
         data-slot="tour-card-close"
         variant="ghost"
         size="icon-sm"
-        aria-label={label}
+        aria-label={label ?? closeTour}
         className={cn('-mt-1 -mr-2 shrink-0 text-muted-foreground', className)}
       >
         <X />

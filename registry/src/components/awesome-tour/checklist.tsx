@@ -6,6 +6,7 @@ import {
   type ChecklistItemDefinition,
   type ChecklistRootProps,
   useStoreSelector,
+  useTourMessages,
 } from '@awesome-tour/react';
 import { Check, ChevronRight, Minus, X } from 'lucide-react';
 import type * as React from 'react';
@@ -39,6 +40,7 @@ function ChecklistHeader({
   /** Id for the heading, to label the root with `aria-labelledby`. */
   titleId?: string;
 }) {
+  const { dismissChecklist } = useTourMessages();
   return (
     <div data-slot="checklist-header" className={cn('flex items-start gap-2', className)}>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -52,7 +54,7 @@ function ChecklistHeader({
           <Button
             variant="ghost"
             size="icon-xs"
-            aria-label="Dismiss checklist"
+            aria-label={dismissChecklist}
             className="-mt-1 -mr-1 text-muted-foreground"
           >
             <X />
@@ -65,6 +67,7 @@ function ChecklistHeader({
 
 /** Progress label + bar driven by `--checklist-progress`. */
 function ChecklistProgressBar({ className }: { className?: string }) {
+  const { checklistValue } = useTourMessages();
   return (
     <Checklist.Progress
       data-slot="checklist-progress"
@@ -73,7 +76,7 @@ function ChecklistProgressBar({ className }: { className?: string }) {
       {({ completed, total }) => (
         <>
           <span className="text-xs text-muted-foreground tabular-nums">
-            {completed} of {total} done
+            {checklistValue(completed, total)}
           </span>
           <span aria-hidden="true" className="h-1.5 overflow-hidden rounded-full bg-muted">
             <span className="block h-full w-[calc(var(--checklist-progress)*100%)] rounded-full bg-primary transition-[width] duration-500 ease-out" />

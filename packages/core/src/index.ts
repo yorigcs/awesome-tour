@@ -34,6 +34,7 @@ export {
 } from './dom';
 export type { Emitter } from './emitter';
 export { createEmitter } from './emitter';
+export { type FrameInput, frameTarget } from './frames';
 export type { QueueOptions, TourManager, TourManagerState } from './manager';
 export { createTourManager } from './manager';
 export type { PersistedTourState, PersistenceAdapter, PersistOptions } from './persistence';
