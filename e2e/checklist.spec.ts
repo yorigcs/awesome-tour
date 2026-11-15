@@ -21,8 +21,8 @@ test('checklist completes from signals and tours, persists, and is accessible', 
   await checklist.getByRole('button', { name: 'Try the CSS-only tour' }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toHaveAccessibleName('Your numbers');
-  await dialog.getByRole('button', { name: 'Next' }).click();
-  await dialog.getByRole('button', { name: 'Next' }).click();
+  await dialog.getByRole('button', { name: /^(Next|Finish)$/ }).click();
+  await dialog.getByRole('button', { name: /^(Next|Finish)$/ }).click();
   await expect(dialog).toHaveCount(0);
   await expect(progress).toHaveAttribute('aria-valuenow', '3');
 

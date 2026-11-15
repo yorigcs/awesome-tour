@@ -5,9 +5,13 @@ sidebar:
   order: 3
 ---
 
+import Preview from '../../../components/Preview.astro';
 import { BranchingDemo } from '../../../components/demos/BranchingDemo';
+import BranchingDemoSource from '../../../components/demos/BranchingDemo.tsx?raw';
 
-<BranchingDemo client:visible />
+<Preview code={BranchingDemoSource} title="BranchingDemo.tsx">
+  <BranchingDemo client:visible />
+</Preview>
 
 ## Tour data
 

@@ -5,13 +5,17 @@ sidebar:
   order: 1
 ---
 
-import { Aside } from '@astrojs/starlight/components';
+import Preview from '../../../components/Preview.astro';
+import { Aside } from '~/components/mdx';
 import { TargetsDemo } from '../../../components/demos/TargetsDemo';
+import TargetsDemoSource from '../../../components/demos/TargetsDemo.tsx?raw';
 
 A step's `target` is what gets highlighted and what the content is positioned against. Leave it out
 for a centered step.
 
-<TargetsDemo client:visible />
+<Preview code={TargetsDemoSource} title="TargetsDemo.tsx">
+  <TargetsDemo client:visible />
+</Preview>
 
 ## Target types
 

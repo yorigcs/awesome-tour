@@ -5,7 +5,9 @@ sidebar:
   order: 14
 ---
 
+import Preview from '../../../components/Preview.astro';
 import { DevtoolsDemo } from '../../../components/demos/DevtoolsDemo';
+import DevtoolsDemoSource from '../../../components/demos/DevtoolsDemo.tsx?raw';
 
 ```bash
 pnpm add -D @awesome-tour/devtools
@@ -20,7 +22,9 @@ import { TourDevtools } from '@awesome-tour/devtools';
 </TourProvider>;
 ```
 
-<DevtoolsDemo client:visible />
+<Preview code={DevtoolsDemoSource} title="DevtoolsDemo.tsx">
+  <DevtoolsDemo client:visible />
+</Preview>
 
 ## What you get
 

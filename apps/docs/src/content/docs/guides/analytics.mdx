@@ -5,7 +5,9 @@ sidebar:
   order: 6
 ---
 
+import Preview from '../../../components/Preview.astro';
 import { AnalyticsDemo } from '../../../components/demos/AnalyticsDemo';
+import AnalyticsDemoSource from '../../../components/demos/AnalyticsDemo.tsx?raw';
 
 The `analytics` plugin turns tour activity into flat events you can send to any tool.
 
@@ -19,7 +21,9 @@ createTour({
 });
 ```
 
-<AnalyticsDemo client:visible />
+<Preview code={AnalyticsDemoSource} title="AnalyticsDemo.tsx">
+  <AnalyticsDemo client:visible />
+</Preview>
 
 ## Events
 

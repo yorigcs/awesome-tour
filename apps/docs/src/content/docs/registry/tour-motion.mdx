@@ -1,0 +1,57 @@
+---
+title: Tour (motion)
+description: The styled tour card animated with motion — a spring spotlight that glides between targets.
+sidebar:
+  order: 2
+---
+
+import { Tabs, TabItem, Code } from '~/components/mdx';
+import Preview from '../../../components/Preview.astro';
+import { MotionDemo } from '../../../components/demos/MotionDemo';
+import MotionDemoSource from '../../../components/demos/MotionDemo.tsx?raw';
+import componentSource from '../../../../../../registry/src/components/awesome-tour/tour-motion.tsx?raw';
+
+<Preview code={MotionDemoSource} title="MotionDemo.tsx">
+  <MotionDemo client:visible />
+</Preview>
+
+## Installation
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+    ```sh
+    pnpm dlx shadcn@latest add @awesome-tour/tour-motion
+    ```
+  </TabItem>
+  <TabItem label="npm">
+    ```sh
+    npx shadcn@latest add @awesome-tour/tour-motion
+    ```
+  </TabItem>
+</Tabs>
+
+Installs [`tour`](../tour/), `@awesome-tour/motion` and `motion`.
+
+## Usage
+
+```tsx
+import { TourMotionPopover } from '@/components/awesome-tour/tour-motion';
+
+<Tour.Root tour={tour}>
+  <TourMotionPopover preset="slide" backdrop="overlay" />
+</Tour.Root>
+```
+
+| Prop                | Type                                  | Default     |
+| ------------------- | ------------------------------------- | ----------- |
+| `backdrop`          | `'overlay' \| 'spotlight' \| 'none'`   | `'overlay'` |
+| `preset`            | `'slide' \| 'scale' \| 'fade' \| 'pop'` | `'slide'`   |
+| `animateStepChange` | `boolean`                             | `true`      |
+| `progress` · `dots` · `skip` · `size` | as in [`TourPopover`](../tour/#usage) | |
+
+Parts: `TourMotionOverlay`, `TourMotionSpotlight`, `TourMotionCard`. Reduced-motion users get instant
+transitions.
+
+## Source
+
+<Code code={componentSource} lang="tsx" title="components/awesome-tour/tour-motion.tsx" />

@@ -1,0 +1,107 @@
+---
+title: Tour
+description: A styled product tour — overlay, spotlight and a composable card built on the Tour primitives.
+sidebar:
+  order: 1
+---
+
+import { Tabs, TabItem, Code } from '~/components/mdx';
+import Preview from '../../../components/Preview.astro';
+import { BasicDemo } from '../../../components/demos/BasicDemo';
+import BasicDemoSource from '../../../components/demos/BasicDemo.tsx?raw';
+import { StylingDemo } from '../../../components/demos/StylingDemo';
+import StylingDemoSource from '../../../components/demos/StylingDemo.tsx?raw';
+import componentSource from '../../../../../../registry/src/components/awesome-tour/tour.tsx?raw';
+
+<Preview code={BasicDemoSource} title="BasicDemo.tsx">
+  <BasicDemo client:visible />
+</Preview>
+
+## Installation
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+    ```sh
+    pnpm dlx shadcn@latest add @awesome-tour/tour
+    ```
+  </TabItem>
+  <TabItem label="npm">
+    ```sh
+    npx shadcn@latest add @awesome-tour/tour
+    ```
+  </TabItem>
+</Tabs>
+
+## Usage
+
+`TourPopover` is the whole UI in one component — put it inside `Tour.Root`:
+
+```tsx
+import { createTour, Tour } from '@awesome-tour/react';
+import { TourPopover } from '@/components/awesome-tour/tour';
+
+const tour = createTour({ id: 'onboarding', steps: [/* … */] });
+
+export function Onboarding() {
+  return (
+    <Tour.Root tour={tour}>
+      <Tour.Trigger>Start tour</Tour.Trigger>
+      <TourPopover />
+    </Tour.Root>
+  );
+}
+```
+
+| Prop       | Type                     | Default     |                                              |
+| ---------- | ------------------------ | ----------- | -------------------------------------------- |
+| `overlay`  | `boolean`                | `true`      | Dim the page around the target.              |
+| `progress` | `boolean`                | `true`      | "Step 2 of 5" header with a progress bar.     |
+| `dots`     | `boolean`                | `false`     | Clickable step dots in the footer.           |
+| `skip`     | `boolean`                | `false`     | A "Skip tour" link in the footer.            |
+| `size`     | `'sm' \| 'default' \| 'lg'` | `'default'` | Card width and spacing.                      |
+| `children` | `ReactNode`              |             | Extra content under every step.              |
+
+…plus every [`Tour.Content`](../../components/tour/#content) prop (`side`, `align`, `sideOffset`…).
+
+## Composition
+
+Need a different layout? Compose the parts — they're thin, styled wrappers over the primitives:
+
+```tsx
+<Tour.Portal>
+  <TourSpotlight />
+  <TourCard size="sm">
+    <TourCardMedia>
+      <img src="/feature.png" alt="" />
+    </TourCardMedia>
+    <TourCardTitle />
+    <TourCardDescription />
+    <TourCardFooter>
+      <TourDots />
+      <TourCardNext finish="Got it" />
+    </TourCardFooter>
+  </TourCard>
+</Tour.Portal>
+```
+
+| Part | Wraps |
+| --- | --- |
+| `TourOverlay` · `TourSpotlight` | `Tour.Overlay` · `Tour.Spotlight` |
+| `TourCard` (+ `tourCardVariants`) | `Tour.Content` + `Tour.Arrow` |
+| `TourCardHeader` · `TourCardFooter` · `TourCardMedia` | layout |
+| `TourCardProgress` | `Tour.Progress` |
+| `TourCardTitle` · `TourCardDescription` · `TourCardBody` | `Tour.Title` · `Tour.Description` · `Tour.StepContent` |
+| `TourCardPrev` · `TourCardNext` · `TourCardSkip` · `TourCardClose` | `Tour.Prev` · `Tour.Next` · `Tour.Skip` · `Tour.Close` |
+| `TourDots` | `Tour.Indicators` |
+
+## Restyling
+
+It's your code — but plain `className`s go a long way too:
+
+<Preview code={StylingDemoSource} title="StylingDemo.tsx">
+  <StylingDemo client:visible />
+</Preview>
+
+## Source
+
+<Code code={componentSource} lang="tsx" title="components/awesome-tour/tour.tsx" />

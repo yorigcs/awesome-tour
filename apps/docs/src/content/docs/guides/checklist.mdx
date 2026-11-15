@@ -5,13 +5,17 @@ sidebar:
   order: 8
 ---
 
+import Preview from '../../../components/Preview.astro';
 import { ChecklistDemo } from '../../../components/demos/ChecklistDemo';
+import ChecklistDemoSource from '../../../components/demos/ChecklistDemo.tsx?raw';
 
 A checklist tracks onboarding across tours and actions: "Take the tour", "Invite a teammate",
 "Connect your data". It is headless like tours: `createChecklist` holds the state, `Checklist.*`
 renders it.
 
-<ChecklistDemo client:visible />
+<Preview code={ChecklistDemoSource} title="ChecklistDemo.tsx">
+  <ChecklistDemo client:visible />
+</Preview>
 
 ```tsx
 import { Checklist, createChecklist, localStorageAdapter } from '@awesome-tour/react';

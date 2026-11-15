@@ -5,7 +5,7 @@ sidebar:
   order: 9
 ---
 
-import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside, Tabs, TabItem } from '~/components/mdx';
 
 Steps with a `route` live on another page: before showing them, the tour checks the current path and calls `router.navigate(route)` if it doesn't match. The step is only shown once the path actually matches: if navigation is blocked, redirected or times out, the step stays hidden (`phase: 'resolving'`) until the user gets there — targets are never looked up on the wrong page. Likewise, if the user navigates away from a step's route, the step is hidden until they come back.
 

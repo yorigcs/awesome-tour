@@ -1,7 +1,9 @@
 import { TourDevtools } from '@awesome-tour/devtools';
 import { createTour, Tour } from '@awesome-tour/react';
+import { Wrench } from 'lucide-react';
 import { useState } from 'react';
-import { Frame, MockApp, TourCard } from './ui';
+import { TourPopover } from '@/components/awesome-tour/tour';
+import { DemoFrame, MockApp, StartButton, worldButton } from './ui';
 
 const tour = createTour({
   id: 'docs-devtools',
@@ -33,26 +35,32 @@ export function DevtoolsDemo() {
   const [show, setShow] = useState(false);
   return (
     <Tour.Root tour={tour}>
-      <Frame
+      <DemoFrame
         title="Devtools"
         actions={
           <>
             <button
               type="button"
-              className="at-button"
+              className={worldButton.secondary}
               aria-pressed={show}
               onClick={() => setShow((s) => !s)}
             >
+              <Wrench />
               {show ? 'Hide devtools' : 'Show devtools'}
             </button>
-            <Tour.Trigger className="at-button at-button--primary">Start tour</Tour.Trigger>
+            <StartButton />
           </>
         }
-        footer="Alt+Shift+T toggles the panel. Hover a step to highlight its target, click to jump to it."
+        footer={
+          <>
+            <kbd className="rounded border bg-background px-1 font-mono">Alt+Shift+T</kbd> toggles
+            the panel. Hover a step to highlight its target, click to jump to it.
+          </>
+        }
       >
         <MockApp id="devtools" />
-      </Frame>
-      <TourCard />
+      </DemoFrame>
+      <TourPopover />
       {show && <TourDevtools tours={[tour]} defaultOpen position="bottom-right" />}
     </Tour.Root>
   );

@@ -5,14 +5,19 @@ sidebar:
   order: 10
 ---
 
-import { Aside } from '@astrojs/starlight/components';
+import Preview from '../../../components/Preview.astro';
+import { Aside } from '~/components/mdx';
 import { StylingDemo } from '../../../components/demos/StylingDemo';
+import StylingDemoSource from '../../../components/demos/StylingDemo.tsx?raw';
 import { NonModalDemo } from '../../../components/demos/NonModalDemo';
+import NonModalDemoSource from '../../../components/demos/NonModalDemo.tsx?raw';
 
 awesome-tour ships **no CSS**. Every part renders a plain element you style with classes, Tailwind,
 CSS-in-JS or anything else. The demo below is one tour with four different stylesheets.
 
-<StylingDemo client:visible />
+<Preview code={StylingDemoSource} title="StylingDemo.tsx">
+  <StylingDemo client:visible />
+</Preview>
 
 ## Data attributes
 
@@ -73,7 +78,9 @@ Style states without JavaScript:
   glow, or a huge `box-shadow` that dims the page. Combine it with `modal={false}` for tours that
   leave the page usable:
 
-<NonModalDemo client:visible />
+<Preview code={NonModalDemoSource} title="NonModalDemo.tsx">
+  <NonModalDemo client:visible />
+</Preview>
 
 ```css
 .spotlight {

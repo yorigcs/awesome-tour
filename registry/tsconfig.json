@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "@awesome-tour/core": ["../packages/core/src/index.ts"],
+      "@awesome-tour/react": ["../packages/react/src/index.ts"],
+      "@awesome-tour/motion": ["../packages/motion/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

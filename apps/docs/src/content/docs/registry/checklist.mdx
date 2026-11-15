@@ -1,0 +1,52 @@
+---
+title: Checklist
+description: A styled onboarding checklist — progress, completion states and a dismiss/restore flow.
+sidebar:
+  order: 3
+---
+
+import { Tabs, TabItem, Code } from '~/components/mdx';
+import Preview from '../../../components/Preview.astro';
+import { ChecklistDemo } from '../../../components/demos/ChecklistDemo';
+import ChecklistDemoSource from '../../../components/demos/ChecklistDemo.tsx?raw';
+import componentSource from '../../../../../../registry/src/components/awesome-tour/checklist.tsx?raw';
+
+<Preview code={ChecklistDemoSource} title="ChecklistDemo.tsx">
+  <ChecklistDemo client:visible />
+</Preview>
+
+## Installation
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+    ```sh
+    pnpm dlx shadcn@latest add @awesome-tour/checklist
+    ```
+  </TabItem>
+  <TabItem label="npm">
+    ```sh
+    npx shadcn@latest add @awesome-tour/checklist
+    ```
+  </TabItem>
+</Tabs>
+
+## Usage
+
+```tsx
+import { ChecklistPanel } from '@/components/awesome-tour/checklist';
+
+<ChecklistPanel
+  checklist={gettingStarted}
+  title="Getting started"
+  description="3 quick wins to get going"
+/>
+```
+
+Item titles and descriptions are read from `meta.title` / `meta.description`; pass `renderItem` to
+map them differently. Once dismissed, the panel becomes a "Show checklist" button.
+
+Parts: `ChecklistCard`, `ChecklistHeader`, `ChecklistProgressBar`, `ChecklistItems`, `ChecklistRow`.
+
+## Source
+
+<Code code={componentSource} lang="tsx" title="components/awesome-tour/checklist.tsx" />

@@ -9,7 +9,9 @@
       "@awesome-tour/core": ["../../packages/core/src/index.ts"],
       "@awesome-tour/react": ["../../packages/react/src/index.ts"],
       "@awesome-tour/motion": ["../../packages/motion/src/index.ts"],
-      "@awesome-tour/devtools": ["../../packages/devtools/src/index.ts"]
+      "@awesome-tour/devtools": ["../../packages/devtools/src/index.ts"],
+      "@/*": ["../../registry/src/*"],
+      "~/*": ["./src/*"]
     }
   }
 }

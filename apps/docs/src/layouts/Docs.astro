@@ -1,0 +1,191 @@
+---
+import type { MarkdownHeading } from 'astro';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { getNav, getPager } from '~/lib/nav';
+import Base from './Base.astro';
+
+interface Props {
+  slug: string;
+  title: string;
+  description?: string;
+  headings: MarkdownHeading[];
+}
+
+const { slug, title, description, headings } = Astro.props;
+const nav = await getNav();
+const { prev, current, next } = await getPager(slug);
+const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
+const group = nav.find((g) => g.links.some((l) => l.slug === slug));
+---
+
+<Base title={`${title} · awesome-tour`} description={description}>
+  <div class="mx-auto grid max-w-[90rem] lg:grid-cols-[17rem_minmax(0,1fr)] xl:grid-cols-[17rem_minmax(0,1fr)_14rem]">
+    <!-- Contents: the booklet index -->
+    <div class="border-ink lg:sticky lg:top-16 lg:h-[calc(100svh-4rem)] lg:border-r-2">
+      <details class="group lg:hidden" data-mobile-nav>
+        <summary
+          class="flex cursor-pointer list-none items-center gap-3 border-b-2 border-ink px-4 py-3 font-semibold marker:hidden"
+        >
+          <span class="part-disc">{group?.letter}</span>
+          <span class="min-w-0 flex-1 truncate">{title}</span>
+          <span class="text-sm text-ink-2 group-open:hidden">Contents</span>
+          <span class="hidden text-sm text-ink-2 group-open:inline">Close</span>
+        </summary>
+        <div class="max-h-[70svh] overflow-y-auto border-b-2 border-ink">
+          <nav aria-label="Docs (mobile)" class="px-3 py-4">
+            {
+              nav.map((g) => (
+                <div class="mb-5">
+                  <p class="mb-1.5 flex items-center gap-2 px-2 text-sm font-bold">
+                    <span class="part-disc size-6 text-xs">{g.letter}</span>
+                    {g.label}
+                  </p>
+                  <ul>
+                    {g.links.map((l) => (
+                      <li>
+                        <a
+                          href={l.href}
+                          aria-current={l.slug === slug ? 'page' : undefined}
+                          class="flex items-baseline gap-3 rounded-sm px-2 py-1.5 text-[0.9375rem] text-ink-2 hover:text-ink aria-[current=page]:bg-marker aria-[current=page]:font-semibold aria-[current=page]:text-marker-ink"
+                        >
+                          <span class="min-w-0 flex-1">{l.label}</span>
+                          <span class="font-mono text-[0.6875rem] tabular-nums">{l.folio}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))
+            }
+          </nav>
+        </div>
+      </details>
+      <nav aria-label="Docs" class="hidden h-full overflow-y-auto px-3 py-6 [scrollbar-width:thin] lg:block">
+        {
+          nav.map((g) => (
+            <div class="mb-6">
+              <p class="mb-2 flex items-center gap-2.5 px-2 text-[0.8125rem] font-bold tracking-wide uppercase">
+                <span class="part-disc size-6 text-xs">{g.letter}</span>
+                {g.label}
+              </p>
+              <ul class="ml-[1.1rem] border-l border-dashed border-rule pl-2">
+                {g.links.map((l) => (
+                  <li>
+                    <a
+                      href={l.href}
+                      aria-current={l.slug === slug ? 'page' : undefined}
+                      class="flex items-baseline gap-3 rounded-sm px-2 py-[0.3rem] text-[0.9375rem] text-ink-2 transition-colors hover:text-ink aria-[current=page]:bg-marker aria-[current=page]:font-semibold aria-[current=page]:text-marker-ink"
+                    >
+                      <span class="min-w-0 flex-1">{l.label}</span>
+                      <span class="font-mono text-[0.6875rem] tabular-nums">{l.folio}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </nav>
+    </div>
+
+    <!-- The page -->
+    <main id="main" class="min-w-0 px-4 pt-8 pb-20 md:px-10 md:pt-12 xl:px-14" data-pagefind-body>
+      <header class="mb-10 grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-5 gap-y-3 md:gap-x-7">
+        <div class="flex flex-col items-start gap-2 pt-1" aria-hidden="true" data-pagefind-ignore>
+          <span class="font-numeral text-[3.25rem] leading-[0.82] md:text-[4.5rem]">{current?.folio.split('·')[1]}</span>
+          <span class="font-mono text-xs text-ink-2">{current?.folio}</span>
+        </div>
+        <div class="col-span-2 md:col-span-1">
+          <h1 class="font-display text-[2.25rem] leading-[1.02] text-balance md:text-[3.25rem]">{title}</h1>
+          {description && <p class="mt-4 max-w-[60ch] text-lg leading-relaxed text-ink-2">{description}</p>}
+        </div>
+      </header>
+
+      <div class="prose">
+        <slot />
+      </div>
+
+      <nav
+        aria-label="Previous and next page"
+        class="mt-20 grid max-w-[56rem] gap-3 border-t-2 border-ink pt-6 sm:grid-cols-2"
+        data-pagefind-ignore
+      >
+        {
+          prev ? (
+            <a
+              href={prev.href}
+              class="group flex flex-col gap-1 rounded-sm border-2 border-ink p-4 transition-colors hover:bg-paper-2"
+            >
+              <span class="flex items-center gap-2 text-sm text-ink-2">
+                <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-0.5" aria-hidden="true" />
+                Previous · <span class="font-mono text-xs">{prev.folio}</span>
+              </span>
+              <span class="font-semibold">{prev.label}</span>
+            </a>
+          ) : (
+            <span />
+          )
+        }
+        {
+          next && (
+            <a
+              href={next.href}
+              class="group flex flex-col items-end gap-1 rounded-sm border-2 border-ink p-4 text-right transition-colors hover:bg-marker hover:text-marker-ink"
+            >
+              <span class="flex items-center gap-2 text-sm text-ink-2 group-hover:text-marker-ink">
+                Next · <span class="font-mono text-xs">{next.folio}</span>
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+              </span>
+              <span class="font-semibold">{next.label}</span>
+            </a>
+          )
+        }
+      </nav>
+    </main>
+
+    <!-- On this page -->
+    {
+      toc.length > 0 && (
+        <div class="hidden xl:block" data-pagefind-ignore>
+          <nav aria-label="On this page" class="sticky top-16 max-h-[calc(100svh-4rem)] overflow-y-auto py-12 pr-4">
+            <p class="mb-3 text-[0.8125rem] font-bold tracking-wide uppercase">On this page</p>
+            <ol class="space-y-1 border-l-2 border-ink" data-toc>
+              {toc.map((h) => (
+                <li>
+                  <a
+                    href={`#${h.slug}`}
+                    data-toc-link={h.slug}
+                    class:list={[
+                      'block py-1 text-sm leading-snug text-ink-2 transition-colors hover:text-ink data-[active]:font-semibold data-[active]:text-ink',
+                      h.depth === 3 ? 'pl-6' : 'pl-3',
+                    ]}
+                  >
+                    {h.text}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        </div>
+      )
+    }
+  </div>
+</Base>
+
+<script>
+  // Highlight the section being read.
+  const links = new Map<string, HTMLElement>();
+  for (const a of document.querySelectorAll<HTMLElement>('[data-toc-link]')) links.set(a.dataset.tocLink!, a);
+  if (links.size) {
+    const headings = [...links.keys()]
+      .map((id) => document.getElementById(id))
+      .filter((h): h is HTMLElement => h !== null);
+    const update = () => {
+      let current = headings[0];
+      for (const h of headings) if (h.getBoundingClientRect().top < 140) current = h;
+      for (const [id, a] of links) a.toggleAttribute('data-active', id === current?.id);
+    };
+    addEventListener('scroll', update, { passive: true });
+    update();
+  }
+</script>

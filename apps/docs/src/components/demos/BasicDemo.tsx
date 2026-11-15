@@ -1,5 +1,6 @@
 import { createTour, Tour } from '@awesome-tour/react';
-import { Frame, MockApp, TourCard } from './ui';
+import { TourPopover } from '@/components/awesome-tour/tour';
+import { DemoFrame, MockApp, StartButton } from './ui';
 
 const tour = createTour({
   id: 'docs-basic',
@@ -40,13 +41,10 @@ const tour = createTour({
 export function BasicDemo() {
   return (
     <Tour.Root tour={tour}>
-      <Frame
-        title="Live demo"
-        actions={<Tour.Trigger className="at-button at-button--primary">Start tour</Tour.Trigger>}
-      >
+      <DemoFrame title="Live demo" actions={<StartButton />}>
         <MockApp id="basic" />
-      </Frame>
-      <TourCard />
+      </DemoFrame>
+      <TourPopover />
     </Tour.Root>
   );
 }

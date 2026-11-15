@@ -1,5 +1,9 @@
-import { Checklist, createChecklist, createTour, memoryStorage, Tour } from '@awesome-tour/react';
-import { Frame, TourCard } from './ui';
+import { createChecklist, createTour, memoryStorage, Tour } from '@awesome-tour/react';
+import { RotateCcw, UserPlus, UserRoundCheck } from 'lucide-react';
+import { ChecklistPanel } from '@/components/awesome-tour/checklist';
+import { TourPopover } from '@/components/awesome-tour/tour';
+import { Button } from '@/components/ui/button';
+import { AppSurface, DemoFrame, worldButton } from './ui';
 
 const miniTour = createTour({
   id: 'docs-checklist-tour',
@@ -18,69 +22,56 @@ const checklist = createChecklist({
   id: 'docs-getting-started',
   persistence: memoryStorage(),
   items: [
-    { id: 'tour', tour: miniTour, meta: { title: 'Take the tour' } },
-    { id: 'invite', signal: 'invited', meta: { title: 'Invite a teammate' } },
-    { id: 'profile', meta: { title: 'Complete your profile' } },
+    {
+      id: 'tour',
+      tour: miniTour,
+      meta: { title: 'Take the tour', description: 'Linked to a tour — completes with it.' },
+    },
+    {
+      id: 'invite',
+      signal: 'invited',
+      meta: { title: 'Invite a teammate', description: "Completes on signal('invited')." },
+    },
+    {
+      id: 'profile',
+      meta: { title: 'Complete your profile', description: 'Completed by hand.' },
+    },
   ],
 });
 
 export function ChecklistDemo() {
   return (
-    <Frame title="Onboarding checklist">
-      <div className="at-row">
-        <Checklist.Root checklist={checklist} className="at-checklist" aria-labelledby="cl-title">
-          <header className="at-checklist__header">
-            <p id="cl-title" className="at-checklist__title">
-              Getting started
-            </p>
-            <button
-              type="button"
-              className="at-button at-button--ghost"
-              onClick={() => checklist.reset()}
-            >
-              Reset
-            </button>
-          </header>
-          <Checklist.Progress className="at-checklist__progress">
-            {({ completed, total }) => (
-              <>
-                <span>
-                  {completed} of {total} done
-                </span>
-                <span className="at-checklist__bar" aria-hidden="true" />
-              </>
-            )}
-          </Checklist.Progress>
-          <Checklist.List className="at-checklist__list">
-            {checklist.getItems().map((item) => (
-              <Checklist.Item key={item.id} value={item.id} className="at-checklist__item">
-                <Checklist.ItemIndicator className="at-checklist__check" forceMount>
-                  ✓
-                </Checklist.ItemIndicator>
-                <Checklist.ItemTrigger className="at-checklist__trigger">
-                  {item.meta?.title as string}
-                </Checklist.ItemTrigger>
-              </Checklist.Item>
-            ))}
-          </Checklist.List>
-        </Checklist.Root>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <button
+    <DemoFrame
+      title="Onboarding checklist"
+      actions={
+        <button type="button" className={worldButton.ghost} onClick={() => checklist.reset()}>
+          <RotateCcw aria-hidden="true" />
+          Reset
+        </button>
+      }
+    >
+      <div className="grid items-start gap-4 sm:grid-cols-[minmax(0,20rem)_1fr]">
+        <ChecklistPanel checklist={checklist} description="3 quick wins to get going" />
+        <AppSurface className="flex flex-col items-start gap-2">
+          <Button
             id="checklist-invite"
-            type="button"
-            className="at-button"
+            variant="outline"
             onClick={() => checklist.signal('invited')}
           >
-            Invite teammate → signal('invited')
-          </button>
-          <button type="button" className="at-button" onClick={() => checklist.complete('profile')}>
-            Save profile → complete('profile')
-          </button>
-        </div>
+            <UserPlus />
+            Invite teammate
+            <code className="text-xs text-muted-foreground">signal('invited')</code>
+          </Button>
+          <Button variant="outline" onClick={() => checklist.complete('profile')}>
+            <UserRoundCheck />
+            Save profile
+            <code className="text-xs text-muted-foreground">complete('profile')</code>
+          </Button>
+        </AppSurface>
       </div>
       <Tour.Root tour={miniTour}>
-        <TourCard />
+        <TourPopover />
       </Tour.Root>
-    </Frame>
+    </DemoFrame>
   );
 }

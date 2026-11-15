@@ -19,7 +19,8 @@
     "format": "biome check --write .",
     "size": "size-limit",
     "changeset": "changeset",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && changeset publish",
+    "registry:build": "pnpm --filter @awesome-tour/registry build"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

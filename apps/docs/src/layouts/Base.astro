@@ -1,0 +1,47 @@
+---
+import '~/styles/global.css';
+import SiteHeader from '~/components/site/SiteHeader.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+  /** Slug of the current docs page (for the header's "Docs" state). */
+  section?: 'home' | 'docs';
+}
+
+const { title, description, section = 'docs' } = Astro.props;
+const base = import.meta.env.BASE_URL;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    <link rel="icon" href={`${base}favicon.svg`} type="image/svg+xml" />
+    <meta property="og:title" content={title} />
+    {description && <meta property="og:description" content={description} />}
+    <script is:inline>
+      // Theme before paint: saved choice, else the OS preference.
+      (() => {
+        let theme = null;
+        try {
+          theme = localStorage.getItem('awesome-tour-theme');
+        } catch {}
+        const dark = theme ? theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.classList.toggle('dark', dark);
+      })();
+    </script>
+  </head>
+  <body class="min-h-svh overflow-x-clip bg-paper text-ink">
+    <a
+      href="#main"
+      class="sr-only z-[100] bg-marker px-3 py-2 font-semibold text-marker-ink focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
+      >Skip to content</a
+    >
+    <SiteHeader section={section} />
+    <slot />
+  </body>
+</html>

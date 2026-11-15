@@ -1,7 +1,14 @@
-import { MotionContent, MotionOverlay } from '@awesome-tour/motion';
 import { createTour, Tour } from '@awesome-tour/react';
 import { useState } from 'react';
-import { CardBody, Frame, MockApp } from './ui';
+import { TourMotionPopover } from '@/components/awesome-tour/tour-motion';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { DemoFrame, MockApp, StartButton } from './ui';
 
 const tour = createTour({
   id: 'docs-motion',
@@ -35,47 +42,35 @@ const tour = createTour({
 });
 
 const presets = ['slide', 'scale', 'fade', 'pop'] as const;
+type Preset = (typeof presets)[number];
 
 export function MotionDemo() {
-  const [preset, setPreset] = useState<(typeof presets)[number]>('slide');
+  const [preset, setPreset] = useState<Preset>('slide');
   return (
     <Tour.Root tour={tour}>
-      <Frame
+      <DemoFrame
         title="@awesome-tour/motion"
         actions={
           <>
-            <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <span className="at-frame__title" style={{ margin: 0 }}>
-                preset
-              </span>
-              <select
-                className="at-select"
-                value={preset}
-                onChange={(e) => setPreset(e.target.value as typeof preset)}
-              >
+            <Select value={preset} onValueChange={(v) => setPreset(v as Preset)}>
+              <SelectTrigger size="sm" aria-label="Animation preset" className="w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
                 {presets.map((p) => (
-                  <option key={p}>{p}</option>
+                  <SelectItem key={p} value={p}>
+                    {p}
+                  </SelectItem>
                 ))}
-              </select>
-            </label>
-            <Tour.Trigger className="at-button at-button--primary">Start tour</Tour.Trigger>
+              </SelectContent>
+            </Select>
+            <StartButton />
           </>
         }
       >
         <MockApp id="motion" />
-      </Frame>
-      <Tour.Portal>
-        <MotionOverlay padding={6} radius={10} />
-        <MotionContent
-          className="at-card at-card--motion"
-          preset={preset}
-          sideOffset={12}
-          animateStepChange
-        >
-          <Tour.Arrow className="at-arrow" width={14} height={7} />
-          <CardBody />
-        </MotionContent>
-      </Tour.Portal>
+      </DemoFrame>
+      <TourMotionPopover preset={preset} />
     </Tour.Root>
   );
 }

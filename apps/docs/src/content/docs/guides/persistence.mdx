@@ -5,7 +5,9 @@ sidebar:
   order: 5
 ---
 
+import Preview from '../../../components/Preview.astro';
 import { PersistenceDemo } from '../../../components/demos/PersistenceDemo';
+import PersistenceDemoSource from '../../../components/demos/PersistenceDemo.tsx?raw';
 
 Persistence is a [plugin](../../reference/plugins/). Add it and a tour remembers its progress:
 
@@ -20,7 +22,9 @@ const onboarding = createTour({
 });
 ```
 
-<PersistenceDemo client:visible />
+<Preview code={PersistenceDemoSource} title="PersistenceDemo.tsx">
+  <PersistenceDemo client:visible />
+</Preview>
 
 ## What it does
 

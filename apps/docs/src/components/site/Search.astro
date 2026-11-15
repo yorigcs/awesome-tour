@@ -1,0 +1,114 @@
+---
+import { Search as SearchIcon } from 'lucide-react';
+---
+
+<button
+  type="button"
+  data-search-open
+  class="group flex h-9 items-center gap-2 rounded-sm border-2 border-ink px-2.5 text-sm text-ink-2 transition-colors hover:bg-paper-2 hover:text-ink md:w-60"
+>
+  <SearchIcon className="size-4 shrink-0" aria-hidden="true" />
+  <span class="sr-only md:not-sr-only">Search the docs…</span>
+  <kbd aria-hidden="true" class="ml-auto hidden rounded-sm bg-paper-2 px-1.5 font-mono text-[0.6875rem] text-ink-2 md:inline"
+    >Ctrl K</kbd
+  >
+</button>
+
+<dialog
+  data-search
+  aria-label="Search the docs"
+  class="m-0 mx-auto mt-[12vh] w-[min(40rem,calc(100vw-2rem))] max-w-none border-2 border-ink bg-paper p-0 text-ink shadow-[0_30px_60px_-20px_rgb(0_0_0/0.45)] backdrop:bg-black/50"
+>
+  <form method="dialog" class="flex items-center gap-2 border-b-2 border-ink px-4">
+    <SearchIcon className="size-5 shrink-0 text-ink-2" aria-hidden="true" />
+    <input
+      data-search-input
+      type="search"
+      placeholder="Search guides, components, API…"
+      aria-label="Search"
+      autocomplete="off"
+      class="h-14 min-w-0 flex-1 bg-transparent text-lg outline-none placeholder:text-ink-2"
+    />
+    <button
+      class="rounded-sm px-2 py-1 font-mono text-xs text-ink-2 hover:bg-paper-2"
+      aria-label="Close search">Esc</button
+    >
+  </form>
+  <div class="max-h-[60vh] overflow-y-auto">
+    <p data-search-status class="px-4 py-6 text-sm text-ink-2" aria-live="polite">
+      Type to search every page.
+    </p>
+    <ol data-search-results class="divide-y divide-rule"></ol>
+  </div>
+</dialog>
+
+<script>
+  type PagefindResult = { data: () => Promise<{ url: string; meta: { title?: string }; excerpt: string }> };
+  type Pagefind = { search: (q: string) => Promise<{ results: PagefindResult[] }> };
+
+  const dialog = document.querySelector<HTMLDialogElement>('[data-search]')!;
+  const input = dialog.querySelector<HTMLInputElement>('[data-search-input]')!;
+  const list = dialog.querySelector<HTMLOListElement>('[data-search-results]')!;
+  const status = dialog.querySelector<HTMLParagraphElement>('[data-search-status]')!;
+  let pagefind: Pagefind | null = null;
+  let token = 0;
+
+  const load = async () => {
+    if (pagefind) return pagefind;
+    try {
+      const url = `${import.meta.env.BASE_URL}pagefind/pagefind.js`;
+      pagefind = (await import(/* @vite-ignore */ url)) as Pagefind;
+    } catch {
+      status.textContent = 'Search is available in the built site (run pnpm docs:build).';
+    }
+    return pagefind;
+  };
+
+  const open = () => {
+    dialog.showModal();
+    input.select();
+    void load();
+  };
+
+  for (const b of document.querySelectorAll('[data-search-open]')) b.addEventListener('click', open);
+  addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      dialog.open ? dialog.close() : open();
+    }
+  });
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) dialog.close();
+  });
+
+  input.addEventListener('input', async () => {
+    const q = input.value.trim();
+    const mine = ++token;
+    list.replaceChildren();
+    if (!q) {
+      status.textContent = 'Type to search every page.';
+      return;
+    }
+    const pf = await load();
+    if (!pf || mine !== token) return;
+    const { results } = await pf.search(q);
+    const data = await Promise.all(results.slice(0, 8).map((r) => r.data()));
+    if (mine !== token) return;
+    status.textContent = data.length ? `${results.length} result${results.length === 1 ? '' : 's'}` : `Nothing found for “${q}”.`;
+    for (const r of data) {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = r.url;
+      a.className = 'block px-4 py-3 outline-none hover:bg-paper-2 focus-visible:bg-marker focus-visible:text-marker-ink';
+      const title = document.createElement('strong');
+      title.className = 'block font-semibold';
+      title.textContent = r.meta.title ?? r.url;
+      const excerpt = document.createElement('span');
+      excerpt.className = 'mt-0.5 block text-sm text-ink-2 [&_mark]:bg-marker [&_mark]:text-marker-ink';
+      excerpt.innerHTML = r.excerpt;
+      a.append(title, excerpt);
+      li.append(a);
+      list.append(li);
+    }
+  });
+</script>

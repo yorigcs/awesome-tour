@@ -1,0 +1,43 @@
+---
+import { Check, Copy } from 'lucide-react';
+
+interface Props {
+  command: string;
+  /** Target name for the landing tour. */
+  tour?: string;
+}
+const { command, tour } = Astro.props;
+---
+
+<div
+  data-tour={tour}
+  class="flex h-12 w-full items-center gap-3 rounded-sm border-2 border-ink bg-paper pl-4 font-mono text-[0.9375rem]"
+>
+  <span class="text-ink-2 select-none" aria-hidden="true">$</span>
+  <code class="min-w-0 flex-1 truncate">{command}</code>
+  <button
+    type="button"
+    data-copy={command}
+    class="group grid h-full w-12 shrink-0 place-items-center border-l-2 border-ink transition-colors hover:bg-marker hover:text-marker-ink"
+    aria-label="Copy install command"
+  >
+    <Copy className="size-4 group-data-[copied]:hidden" aria-hidden="true" />
+    <Check className="hidden size-4 group-data-[copied]:block" aria-hidden="true" />
+  </button>
+</div>
+
+<script>
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
+    button.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(button.dataset.copy ?? '');
+        button.toggleAttribute('data-copied', true);
+        button.setAttribute('aria-label', 'Copied');
+        setTimeout(() => {
+          button.toggleAttribute('data-copied', false);
+          button.setAttribute('aria-label', 'Copy install command');
+        }, 1600);
+      } catch {}
+    });
+  }
+</script>

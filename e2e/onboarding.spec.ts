@@ -129,7 +129,7 @@ test('declarative CSS tour and hotspot', async ({ page }) => {
   await expect(dialog(page)).not.toHaveAttribute('aria-modal', 'true');
   await dialog(page).getByRole('button', { name: 'Go to step 2' }).click();
   await expect(dialog(page)).toHaveAccessibleName('Reports');
-  await dialog(page).getByRole('button', { name: 'Next' }).click();
+  await next(page).click();
   await expect(dialog(page)).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Show hint' }).click();

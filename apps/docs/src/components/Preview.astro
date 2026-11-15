@@ -1,0 +1,28 @@
+---
+/**
+ * Live demo + its exact source (imported with `?raw`, so the code shown can't drift from the demo).
+ */
+import { Code } from 'astro-expressive-code/components';
+import TabItem from './mdx/TabItem.astro';
+import Tabs from './mdx/Tabs.astro';
+
+interface Props {
+  /** The demo's source, from `import source from './Demo.tsx?raw'`. */
+  code: string;
+  /** File name shown above the code. */
+  title: string;
+}
+
+const { code, title } = Astro.props;
+---
+
+<div class="not-prose my-8">
+  <Tabs>
+    <TabItem label="Preview">
+      <slot />
+    </TabItem>
+    <TabItem label="Code">
+      <Code code={code} lang="tsx" title={title} />
+    </TabItem>
+  </Tabs>
+</div>

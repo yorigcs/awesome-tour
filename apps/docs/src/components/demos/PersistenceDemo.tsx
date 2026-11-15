@@ -1,6 +1,8 @@
 import { createTour, localStorageAdapter, persist, Tour } from '@awesome-tour/react';
+import { RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Frame, MockApp, TourCard } from './ui';
+import { TourPopover } from '@/components/awesome-tour/tour';
+import { DemoFrame, MockApp, StartButton, worldButton } from './ui';
 
 const adapter = localStorageAdapter({ prefix: 'awesome-tour-docs:' });
 
@@ -70,45 +72,46 @@ export function PersistenceDemo() {
   };
   return (
     <Tour.Root tour={tour} key={load}>
-      <Frame
+      <DemoFrame
         title={`Persistence · page load #${load + 1}`}
         actions={
           <>
             {/* restart={false}: resume instead of restarting (the Trigger's default) */}
-            <Tour.Trigger restart={false} className="at-button at-button--primary">
-              Start tour
-            </Tour.Trigger>
+            <StartButton restart={false} />
             <button
               type="button"
-              className="at-button"
+              className={worldButton.secondary}
               onClick={() => tour.start({ force: true, stepId: 'one' })}
             >
+              <RotateCcw />
               Force restart
             </button>
-            <button type="button" className="at-button" onClick={reload}>
+            <button type="button" className={worldButton.secondary} onClick={reload}>
+              <RefreshCw />
               Simulate reload
             </button>
             <button
               type="button"
-              className="at-button at-button--ghost"
+              className={worldButton.ghost}
               onClick={() => {
                 void adapter.remove('persisted');
                 reload();
               }}
             >
+              <Trash2 />
               Clear storage
             </button>
           </>
         }
         footer={
-          <pre className="at-code">
+          <pre className="overflow-x-auto font-mono whitespace-pre-wrap">
             localStorage["awesome-tour-docs:persisted"] = {stored ?? 'null'}
           </pre>
         }
       >
         <MockApp id="persist" />
-      </Frame>
-      <TourCard />
+      </DemoFrame>
+      <TourPopover />
     </Tour.Root>
   );
 }

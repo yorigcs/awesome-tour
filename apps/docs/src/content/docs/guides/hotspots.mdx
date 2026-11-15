@@ -5,12 +5,16 @@ sidebar:
   order: 9
 ---
 
+import Preview from '../../../components/Preview.astro';
 import { HotspotDemo } from '../../../components/demos/HotspotDemo';
+import HotspotDemoSource from '../../../components/demos/HotspotDemo.tsx?raw';
 
 Not everything deserves a tour. A hotspot is a pulsing beacon attached to an element that reveals a
 hint when clicked — without blocking the page.
 
-<HotspotDemo client:visible />
+<Preview code={HotspotDemoSource} title="HotspotDemo.tsx">
+  <HotspotDemo client:visible />
+</Preview>
 
 ```tsx
 import { Hotspot } from '@awesome-tour/react';

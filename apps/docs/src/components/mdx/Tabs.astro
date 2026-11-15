@@ -1,0 +1,92 @@
+---
+/**
+ * Accessible tabs. Panels come from <TabItem label="…">; `syncKey` keeps every tab group with the
+ * same key on the same label (and remembers it).
+ */
+interface Props {
+  syncKey?: string;
+}
+const { syncKey } = Astro.props;
+const html = await Astro.slots.render('default');
+const labels = [...html.matchAll(/data-tab-label="([^"]*)"/g)].map((m) => m[1]!);
+---
+
+<div class="my-6" data-tabs data-sync-key={syncKey}>
+  <div role="tablist" class="flex gap-0 overflow-x-auto overflow-y-hidden border-b-2 border-ink [scrollbar-width:none]">
+    {
+      labels.map((label, i) => (
+        <button
+          type="button"
+          role="tab"
+          aria-selected={i === 0 ? 'true' : 'false'}
+          tabindex={i === 0 ? 0 : -1}
+          data-tab={label}
+          class="-mb-[2px] shrink-0 border-2 border-transparent px-3.5 py-2 text-sm font-semibold text-ink-2 transition-colors hover:text-ink aria-selected:border-ink aria-selected:border-b-paper aria-selected:bg-paper aria-selected:text-ink aria-selected:shadow-[inset_0_4px_0_var(--marker)]"
+        >
+          {label}
+        </button>
+      ))
+    }
+  </div>
+  <div class="[&>[role=tabpanel]:not(:first-child)]:hidden [&>[role=tabpanel][data-hidden]]:hidden [&>[role=tabpanel][data-shown]]:block [&>[role=tabpanel]]:pt-4">
+    <Fragment set:html={html} />
+  </div>
+</div>
+
+<script>
+  const STORE = 'awesome-tour-tabs:';
+  const groups = [...document.querySelectorAll<HTMLElement>('[data-tabs]')];
+
+  function select(group: HTMLElement, label: string, focus = false) {
+    const tabs = [...group.querySelectorAll<HTMLButtonElement>(':scope > [role=tablist] > [role=tab]')];
+    const panels = [...group.querySelectorAll<HTMLElement>(':scope > div > [role=tabpanel]')];
+    const index = tabs.findIndex((t) => t.dataset.tab === label);
+    if (index < 0) return;
+    tabs.forEach((t, i) => {
+      t.setAttribute('aria-selected', String(i === index));
+      t.tabIndex = i === index ? 0 : -1;
+    });
+    panels.forEach((p, i) => {
+      p.toggleAttribute('data-hidden', i !== index);
+      p.toggleAttribute('data-shown', i === index);
+    });
+    if (focus) tabs[index]!.focus();
+  }
+
+  groups.forEach((group, g) => {
+    const tabs = [...group.querySelectorAll<HTMLButtonElement>(':scope > [role=tablist] > [role=tab]')];
+    const panels = [...group.querySelectorAll<HTMLElement>(':scope > div > [role=tabpanel]')];
+    tabs.forEach((tab, i) => {
+      const panel = panels[i];
+      tab.id = `tab-${g}-${i}`;
+      if (panel) {
+        panel.id = `tabpanel-${g}-${i}`;
+        panel.setAttribute('aria-labelledby', tab.id);
+        tab.setAttribute('aria-controls', panel.id);
+      }
+      tab.addEventListener('click', () => {
+        const key = group.dataset.syncKey;
+        const label = tab.dataset.tab!;
+        if (!key) return select(group, label);
+        try {
+          localStorage.setItem(STORE + key, label);
+        } catch {}
+        for (const other of groups) if (other.dataset.syncKey === key) select(other, label);
+      });
+      tab.addEventListener('keydown', (e) => {
+        const dir = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+        if (!dir) return;
+        e.preventDefault();
+        const next = tabs[(i + dir + tabs.length) % tabs.length]!;
+        next.click();
+        next.focus();
+      });
+    });
+    const key = group.dataset.syncKey;
+    let saved: string | null = null;
+    try {
+      saved = key ? localStorage.getItem(STORE + key) : null;
+    } catch {}
+    select(group, saved ?? tabs[0]?.dataset.tab ?? '');
+  });
+</script>
