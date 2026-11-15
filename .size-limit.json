@@ -1,0 +1,21 @@
+[
+  { "name": "@awesome-tour/core", "path": "packages/core/dist/index.js", "limit": "8 kB" },
+  {
+    "name": "@awesome-tour/react",
+    "path": "packages/react/dist/index.js",
+    "limit": "16 kB",
+    "ignore": ["react", "react-dom", "@awesome-tour/core"]
+  },
+  {
+    "name": "@awesome-tour/motion",
+    "path": "packages/motion/dist/index.js",
+    "limit": "4 kB",
+    "ignore": ["react", "react-dom", "motion", "@awesome-tour/core", "@awesome-tour/react"]
+  },
+  {
+    "name": "@awesome-tour/three",
+    "path": "packages/three/dist/index.js",
+    "limit": "3 kB",
+    "ignore": ["react", "three", "@react-three/fiber", "@awesome-tour/core", "@awesome-tour/react"]
+  }
+]

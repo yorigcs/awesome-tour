@@ -1,0 +1,57 @@
+{
+  "name": "@awesome-tour/motion",
+  "version": "0.1.0",
+  "description": "Motion (motion.dev) adapter for awesome-tour: animated spotlight and presets.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "tour",
+    "onboarding",
+    "product-tour",
+    "walkthrough",
+    "headless",
+    "react",
+    "a11y"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "@awesome-tour/core": "workspace:^",
+    "@awesome-tour/react": "workspace:^",
+    "motion": ">=11",
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "@awesome-tour/core": "workspace:^",
+    "@awesome-tour/react": "workspace:^",
+    "motion": "^14.14.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
