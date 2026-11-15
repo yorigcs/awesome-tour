@@ -1,22 +1,119 @@
 name: CI
+
 on:
-  push: { branches: [main] }
   pull_request:
+  push:
+    branches: [main]
+  merge_group:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
 jobs:
-  ci:
+  quality:
+    name: Lint, types & changeset
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
+      - uses: ./.github/actions/setup
       - run: pnpm lint
       - run: pnpm typecheck
-      - run: pnpm build
+      - name: Changeset present
+        # Every PR touching a published package carries a changeset (or an empty one).
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.head_ref != 'changeset-release/main' &&
+          github.actor != 'dependabot[bot]'
+        run: pnpm changeset status --since=origin/${{ github.base_ref }}
+
+  unit:
+    name: Unit tests (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24, 26]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with: { node-version: "${{ matrix.node }}" }
       - run: pnpm test
+
+  packages:
+    name: Build, size & package checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm build
       - run: pnpm size
+      # publint + Are The Types Wrong: exports and types as consumers resolve them.
+      - run: pnpm check:packages
+
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Playwright version
+        id: playwright
+        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        id: browsers
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - if: steps.browsers.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+      - if: steps.browsers.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+      - run: pnpm e2e
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  registry:
+    name: Registry (shadcn add)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
       # Installs every registry item with the shadcn CLI into a fresh Vite app, then tsc + build.
       - run: pnpm --filter @awesome-tour/registry smoke
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm e2e
+
+  docs:
+    name: Docs build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm docs:build
+      - name: Upload preview
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: docs-preview-pr-${{ github.event.pull_request.number }}
+          path: apps/docs/dist
+          retention-days: 7
+      - name: How to preview
+        if: github.event_name == 'pull_request'
+        run: |
+          {
+            echo "### Docs preview"
+            echo "Download **docs-preview-pr-${{ github.event.pull_request.number }}** from this run's artifacts, then:"
+            echo '```sh'
+            echo 'mkdir -p /tmp/site/awesome-tour && unzip docs-preview-*.zip -d /tmp/site/awesome-tour && npx serve /tmp/site'
+            echo '```'
+            echo 'and open http://localhost:3000/awesome-tour/'
+          } >> "$GITHUB_STEP_SUMMARY"

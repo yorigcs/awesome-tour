@@ -3,6 +3,16 @@
   "version": "0.1.0",
   "description": "Router adapters for awesome-tour multi-page tours: React Router, Next.js App Router, TanStack Router.",
   "license": "MIT",
+  "author": "Yor\u00ed",
+  "homepage": "https://yorigcs.github.io/awesome-tour/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yorigcs/awesome-tour.git",
+    "directory": "packages/router"
+  },
+  "bugs": {
+    "url": "https://github.com/yorigcs/awesome-tour/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "exports": {
@@ -80,5 +90,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

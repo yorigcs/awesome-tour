@@ -3,6 +3,16 @@
   "version": "0.1.0",
   "description": "Codemods to migrate react-joyride, Shepherd and driver.js tours to awesome-tour.",
   "license": "MIT",
+  "author": "Yor\u00ed",
+  "homepage": "https://yorigcs.github.io/awesome-tour/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yorigcs/awesome-tour.git",
+    "directory": "packages/codemod"
+  },
+  "bugs": {
+    "url": "https://github.com/yorigcs/awesome-tour/issues"
+  },
   "type": "module",
   "bin": {
     "awesome-tour-codemod": "./dist/cli.js"
@@ -33,5 +43,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

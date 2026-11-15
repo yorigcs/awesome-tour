@@ -1,0 +1,16 @@
+name: Setup
+description: pnpm (version from package.json) + Node + cached, frozen install.
+inputs:
+  node-version:
+    description: Node.js version.
+    default: "22"
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v6
+    - uses: actions/setup-node@v7
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+    - run: pnpm install --frozen-lockfile
+      shell: bash

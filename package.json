@@ -4,7 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@12.16.1",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12"
   },
   "scripts": {
     "build": "pnpm -r --filter './packages/*' build",
@@ -20,11 +20,15 @@
     "size": "size-limit",
     "changeset": "changeset",
     "release": "pnpm build && changeset publish",
-    "registry:build": "pnpm --filter @awesome-tour/registry build"
+    "registry:build": "pnpm --filter @awesome-tour/registry build",
+    "check:packages": "node scripts/check-packages.mjs",
+    "version-packages": "changeset version && pnpm install --lockfile-only"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
     "@axe-core/playwright": "^4.14.0",
     "@biomejs/biome": "^2.6.8",
+    "@changesets/changelog-github": "^1.0.1",
     "@changesets/cli": "^3.0.3",
     "@playwright/test": "^1.65.1",
     "@size-limit/preset-small-lib": "^14.3.0",
@@ -36,6 +40,8 @@
     "@types/react-dom": "^19.3.0",
     "axe-core": "^4.11.0",
     "jsdom": "^31.0.1",
+    "prettier": "^3.10.1",
+    "publint": "^0.3.25",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "size-limit": "^14.3.0",
