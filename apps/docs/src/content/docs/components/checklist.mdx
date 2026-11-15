@@ -1,0 +1,171 @@
+---
+title: Checklist
+description: Unstyled parts for an onboarding checklist backed by createChecklist.
+sidebar:
+  order: 3
+---
+
+`Checklist` renders a checklist created with `createChecklist` from `@awesome-tour/react`, which re-exports it from the core. Items can be completed when a tour completes, by a named signal, by a predicate, or manually. See the [Checklist guide](../../guides/checklist/) and the [core API](../../reference/checklist/).
+
+## Anatomy
+
+```tsx
+import { Checklist } from '@awesome-tour/react';
+
+<Checklist.Root checklist={gettingStarted}>
+  <Checklist.Progress />
+  <Checklist.List>
+    {gettingStarted.getItems().map((item) => (
+      <Checklist.Item key={item.id} value={item.id}>
+        <Checklist.ItemIndicator>✓</Checklist.ItemIndicator>
+        <Checklist.ItemTrigger>{item.meta?.title as string}</Checklist.ItemTrigger>
+        <Checklist.ItemSkip>Skip</Checklist.ItemSkip>
+      </Checklist.Item>
+    ))}
+  </Checklist.List>
+  <Checklist.Dismiss />
+</Checklist.Root>;
+```
+
+## Root
+
+A `div` that provides the checklist to the parts below. On mount it does three things:
+
+- Connects the checklist to the `TourProvider` manager, if there is one, so items can reference tours by id.
+- Calls `checklist.refresh()` to evaluate `when` predicates.
+- With `refreshOnFocus`, calls `refresh()` again whenever the window regains focus.
+
+| Prop             | Type                | Default | Description                                         |
+| ---------------- | ------------------- | ------- | --------------------------------------------------- |
+| `checklist`      | `ChecklistInstance` | —       | A checklist from `createChecklist`.                 |
+| `refreshOnFocus` | `boolean`           | `true`  | Re-check `when` predicates when the window regains focus. |
+| `asChild`        | `boolean`           | `false` | Render the child element instead.                   |
+
+| Data attribute   | Values                                       |
+| ---------------- | -------------------------------------------- |
+| `data-state`     | `"in-progress" \| "complete" \| "dismissed"` |
+| `data-completed` | number of items done or skipped              |
+| `data-total`     | number of items                              |
+
+| CSS variable           | Description              |
+| ---------------------- | ------------------------ |
+| `--checklist-progress` | Completion, `0` to `1`.  |
+
+A dismissed checklist still renders, so you decide what to show:
+
+```tsx
+const { dismissed } = useStoreSelector(gettingStarted);
+if (dismissed) return <button onClick={() => gettingStarted.restore()}>Show checklist</button>;
+```
+
+## Progress
+
+A `div role="progressbar"`. `aria-valuenow` is the number of completed items and `aria-valuemax` the total. The default accessible label is "Checklist progress", and the value text reads "n of m completed". Default content: `"completed / total"`.
+
+| Prop       | Type                                              | Default | Description                       |
+| ---------- | ------------------------------------------------- | ------- | --------------------------------- |
+| `children` | `ReactNode \| (state: ChecklistState) => ReactNode` | —     | Custom content or render function. |
+| `asChild`  | `boolean`                                         | `false` | Render the child element instead. |
+
+| Data attribute | Values                                       |
+| -------------- | -------------------------------------------- |
+| `data-state`   | `"in-progress" \| "complete" \| "dismissed"` |
+
+```tsx
+<Checklist.Progress>
+  {({ completed, total }) => `${completed} of ${total} done`}
+</Checklist.Progress>
+```
+
+## List
+
+An `ol`. Accepts `asChild` and any `ol` props.
+
+## Item
+
+An `li` for one item. Throws if `value` isn't an item id of the checklist.
+
+| Prop      | Type      | Default | Description                                    |
+| --------- | --------- | ------- | ---------------------------------------------- |
+| `value`   | `string`  | —       | Item id, as declared in `createChecklist({ items })`. |
+| `asChild` | `boolean` | `false` | Render the child element instead.              |
+
+| Data attribute | Values                               |
+| -------------- | ------------------------------------ |
+| `data-state`   | `"pending" \| "done" \| "skipped"`   |
+| `data-item`    | item id                              |
+
+## ItemTrigger
+
+A `button`. If the item is linked to a tour, clicking it starts that tour with `checklist.startItem(id)`. For any other action, add your own `onClick`. It is described by the item's status text from `ItemIndicator` through `aria-describedby`.
+
+| Data attribute | Values                             |
+| -------------- | ---------------------------------- |
+| `data-state`   | `"pending" \| "done" \| "skipped"` |
+
+```tsx
+<Checklist.ItemTrigger onClick={() => item.id === 'invite' && openInviteDialog()}>
+  Invite a teammate
+</Checklist.ItemTrigger>
+```
+
+## ItemIndicator
+
+A `span` that shows its children, the check mark, once the item is done or skipped. It also renders visually hidden status text, which `ItemTrigger` uses as its description.
+
+| Prop         | Type                                                     | Default                                                   | Description                               |
+| ------------ | -------------------------------------------------------- | --------------------------------------------------------- | ----------------------------------------- |
+| `labels`     | `Partial<Record<'pending' \| 'done' \| 'skipped', string>>` | `Not completed` / `Completed` / `Skipped`               | Status text for screen readers (i18n).    |
+| `forceMount` | `boolean`                                                | —                                                         | Render the children even while pending, then style them with `data-state`. |
+| `asChild`    | `boolean`                                                | `false`                                                   | Render the child element instead.         |
+
+| Data attribute | Values                             |
+| -------------- | ---------------------------------- |
+| `data-state`   | `"pending" \| "done" \| "skipped"` |
+
+## ItemSkip
+
+A `button` that calls `checklist.skip(id)` for the item it belongs to.
+
+## Dismiss
+
+A `button` that calls `checklist.dismiss()`. If it has no children, it gets `aria-label="Dismiss checklist"`.
+
+## useChecklist
+
+```ts
+function useChecklist(checklist?: ChecklistInstance): ChecklistState & { checklist: ChecklistInstance };
+```
+
+Returns the state of the given checklist, or of the nearest `Checklist.Root`, and re-renders when it changes. The state fields are `items`, `completed`, `total`, `progress`, `done`, `dismissed` and `hydrated`. Throws if it gets neither a checklist argument nor a root.
+
+```tsx
+const { progress, done, checklist } = useChecklist(gettingStarted);
+```
+
+## useChecklistItem
+
+```ts
+function useChecklistItem(): {
+  item: ChecklistItemDefinition;
+  status: 'pending' | 'done' | 'skipped';
+  statusId: string;
+  complete(): void;
+  skip(): void;
+  reset(): void;
+  start(): Promise<void>;
+};
+```
+
+The item of the nearest `Checklist.Item`, with actions bound to it. Use it to build custom item parts.
+
+```tsx
+function ItemMenu() {
+  const { status, complete, reset } = useChecklistItem();
+  return status === 'pending' ? (
+    <button onClick={complete}>Mark done</button>
+  ) : (
+    <button onClick={reset}>Undo</button>
+  );
+}
+```

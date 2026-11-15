@@ -275,3 +275,26 @@ describe('router', () => {
     expect(tour.getState().phase).toBe('resolving');
   });
 });
+
+describe('inertOthers', () => {
+  it('skips data-tour-keep subtrees and restores on cleanup', async () => {
+    const { inertOthers } = await import('../src');
+    const app = document.createElement('main');
+    const target = document.createElement('button');
+    const sibling = document.createElement('p');
+    app.append(target, sibling);
+    const kept = document.createElement('aside');
+    kept.setAttribute('data-tour-keep', '');
+    const other = document.createElement('footer');
+    document.body.append(app, kept, other);
+
+    const restore = inertOthers([target]);
+    expect(sibling.hasAttribute('inert')).toBe(true);
+    expect(other.hasAttribute('inert')).toBe(true);
+    expect(kept.hasAttribute('inert')).toBe(false);
+    expect(app.hasAttribute('inert')).toBe(false);
+    restore();
+    expect(sibling.hasAttribute('inert')).toBe(false);
+    expect(other.hasAttribute('inert')).toBe(false);
+  });
+});

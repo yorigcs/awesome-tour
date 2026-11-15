@@ -1,0 +1,81 @@
+---
+title: Conditional steps & branching
+description: Show steps only to some users, branch on answers and data, and hook into step lifecycle.
+sidebar:
+  order: 3
+---
+
+import { BranchingDemo } from '../../../components/demos/BranchingDemo';
+
+<BranchingDemo client:visible />
+
+## Tour data
+
+Every tour carries typed `data` — the user's role, answers from a step, feature flags. Read it in
+`when`, `next` and lifecycle hooks via `ctx.data`; update it with `tour.setData()`.
+
+```tsx
+interface Data {
+  role: 'developer' | 'designer' | null;
+}
+
+const tour = createTour({
+  id: 'welcome',
+  data: { role: null } as Data,
+  steps: [
+    {
+      id: 'role',
+      title: 'What do you do?',
+      content: <RolePicker />, // calls setData({ role }) then next()
+      next: (ctx) => (ctx.data.role === 'designer' ? 'tokens' : 'api'),
+    },
+    { id: 'api', target: '#api-keys', next: 'webhooks' },
+    { id: 'tokens', target: '#tokens', next: null }, // null completes the tour
+    { id: 'webhooks', target: '#webhooks', when: (ctx) => ctx.data.role === 'developer' },
+  ],
+});
+
+function RolePicker() {
+  const { setData, next } = useTour<Data>();
+  return (
+    <button onClick={() => { setData({ role: 'designer' }); next(); }}>Designer</button>
+  );
+}
+```
+
+Start with data from your app: `tour.start({ data: { role: user.role } })`.
+
+## Conditional steps — `when`
+
+A step whose `when(ctx)` returns `false` is skipped, in either direction. It may be async (e.g.
+check a feature flag); progress (`Step 2 of 5`) counts only visible steps.
+
+## Branching — `next`
+
+- `next: 'stepId'` — jump to a fixed step.
+- `next: (ctx) => 'stepId'` — decide at runtime.
+- `next: null` — complete the tour after this step.
+
+**Back goes back the way you came.** `prev()` walks the history of steps actually visited, so after a
+branch, "Back" returns to the branching step — not to the previous item in the array.
+
+## Lifecycle hooks
+
+```ts
+{
+  id: 'settings',
+  route: '/settings',
+  target: '#danger-zone',
+  // Runs after navigation, before the target is resolved.
+  beforeEnter: async (ctx) => {
+    await openSettingsPanel({ signal: ctx.signal });
+  },
+  afterLeave: () => closeSettingsPanel(),
+}
+```
+
+Transitions are cancellable: if the user clicks "Next" twice, the first transition is aborted and
+`ctx.signal` (an `AbortSignal`) fires — pass it to `fetch` or check it in long hooks.
+
+For cross-cutting rules (block steps, redirect, A/B tests) use a [plugin](../../reference/plugins/)
+with `beforeStep`.

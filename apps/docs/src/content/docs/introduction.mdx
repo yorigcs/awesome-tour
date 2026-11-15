@@ -1,0 +1,55 @@
+---
+title: Introduction
+description: What awesome-tour is, why it exists and how it is organized.
+---
+
+import { LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+**awesome-tour** is a set of unstyled, accessible React primitives for product tours, hints and
+onboarding checklists — built the way [Radix](https://www.radix-ui.com/) builds dialogs and popovers.
+
+## Why another tour library?
+
+Most tour libraries were designed when a tour was a list of selectors and a tooltip with a fixed look.
+In a modern app that breaks down quickly:
+
+- **Styling is a fight.** Pre-built tooltips must be overridden, themed and re-themed. awesome-tour
+  ships **zero CSS**: you compose parts and style them like the rest of your design system.
+- **Tours are brittle.** Selectors break, targets load late, routes change. awesome-tour resolves
+  targets asynchronously (anchors, refs, selectors, virtual elements), waits for them, follows the
+  user across pages and has an explicit policy for when a target is missing.
+- **Real onboarding is not linear.** Steps depend on the user's role, on what they clicked, on what
+  they typed. awesome-tour has conditional steps, branching, interactive steps and a history-aware
+  "back".
+- **Accessibility is an afterthought.** Here it is the default: dialog semantics, focus management,
+  `inert`, keyboard navigation and screen-reader announcements.
+- **It has to scale.** Many tours on one app, saved progress across devices, analytics, checklists,
+  devtools.
+
+## Principles
+
+- **Headless engine.** `@awesome-tour/core` is a framework-agnostic state machine. The React layer
+  only renders its state.
+- **Composition over configuration.** Every visual part is a component you can replace, wrap or
+  render `asChild`.
+- **Controlled or uncontrolled.** Let the tour manage itself, or drive `open` and `step` from your
+  own state.
+- **Accessible by default, unstyled by default.** You can't forget the ARIA; you can't be stuck with
+  the look.
+- **Concurrent-safe.** Built on `useSyncExternalStore`; SSR-safe and StrictMode-safe.
+
+## Packages
+
+| Package                                         | What it does                                                       |
+| ----------------------------------------------- | ------------------------------------------------------------------ |
+| [`@awesome-tour/core`](../reference/create-tour/) | Headless engine: tours, steps, persistence, analytics, checklists. |
+| [`@awesome-tour/react`](../components/tour/)      | React primitives and hooks. Re-exports the core.                   |
+| [`@awesome-tour/motion`](../guides/animation/)    | Animated overlay and content built on `motion`.                    |
+| [`@awesome-tour/three`](../guides/three/)         | Targets inside react-three-fiber scenes.                           |
+| [`@awesome-tour/router`](../guides/multi-page/)   | React Router, Next.js and TanStack Router adapters.                |
+| [`@awesome-tour/devtools`](../guides/devtools/)   | A development panel to inspect and drive tours.                    |
+
+<CardGrid>
+  <LinkCard title="Installation" href="../installation/" />
+  <LinkCard title="Quick start" href="../quick-start/" />
+</CardGrid>

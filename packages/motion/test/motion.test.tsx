@@ -37,8 +37,15 @@ describe('motion adapter', () => {
     expect(screen.getByTestId('overlay')).toBeInTheDocument();
     expect(screen.getByTestId('spotlight')).toBeInTheDocument();
 
-    await userEvent.click(screen.getByText('Next'));
+    // Children are direct children of the content element (no animation wrapper), so the card's
+    // own flex/grid layout applies to them.
+    expect(screen.getByText('Next').parentElement).toBe(dialog);
+
+    const next = screen.getByText('Next');
+    await userEvent.click(next);
     await waitFor(() => expect(screen.getByRole('dialog')).toHaveAttribute('data-step', 'b'));
+    expect(screen.getAllByText('Next')).toHaveLength(1);
+    expect(screen.getByText('Next')).toBe(next); // animated in place, not remounted
 
     act(() => tour.close());
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());

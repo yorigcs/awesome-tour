@@ -1,0 +1,60 @@
+---
+title: Multiple tours
+description: Register many tours in one app, start them by id, and let a queue decide which one is on screen.
+sidebar:
+  order: 7
+---
+
+Real apps have many tours: the main onboarding, a "what's new" for each release, a tour per feature.
+`TourProvider` registers them and makes sure **only one is on screen at a time**.
+
+```tsx
+import { Tour, TourProvider, useTour } from '@awesome-tour/react';
+
+export function App() {
+  return (
+    <TourProvider tours={[onboarding, whatsNew, reportsTour]} router={router}>
+      <Routes />
+      {/* One Tour.Root per tour, rendered wherever its UI should live */}
+      <Tour.Root tourId="onboarding">
+        <OnboardingCard />
+      </Tour.Root>
+      <Tour.Root tourId="whats-new">
+        <AnnouncementCard />
+      </Tour.Root>
+    </TourProvider>
+  );
+}
+
+function HelpMenu() {
+  const { start } = useTour('reports'); // look up a registered tour by id
+  return <button onClick={() => start()}>Tour the reports page</button>;
+}
+```
+
+## Queue and priority
+
+Starting a tour through the manager while another is on screen **queues** it; it starts when the
+current one finishes. Higher `priority` goes first; `interrupt` closes whatever is showing.
+
+```tsx
+const manager = useTourManager();
+
+manager.start('whats-new', { priority: 1 }); // after onboarding, before priority-0 tours
+manager.start('security-alert', { interrupt: true }); // right now
+```
+
+`Tour.Trigger` and the `open` prop of `Tour.Root` go through the manager when the tour is
+registered on a provider. Calling `tour.start()` directly bypasses the queue.
+
+`useStoreSelector(manager)` gives you `{ activeId, queue, tourIds }` — e.g. to hide a chat widget
+while any tour is active:
+
+```tsx
+const activeId = useStoreSelector(useTourManager(), (s) => s.activeId);
+```
+
+## Outside React
+
+The provider wraps `createTourManager()` from the core, which you can also create yourself and pass
+as `<TourProvider manager={manager}>`. See the [manager reference](../../reference/manager/).

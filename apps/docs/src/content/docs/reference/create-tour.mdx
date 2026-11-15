@@ -1,0 +1,101 @@
+---
+title: createTour
+description: Create a headless, framework-agnostic tour instance from a list of steps.
+sidebar:
+  order: 1
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+```ts
+import { createTour } from '@awesome-tour/core';
+```
+
+`createTour(options)` returns a [`Tour` instance](../tour-instance/): an immutable state snapshot (`getState` / `subscribe`), an event emitter (`on`) and imperative controls (`start`, `next`, `prev`, `goTo`…). It doesn't touch the DOM until it is started, and it works without React.
+
+<Aside>
+`@awesome-tour/react` re-exports everything from `@awesome-tour/core`, so in a React app you can import `createTour`, `persist`, `analytics`, etc. from `@awesome-tour/react` directly.
+</Aside>
+
+## Example
+
+```ts
+import { anchor, createTour, localStorageAdapter, persist } from '@awesome-tour/core';
+
+interface OnboardingData {
+  role: 'admin' | 'member';
+}
+
+export const onboarding = createTour({
+  id: 'onboarding',
+  version: 2,
+  data: { role: 'member' } as OnboardingData,
+  plugins: [persist(localStorageAdapter())],
+  steps: [
+    { id: 'welcome' }, // no target → centered
+    { id: 'nav', target: anchor('nav') },
+    { id: 'admin', target: '#admin', when: (ctx) => ctx.data.role === 'admin' },
+    { id: 'done' },
+  ],
+});
+
+onboarding.start();
+```
+
+## Options
+
+| Option            | Type                                    | Default          | Description                                                                                                                                                 |
+| ----------------- | --------------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`              | `string`                                | —                | **Required.** Unique id. Used by `TourProvider` / the manager to look the tour up, and as the default persistence key.                                    |
+| `steps`           | `readonly TStep[]`                      | —                | **Required.** The [step definitions](../steps/), in order.                                                                                                |
+| `version`         | `number`                                | `1`              | Bump it when the tour changes meaningfully: persisted progress saved with another version is discarded by [`persist`](../persistence/).                   |
+| `data`            | `TData`                                 | `{}`             | Initial tour data. Available to `when`, `next`, `advanceOn.when` etc. as `ctx.data`; update it with `tour.setData()`.                                     |
+| `modal`           | `boolean`                               | `true`           | Modal tours block the page (overlay, focus trap, rest of the page `inert`). Steps can override it with `step.modal`.                                     |
+| `plugins`         | `readonly TourPlugin[]`                 | `[]`             | [Plugins](../plugins/) such as `persist()` and `analytics()`. Run in order.                                                                              |
+| `router`          | `RouterAdapter`                         | —                | [Router adapter](../router/) for steps with a `route`. Usually injected by `TourProvider` instead.                                                        |
+| `anchors`         | `AnchorRegistry`                        | `defaultAnchors` | Registry used to resolve `anchor(id)` targets. See [utilities](../utilities/#anchors).                                                                   |
+| `targetTimeout`   | `number`                                | `3000`           | How long (ms) to wait for a missing target before applying `onTargetMissing`. Per-step `targetTimeout` wins.                                             |
+| `onTargetMissing` | `'center' \| 'wait' \| 'skip' \| 'error'` | `'center'`     | What to do when a target isn't found in time. Per-step `onTargetMissing` wins. See [missing targets](../steps/#missing-targets).                          |
+| `scroll`          | `boolean \| ScrollIntoViewOptions`      | `true`           | Scroll targets into view when a step is shown. Options are merged over `{ block: 'center', inline: 'nearest' }`. Per-step `scroll` wins.                |
+
+## Type parameters
+
+```ts
+function createTour<const TStep extends StepDefinition<TData, string>, TData = Record<string, unknown>>(
+  options: TourOptions<TStep, TData>,
+): Tour<TStep, TData>;
+```
+
+`TStep` is inferred with a `const` type parameter, so step ids become a string-literal union. Methods that take a step id are checked against it:
+
+```ts
+const tour = createTour({
+  id: 'demo',
+  steps: [{ id: 'welcome' }, { id: 'search', target: '#search' }],
+});
+
+tour.goTo('search'); // ✅
+tour.goTo('serch'); // ❌ Type error: '"serch"' is not assignable to '"welcome" | "search"'
+tour.getState().stepId; // "welcome" | "search" | null
+```
+
+`TData` is inferred from `data`. Cast the initial value (`{ role: 'member' } as OnboardingData`) to widen it, as in the example above.
+
+In React, annotate steps with [`ReactStepDefinition`](../steps/#react-only-fields) to get `title`, `description`, `content`, `side`, `align` and `interactive`:
+
+```tsx
+import { createTour, type ReactStepDefinition } from '@awesome-tour/react';
+
+const steps = [
+  { id: 'welcome', title: 'Welcome', description: 'A quick look around.' },
+  { id: 'nav', target: '#nav', side: 'right', title: 'Navigation' },
+] satisfies ReactStepDefinition<OnboardingData>[];
+
+export const onboarding = createTour({ id: 'onboarding', steps, data: { role: 'member' } as OnboardingData });
+```
+
+## Lifecycle notes
+
+- Plugins' `setup` runs synchronously inside `createTour`.
+- The tour starts in the `idle` status and does nothing until `start()` is called (directly, through `Tour.Trigger`, `defaultOpen`, the manager or a checklist).
+- Call `tour.destroy()` when you no longer need the tour: it aborts in-flight transitions, runs plugin cleanups, removes event handlers and unsubscribes from the router.

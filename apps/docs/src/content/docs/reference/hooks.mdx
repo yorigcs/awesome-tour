@@ -1,0 +1,271 @@
+---
+title: React hooks
+description: Every hook and low-level utility exported by @awesome-tour/react.
+sidebar:
+  order: 11
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+All hooks are concurrent-safe: they subscribe with `useSyncExternalStore` and re-render only when the value you select changes. They are also SSR-safe and StrictMode-safe.
+
+## useTour
+
+```ts
+function useTour<TData = any>(tourOrId?: TourInstance<any, TData> | string): UseTourResult<TData>;
+
+interface UseTourResult<TData> {
+  tour: TourInstance<any, TData>;
+  start(options?: StartOptions): Promise<void>;
+  next(): Promise<void>;
+  prev(): Promise<void>;
+  goTo(id: string): Promise<void>;
+  complete(): void;
+  skip(): void;
+  close(): void;
+  pause(): void;
+  resume(): Promise<void>;
+  restart(): Promise<void>;
+  setData(update: Partial<TData> | ((data: TData) => TData)): void;
+  signal(name: string): void;
+}
+```
+
+Gives the controls of a tour. The argument selects which tour:
+
+- No argument: the tour of the nearest `Tour.Root`.
+- A tour instance: that tour.
+- A string: the tour registered with that id on the `TourProvider`.
+
+The result object is memoized for each tour, and it does **not** subscribe to state. Pair it with `useTourState` or `useTourSelector` when you need to re-render on changes. Throws when no tour is found.
+
+```tsx
+function Header() {
+  const { start, setData } = useTour<{ role: string }>('onboarding');
+  return <button onClick={() => start({ force: true })}>Take the tour</button>;
+}
+```
+
+<Aside>
+`start` and `tour.start()` call the tour directly, which skips the provider's queue. To respect the queue, use `useTourManager().start(id)`, `Tour.Trigger`, or `Tour.Root` `open`.
+</Aside>
+
+## useTourState
+
+```ts
+function useTourState<T = TourState>(
+  selector?: (state: TourState) => T,
+  isEqual?: (a: T, b: T) => boolean,
+): T;
+```
+
+Selects from the state of the nearest `Tour.Root`'s tour. Without a selector it returns the whole state. Comparison uses `Object.is` by default. The selector can be an inline function.
+
+```tsx
+const isLast = useTourState((s) => s.progress.current >= s.progress.total);
+const role = useTourState((s) => s.data.role);
+```
+
+## useTourSelector
+
+```ts
+function useTourSelector<S extends TourState, T = S>(
+  tour: { subscribe; getState },
+  selector?: (state: S) => T,
+  isEqual?: (a: T, b: T) => boolean,
+): T;
+```
+
+`useTourState` for any tour instance, so it works outside a `Tour.Root`.
+
+```tsx
+const status = useTourSelector(onboarding, (s) => s.status);
+```
+
+## useStoreSelector
+
+```ts
+function useStoreSelector<S, T = S>(
+  store: { subscribe(listener: () => void): () => void; getState(): S },
+  selector?: (state: S) => T,
+  isEqual?: (a: T, b: T) => boolean,
+): T;
+```
+
+Subscribes to any store with `subscribe` and `getState`. That includes tours, checklists, the tour manager, and stores made with `createStore`.
+
+```tsx
+const { completed, total } = useStoreSelector(gettingStarted);
+const queue = useStoreSelector(useTourManager(), (s) => s.queue);
+```
+
+## useTourStep
+
+```ts
+function useTourStep<TStep extends ReactStepDefinition = ReactStepDefinition>(): {
+  step: TStep | undefined;
+  stepId: string | null;
+  index: number; // 0-based among visible steps (-1 when none)
+  progress: { current: number; total: number };
+  isFirst: boolean;
+  isLast: boolean;
+  targets: readonly TourTargetNode[];
+  targetMissing: boolean;
+  phase: 'transitioning' | 'resolving' | 'ready' | null;
+};
+```
+
+The current step of the nearest `Tour.Root`, with derived flags. `isFirst` is true only when there is no history to go back through. Must be used inside a `Tour.Root`.
+
+```tsx
+function NextButton() {
+  const { isLast } = useTourStep();
+  return <Tour.Next>{isLast ? 'Finish' : 'Next'}</Tour.Next>;
+}
+```
+
+## useTourEvent
+
+```ts
+function useTourEvent<K extends keyof TourEvents>(
+  event: K,
+  handler: (payload: TourEvents[K]) => void,
+  tour?: TourInstance,
+): void;
+```
+
+Subscribes to a tour event: the given tour's, or else the nearest `Tour.Root`'s. The handler can change between renders without resubscribing. The events are `start`, `stepChange`, `stepLeave`, `targetMissing`, `complete`, `skip`, `close`, `pause`, `resume`, `dataChange` and `error`.
+
+```tsx
+useTourEvent('complete', () => confetti());
+useTourEvent('stepChange', ({ from, to, direction }) => log(from, to, direction), onboarding);
+```
+
+## useTourAnchor
+
+```ts
+function useTourAnchor<T extends Element = HTMLElement>(
+  id: string,
+  registry?: AnchorRegistry,
+): React.RefCallback<T>;
+```
+
+Registers an element as a named target. Reference it from a step with `anchor(id)`, so tours don't depend on CSS selectors. It uses the `TourProvider` registry, or the global one. If a step is waiting for the anchor, registering it resolves the step immediately.
+
+```tsx
+function CreateButton() {
+  const ref = useTourAnchor<HTMLButtonElement>('create');
+  return <button ref={ref}>Create</button>;
+}
+// step: { id: 'create', target: anchor('create') }
+```
+
+The component form is [`Tour.Anchor`](../../components/tour/#anchor).
+
+## useTargetRect
+
+```ts
+function useTargetRect(): RectLike | null;
+```
+
+The live viewport rect of the current step's targets; with several targets, it's the union of their rects. It returns `null` for centered steps. The rect updates on resize, on scroll, and when the layout changes. Virtual targets are tracked every animation frame. Must be used inside a `Tour.Root`. It's the building block for custom overlays and spotlights.
+
+```tsx
+function Ring() {
+  const rect = useTargetRect();
+  if (!rect) return null;
+  return <div className="ring" style={{ position: 'fixed', top: rect.y, left: rect.x, width: rect.width, height: rect.height }} />;
+}
+```
+
+## useRouterAdapter
+
+```ts
+function useRouterAdapter(options: {
+  pathname: string;
+  navigate: (path: string) => unknown;
+  match?: (route: string, path: string) => boolean; // default: matchRoute
+  timeout?: number; // default: 3000
+}): RouterAdapter;
+```
+
+Bridges any router to awesome-tour. The returned adapter is stable for the lifetime of the component. Its `navigate` resolves once the pathname you pass in has changed to the target path, or after `timeout`. Query strings and hashes are ignored when it compares paths. Pass the adapter to `TourProvider`.
+
+```tsx
+function Providers({ children }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const router = useRouterAdapter({ pathname: location.pathname, navigate });
+  return <TourProvider router={router}>{children}</TourProvider>;
+}
+```
+
+For React Router, Next.js and TanStack Router, `@awesome-tour/router` ships ready-made adapters. See [Multi-page tours](../../guides/multi-page/) and the [router reference](../router/).
+
+## useTourManager
+
+```ts
+function useTourManager(): TourManager;
+```
+
+The manager of the nearest `TourProvider`. Throws outside one. See [TourProvider](../../components/provider/#usetourmanager).
+
+## useChecklist / useChecklistItem
+
+State and actions of a checklist, and of the item being rendered. See [Checklist](../../components/checklist/#usechecklist).
+
+## useResolvedTarget
+
+Resolves a `TargetInput` to nodes and keeps them up to date. See [Hotspot](../../components/hotspot/#useresolvedtarget).
+
+## useTourLayer / useTourContentContext
+
+Hooks for building custom parts. See [Tour: low-level utilities](../../components/tour/#low-level-utilities).
+
+## Presence / usePresence
+
+```ts
+function usePresence(present: boolean): { isPresent: boolean; ref: (el: HTMLElement | null) => void };
+function Presence(props: { present: boolean; children: React.ReactElement }): React.ReactElement | null;
+```
+
+Keeps an element mounted until its CSS exit animation finishes. The Radix contract applies:
+
+- When `present` becomes `false`, the element should get `data-state="closed"` with an `animation`.
+- The element unmounts on `animationend`.
+- If no animation is running, it unmounts right away.
+
+Every animatable part (`Tour.Overlay`, `Tour.Spotlight`, `Tour.Content`, `Hotspot.Content`) uses it, so plain CSS keyframes work for exit animations. `Presence` needs a single child that accepts a ref.
+
+```tsx
+<Presence present={open}>
+  <div data-state={open ? 'open' : 'closed'} className="panel" />
+</Presence>
+```
+
+## composeRefs / useComposedRefs
+
+```ts
+function composeRefs<T>(...refs: (React.Ref<T> | undefined)[]): React.RefCallback<T>;
+function useComposedRefs<T>(...refs: (React.Ref<T> | undefined)[]): React.RefCallback<T>;
+```
+
+Merge several refs into one callback ref. Ref cleanup functions from React 19 are supported. `useComposedRefs` memoizes on the refs you pass.
+
+```tsx
+const anchorRef = useTourAnchor('chart');
+const ref = useComposedRefs(forwardedRef, anchorRef);
+```
+
+`composeEventHandlers(user, ours)` is exported too. It runs the user's handler first, then the library's handler unless the event was `defaultPrevented`.
+
+## Slot / Primitive
+
+- **`Slot`** merges its props onto its single child: handlers are chained (child first), `style` is merged, `className` strings are joined, and refs are composed. This powers `asChild`.
+- **`Primitive`** gives `asChild`-aware versions of `div`, `button`, `span`, `h2`, `p`, `ol`, `li` and `svg`, for example `<Primitive.button asChild>`. Use them to build parts that match the library's API.
+
+```tsx
+<Tour.Next asChild>
+  <MyButton variant="primary">Next</MyButton>
+</Tour.Next>
+```

@@ -1,0 +1,27 @@
+{
+  "name": "docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --port 4321",
+    "build": "astro build",
+    "preview": "astro preview --port 4322",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/react": "^7.1.9",
+    "@astrojs/starlight": "^0.43.1",
+    "@awesome-tour/core": "workspace:*",
+    "@awesome-tour/devtools": "workspace:*",
+    "@awesome-tour/motion": "workspace:*",
+    "@awesome-tour/react": "workspace:*",
+    "astro": "^7.4.12",
+    "motion": "^14.14.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "typescript": "6.0.3"
+  }
+}

@@ -1,0 +1,66 @@
+---
+title: Animation
+description: Spring-animated overlays and content with @awesome-tour/motion, or plain CSS.
+sidebar:
+  order: 11
+---
+
+import { MotionDemo } from '../../../components/demos/MotionDemo';
+
+Two ways to animate a tour:
+
+- **CSS** — parts stay mounted during exit animations, so keyframes on `data-state` work out of the
+  box. See [Styling](../styling/#css-animations).
+- **`@awesome-tour/motion`** — drop-in replacements built on [Motion](https://motion.dev): a cutout
+  that morphs between targets with springs, enter/exit presets, and in-place step transitions.
+
+<MotionDemo client:visible />
+
+```bash
+pnpm add @awesome-tour/motion motion
+```
+
+```tsx
+import { MotionContent, MotionOverlay } from '@awesome-tour/motion';
+
+<Tour.Root tour={tour}>
+  <Tour.Portal>
+    <MotionOverlay padding={6} radius={10} />
+    <MotionContent className="tour-card" preset="slide" animateStepChange>
+      <Tour.Arrow />
+      <Tour.Title />
+      <Tour.Description />
+      <Tour.Next>Next</Tour.Next>
+    </MotionContent>
+  </Tour.Portal>
+</Tour.Root>;
+```
+
+## Components
+
+| Component         | Replaces         | What it adds                                                        |
+| ----------------- | ---------------- | ------------------------------------------------------------------- |
+| `MotionOverlay`   | `Tour.Overlay`   | The cutout springs from target to target instead of jumping.        |
+| `MotionSpotlight` | `Tour.Spotlight` | Same, for a styled spotlight element.                               |
+| `MotionContent`   | `Tour.Content`   | Enter/exit presets; `animateStepChange` animates between steps.     |
+
+Presets: `fade`, `scale` (default), `slide` (direction derived from the placed side) and `pop`. Or
+pass a factory that receives the side:
+
+```tsx
+<MotionContent
+  preset={(side) => ({
+    initial: { opacity: 0, y: side === 'top' ? 12 : -12 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0 },
+    transition: { type: 'spring', bounce: 0.3, duration: 0.4 },
+  })}
+/>
+```
+
+For custom renderers (canvas, WebGL), `useSpotlightSprings()` exposes the spring values of the
+highlighted rect.
+
+**Reduced motion.** When the user prefers reduced motion, movement is replaced by instant changes.
+
+Full API in the [motion reference](../../reference/motion/).

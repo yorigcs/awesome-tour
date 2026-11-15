@@ -1,0 +1,78 @@
+---
+title: Accessibility
+description: What awesome-tour does for keyboard, screen reader and motion-sensitive users — and what's left to you.
+sidebar:
+  order: 13
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Accessibility is built into the primitives, so it's on even when you restyle everything.
+
+## Semantics
+
+- `Tour.Content` is a `role="dialog"`, with `aria-modal` in modal tours.
+- `aria-labelledby` and `aria-describedby` are wired to `Tour.Title` and `Tour.Description`
+  automatically.
+- The highlighted target gets `aria-describedby` pointing to the step, so focusing it reads the
+  explanation.
+- `Checklist.Progress` is a `progressbar`; tour progress is announced by the live region (below).
+- `Tour.Indicators` are buttons with accessible names ("Go to step 3").
+
+## Keyboard
+
+| Key                 | Action                                                                     |
+| ------------------- | -------------------------------------------------------------------------- |
+| <kbd>→</kbd>        | Next step (← in RTL). Ignored while typing in inputs.                      |
+| <kbd>←</kbd>        | Previous step (→ in RTL).                                                   |
+| <kbd>Esc</kbd>      | Close the tour.                                                            |
+| <kbd>Tab</kbd>      | Moves through the card; in modal tours focus is trapped inside it.         |
+
+Turn them off with `keyboardNavigation={false}` and `closeOnEscape={false}` on `Tour.Root`, or
+intercept Escape with `onEscapeKeyDown` on `Tour.Content`.
+
+## Focus
+
+- When a step opens, focus moves to the card.
+- **Modal tours** trap focus in the card and make the rest of the page `inert` — the highlighted
+  target stays reachable, so interactive steps work with the keyboard too.
+- When the tour closes, focus returns to the element that had it before (`restoreFocus`).
+
+Elements that must stay usable during a modal tour — toasts, chat widgets, devtools — can opt out of
+`inert` with the `data-tour-keep` attribute.
+
+## Screen reader announcements
+
+A polite live region announces each step — "Step 2 of 5" by default. Customize or translate it:
+
+```tsx
+<Tour.Root
+  tour={tour}
+  announce={({ state, step }) =>
+    `Passo ${state.progress.current} de ${state.progress.total}: ${step?.meta?.label ?? ''}`
+  }
+/>
+```
+
+Pass `announce={false}` to disable it.
+
+## Motion
+
+Respect `prefers-reduced-motion` in your CSS animations. The scroll-into-view honors it, and
+`@awesome-tour/motion` swaps movement for instant changes when it's set.
+
+## Your part
+
+<Aside type="caution">
+  The primitives can't know your content. Make sure that:
+</Aside>
+
+- Icon-only buttons (`Tour.Close` with "✕") have an `aria-label`.
+- Every step has a title — it's the dialog's accessible name.
+- Text and buttons in the card meet contrast requirements.
+- Interactive steps don't rely on pointer-only gestures.
+- Modal tours aren't used for information users must dismiss to work — prefer
+  [hotspots](../hotspots/) for hints.
+
+The library is tested with [axe-core](https://github.com/dequelabs/axe-core) in unit tests and in
+Playwright end-to-end tests.

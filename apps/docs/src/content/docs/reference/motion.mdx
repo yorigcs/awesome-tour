@@ -1,0 +1,133 @@
+---
+title: Motion
+description: Animated overlay, spotlight and content for awesome-tour, powered by motion.
+sidebar:
+  order: 12
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+`@awesome-tour/motion` provides drop-in replacements for `Tour.Overlay`, `Tour.Spotlight` and `Tour.Content`, with physics-based animations from [motion](https://motion.dev). When the tour moves between steps, the spotlight morphs from one target to the next instead of jumping. See the [Animation guide](../../guides/animation/).
+
+```bash
+pnpm add @awesome-tour/motion motion
+```
+
+```tsx
+import { MotionContent, MotionOverlay } from '@awesome-tour/motion';
+
+<Tour.Portal>
+  <MotionOverlay padding={6} radius={10} />
+  <MotionContent className="card" preset="slide" animateStepChange>
+    <Tour.Arrow />
+    <Tour.Title />
+    <Tour.Description />
+    <Tour.Next>Next</Tour.Next>
+  </MotionContent>
+</Tour.Portal>;
+```
+
+These components go inside `Tour.Root`, usually in a `Tour.Portal`. They mount and unmount through `AnimatePresence`, so exit animations play when the tour closes.
+
+## MotionOverlay
+
+The [`Tour.Overlay`](../../components/tour/#overlay) SVG cutout overlay, with the cutout driven by springs. On centered steps the hole shrinks into the center of the viewport, so moving between anchored and centered steps stays continuous. The whole overlay fades in and out.
+
+| Prop       | Type                                      | Default                        | Description                                      |
+| ---------- | ----------------------------------------- | ------------------------------ | ------------------------------------------------ |
+| `padding`  | `number \| Partial<Record<Side, number>>` | `4`                            | Space between the target and the edge of the cutout. |
+| `radius`   | `number`                                  | `4`                            | Corner radius of the cutout.                     |
+| `spring`   | `SpringOptions`                           | `{ stiffness: 260, damping: 30, mass: 0.9 }` | Spring for the cutout.             |
+| …          | `HTMLMotionProps<'div'>`                  | —                              | Any `motion.div` prop (`initial`, `transition`, `className`…). `children` isn't accepted. |
+
+It sets `data-state` and `data-tour-overlay`, and its color comes from `--tour-overlay-color`, exactly like `Tour.Overlay`. It honors `closeOnOverlayClick` and keeps a non-interactive cutout blocked.
+
+## MotionSpotlight
+
+A `motion.div` that glides between targets. Style it freely, for example with a border, a glow or a `box-shadow` backdrop. It's rendered only while the step has a target.
+
+| Prop      | Type                                      | Default          | Description                       |
+| --------- | ----------------------------------------- | ---------------- | --------------------------------- |
+| `padding` | `number \| Partial<Record<Side, number>>` | `4`              | Space between the target and the box. |
+| `spring`  | `SpringOptions`                           | same as overlay  | Spring used for the movement.     |
+| …         | `HTMLMotionProps<'div'>`                  | —                | Any `motion.div` prop.            |
+
+Sets `data-tour-spotlight`.
+
+```tsx
+<MotionSpotlight className="ring" spring={{ stiffness: 400, damping: 35 }} />
+```
+
+## MotionContent
+
+[`Tour.Content`](../../components/tour/#content) with enter and exit animations. It accepts every `Tour.Content` prop (`side`, `sideOffset`, `collisionPadding`, `autoFocus`…) except `forceMount` and `asChild`, plus:
+
+| Prop                | Type                                      | Default   | Description                                                                 |
+| ------------------- | ----------------------------------------- | --------- | --------------------------------------------------------------------------- |
+| `preset`            | `'fade' \| 'scale' \| 'slide' \| 'pop' \| PresetFactory` | `'scale'` | Enter/exit animation.                                     |
+| `transition`        | `Transition`                              | preset's  | Override the preset's transition.                                           |
+| `animateStepChange` | `boolean`                                 | `false`   | Fade the content in again on every step change. Animates the content element itself, in place: no remount (focus is kept) and no wrapper element (your flex/grid layout applies). |
+
+Transforms originate from `--tour-content-transform-origin`, which means scale presets grow out of the arrow. All of the data attributes of `Tour.Content` still apply.
+
+## Presets
+
+`tourPresets` holds the built-in factories. Each one receives the side the content was placed on: `'top' | 'right' | 'bottom' | 'left' | 'none'`, where `'none'` means centered.
+
+| Preset  | Animation                                                                  |
+| ------- | -------------------------------------------------------------------------- |
+| `fade`  | Opacity, 180 ms.                                                           |
+| `scale` | Opacity + scale from `0.96`, spring.                                       |
+| `slide` | Opacity + 8 px slide away from the target (12 px up when centered), spring.|
+| `pop`   | Opacity + scale from `0.6`, bouncy spring.                                 |
+
+### Custom presets
+
+Pass a factory that returns `{ initial, animate, exit, transition? }`:
+
+```tsx
+import type { PresetFactory } from '@awesome-tour/motion';
+
+const drop: PresetFactory = (side) => ({
+  initial: { opacity: 0, y: side === 'top' ? 16 : -16, rotate: -2 },
+  animate: { opacity: 1, y: 0, rotate: 0 },
+  exit: { opacity: 0, y: 8 },
+  transition: { type: 'spring', stiffness: 300, damping: 24 },
+});
+
+<MotionContent preset={drop}>…</MotionContent>;
+```
+
+You can also extend a built-in preset: `(side) => ({ ...tourPresets.slide(side), transition: { duration: 0.3 } })`.
+
+## useSpotlightSprings
+
+```ts
+function useSpotlightSprings(
+  rect: RectLike | null,
+  options?: { padding?: Padding; spring?: SpringOptions },
+): { x: MotionValue<number>; y: MotionValue<number>; width: MotionValue<number>; height: MotionValue<number> };
+```
+
+The springs behind `MotionOverlay` and `MotionSpotlight`. They follow `rect` inflated by `padding`, and collapse to the center of the viewport when `rect` is `null`. The first value jumps into place without animating. Combine it with `useTargetRect` to build your own animated renderer:
+
+```tsx
+function Glow() {
+  const rect = useTargetRect();
+  const { x, y, width, height } = useSpotlightSprings(rect, { padding: 8 });
+  return <motion.div className="glow" style={{ position: 'fixed', top: 0, left: 0, x, y, width, height }} />;
+}
+```
+
+## Reduced motion
+
+If the user prefers reduced motion:
+
+- Every `MotionContent` preset is replaced by a 120 ms fade.
+- `animateStepChange` does nothing.
+- The overlay fade shortens to 100 ms.
+- The spotlight springs become near-instant (`stiffness: 2000, damping: 100`).
+
+<Aside>
+Custom preset factories are replaced as well. You don't need to check `prefers-reduced-motion` yourself.
+</Aside>

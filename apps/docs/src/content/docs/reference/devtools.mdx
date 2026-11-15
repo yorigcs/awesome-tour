@@ -1,0 +1,90 @@
+---
+title: Devtools
+description: A floating development panel to inspect tours, jump between steps, check target health and watch events.
+sidebar:
+  order: 14
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+`@awesome-tour/devtools` adds a floating inspector panel to your app. It's meant for development only. See the [Devtools guide](../../guides/devtools/).
+
+```bash
+pnpm add -D @awesome-tour/devtools
+```
+
+```tsx
+import { TourDevtools } from '@awesome-tour/devtools';
+
+<TourProvider tours={[onboarding]}>
+  <App />
+  {import.meta.env.DEV && <TourDevtools checklists={[gettingStarted]} />}
+</TourProvider>;
+```
+
+## TourDevtools
+
+| Prop          | Type                                | Default         | Description                                                               |
+| ------------- | ----------------------------------- | --------------- | ------------------------------------------------------------------------- |
+| `tours`       | `TourInstance[]`                    | `[]`            | Extra tours to inspect. Tours registered on the `TourProvider` are listed automatically. |
+| `checklists`  | `ChecklistInstance[]`               | `[]`            | Checklists to show in the Checklists tab.                                 |
+| `position`    | `'bottom-left' \| 'bottom-right'`   | `'bottom-left'` | Corner of the launcher and panel.                                         |
+| `defaultOpen` | `boolean`                           | `false`         | Initial open state when nothing is stored yet.                            |
+| `shortcut`    | `string \| false`                   | `'alt+shift+t'` | Toggle shortcut: modifiers (`alt`, `shift`, `ctrl`, `meta`) plus a letter or digit, joined with `+`. `false` disables it. |
+| `isolate`     | `boolean`                           | `true`          | Render inside a shadow root so the app's styles and the panel's styles never mix. |
+
+The open state is saved in `localStorage` under `awesome-tour-devtools:open`, so the panel stays open across reloads.
+
+## What it shows
+
+- **Tours tab.** A tour picker that marks queued tours, defaulting to the active tour. Below it:
+  - status, phase, version, modal or non-modal, a "target missing" flag, and progress;
+  - the last error;
+  - the tour's `data` as JSON;
+  - controls: Restart, Prev, Next, Pause or Resume, Complete, Close.
+- **Steps.** Every step with the health of its target:
+  - `centered`: no target;
+  - `found`, or `n targets`;
+  - `on /route`: the step's `route` doesn't match the current path;
+  - `missing`;
+  - hidden by `when`.
+
+  Health is re-checked every second while the panel is open. Click a step to `goTo` it (navigating if needed). Hover a step to outline its target on the page.
+- **Events tab.** A live timeline of the last 100 events from all inspected tours, with time, event name, tour id and a short summary.
+- **Checklists tab.** Progress of each checklist passed in `checklists`. Click an item to toggle it between done and pending; Reset clears the checklist.
+
+## Works during modal tours
+
+The panel's host element has the `data-tour-keep` attribute (exported as `KEEP_ATTRIBUTE`). Elements with that attribute:
+
+- are never made `inert` by a modal tour;
+- are ignored by tour keyboard shortcuts: arrow keys and <kbd>Esc</kbd> pressed inside them don't navigate or close the tour.
+
+Use the same attribute on your own UI that must stay usable during a modal tour, such as toasts, chat widgets or support launchers:
+
+```tsx
+<div data-tour-keep>
+  <SupportChat />
+</div>
+```
+
+## In production
+
+<Aside type="caution">
+The devtools let anyone jump through and complete tours. Don't ship them to users. Render them conditionally so bundlers drop them from production builds:
+
+```tsx
+{import.meta.env.DEV && <TourDevtools />}
+{process.env.NODE_ENV !== 'production' && <TourDevtools />}
+```
+
+To load them on demand, for example behind a feature flag, wrap them in `React.lazy`:
+
+```tsx
+const TourDevtools = React.lazy(() =>
+  import('@awesome-tour/devtools').then((m) => ({ default: m.TourDevtools })),
+);
+```
+</Aside>
+
+The package is a client component. Its build output starts with `'use client'`, so in the Next.js App Router you can render it from a server component layout.

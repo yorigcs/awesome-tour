@@ -1,0 +1,79 @@
+---
+title: Tour manager
+description: Coordinate several tours so only one is on screen at a time, with a priority queue and interruption.
+sidebar:
+  order: 7
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+```ts
+import { createTourManager } from '@awesome-tour/core';
+
+const manager = createTourManager({ tours: [onboarding, whatsNew], router });
+
+manager.start('onboarding');
+manager.start('whats-new'); // queued until onboarding finishes
+```
+
+In React, [`TourProvider`](../../components/provider/) creates a manager for you (`useTourManager()` returns it), and `useTour('id')` / `<Tour.Root tourId="id">` look tours up in it.
+
+## createTourManager(options?)
+
+| Option   | Type             | Description                                             |
+| -------- | ---------------- | ------------------------------------------------------- |
+| `tours`  | `Tour[]`         | Tours to register immediately.                          |
+| `router` | `RouterAdapter`  | Router adapter given to every registered tour (`tour.setRouter`). |
+
+## TourManager
+
+| Method                    | Returns            | Description                                                                                                         |
+| ------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `register(tour)`          | `() => void`       | Register a tour (replacing one with the same id). Returns an unregister function, which also removes it from the queue. |
+| `get(id)`                 | `Tour \| undefined` | A registered tour.                                                                                                 |
+| `getTours()`              | `Tour[]`           | All registered tours.                                                                                               |
+| `start(id, options?)`     | `Promise<void>`    | Start a tour now, or queue it while another tour is on screen. Throws if `id` isn't registered.                     |
+| `setRouter(router)`       | `void`             | Set the router on the manager and every registered tour. `undefined` only resets tours the manager had routed.      |
+| `getState()`              | `TourManagerState` | Immutable snapshot.                                                                                                 |
+| `subscribe(listener)`     | `() => void`       | Called when `activeId`, `queue` or `tourIds` change.                                                                |
+| `destroy()`               | `void`             | Unsubscribe from all tours and clear the queue (doesn't destroy the tours).                                         |
+
+### QueueOptions
+
+`start(id, options)` accepts every [`StartOptions`](../tour-instance/#startoptions) field (`stepId`, `data`, `force`) plus:
+
+| Option      | Type      | Default | Description                                                      |
+| ----------- | --------- | ------- | ---------------------------------------------------------------- |
+| `priority`  | `number`  | `0`     | Higher runs first. Equal priorities run in the order they were queued. |
+| `interrupt` | `boolean` | `false` | Start right away, closing (`close()`) the tour on screen.        |
+
+A tour is "on screen" while its status is `active` or `starting`. When it finishes (completed, skipped, closed or paused), the highest-priority queued tour starts. Queuing a tour that is already queued replaces its entry.
+
+```ts
+manager.start('tips', { priority: -1 }); // low priority, runs last
+manager.start('security-alert', { interrupt: true }); // closes whatever is showing
+```
+
+<Aside>
+A queued tour can still be blocked by its own plugins when it starts — e.g. `persist`'s `once` skips tours the user already finished, and the next queued tour starts instead.
+</Aside>
+
+## TourManagerState
+
+| Field      | Type                | Description                                                      |
+| ---------- | ------------------- | ---------------------------------------------------------------- |
+| `activeId` | `string \| null`    | Tour currently on screen (`active` or `starting`).               |
+| `queue`    | `readonly string[]` | Waiting tours, highest priority first.                           |
+| `tourIds`  | `readonly string[]` | Registered tours.                                                |
+
+```tsx
+import { useStoreSelector, useTourManager } from '@awesome-tour/react';
+
+function TourBadge() {
+  const manager = useTourManager();
+  const { activeId, queue } = useStoreSelector(manager);
+  return <span>{activeId ?? 'idle'} · {queue.length} waiting</span>;
+}
+```
+
+See the [multiple tours guide](../../guides/multiple-tours/).

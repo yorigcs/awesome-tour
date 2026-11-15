@@ -1,0 +1,126 @@
+---
+title: Persistence
+description: Save tour progress with the persist plugin and storage adapters, version it, and sync it across tabs.
+sidebar:
+  order: 5
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+```ts
+import { createTour, localStorageAdapter, persist } from '@awesome-tour/core';
+
+const onboarding = createTour({
+  id: 'onboarding',
+  version: 3,
+  steps,
+  plugins: [persist(localStorageAdapter(), { persistData: true })],
+});
+```
+
+## persist(adapter, options?)
+
+A [plugin](../plugins/) that writes `{ status, stepId, version }` to the adapter whenever the status or step changes, and reads it back in `beforeStart`.
+
+| Option        | Type                         | Default        | Description                                                                                                         |
+| ------------- | ---------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `key`         | `(tourId: string) => string` | `(id) => id`   | Storage key for a tour (the adapter may add its own prefix).                                                        |
+| `resume`      | `boolean`                    | `true`         | Start again from the last saved step.                                                                               |
+| `once`        | `boolean`                    | `true`         | Don't start tours saved as `completed` or `skipped`. `start({ force: true })` / `restart()` still work.             |
+| `persistData` | `boolean`                    | `false`        | Also save `tour.data` (on every change) and restore it on start.                                                    |
+| `sync`        | `boolean`                    | `true`         | When the adapter supports `subscribe`: if the tour is completed or skipped elsewhere (another tab), finish it here too. |
+
+### What happens on `start()`
+
+1. The saved value is read (`adapter.get(key)`). Nothing saved → normal start.
+2. Saved `version` differs from `tour.version` → the entry is removed and the tour starts fresh.
+3. `force: true` → normal start (saved progress ignored).
+4. `once` and the saved status is `completed` / `skipped` → the start is blocked (status stays as it was).
+5. Otherwise the tour resumes at the saved `stepId` (if `resume`) with the saved `data` (if `persistData`).
+
+States `active`, `paused`, `closed`, `completed` and `skipped` are written; `idle` and `starting` are not.
+
+<Aside>
+Bump the tour's `version` when you change its steps meaningfully: everyone sees the new tour once, even if they finished the old one.
+</Aside>
+
+## PersistedTourState
+
+| Field       | Type             | Description                           |
+| ----------- | ---------------- | ------------------------------------- |
+| `status`    | `TourStatus`     | Last status.                          |
+| `stepId`    | `string \| null` | Last step.                            |
+| `version`   | `number`         | `tour.version` when saved.            |
+| `data`      | `unknown`        | Only with `persistData`.              |
+| `updatedAt` | `number`         | `Date.now()` when saved.              |
+
+## Adapters
+
+### PersistenceAdapter
+
+Any object with this shape — sync or async — works. It's generic, so checklists reuse it (`PersistenceAdapter<ChecklistSnapshot>`).
+
+```ts
+interface PersistenceAdapter<T = PersistedTourState> {
+  get(key: string): T | null | undefined | Promise<T | null | undefined>;
+  set(key: string, value: T): void | Promise<void>;
+  remove(key: string): void | Promise<void>;
+  /** Optional: notify about changes made elsewhere (other tabs, server push). */
+  subscribe?(key: string, listener: (value: T | null) => void): () => void;
+}
+```
+
+### localStorageAdapter(options?)
+
+Stores JSON in `localStorage` under `prefix + key`, and implements `subscribe` with the `storage` event (cross-tab sync). Fails silently when storage is unavailable (SSR, privacy mode, quota).
+
+| Option   | Type     | Default            |
+| -------- | -------- | ------------------ |
+| `prefix` | `string` | `'awesome-tour:'`  |
+
+### memoryStorage()
+
+In-memory `Map`. Progress is lost on reload — handy in tests and for "per session" tours.
+
+### Server-backed adapter
+
+```ts
+import type { PersistenceAdapter } from '@awesome-tour/core';
+
+const serverAdapter: PersistenceAdapter = {
+  get: (key) => fetch(`/api/tours/${key}`).then((r) => (r.ok ? r.json() : null)),
+  set: async (key, value) => {
+    await fetch(`/api/tours/${key}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(value),
+    });
+  },
+  remove: async (key) => {
+    await fetch(`/api/tours/${key}`, { method: 'DELETE' });
+  },
+};
+
+createTour({ id: 'onboarding', steps, plugins: [persist(serverAdapter, { key: (id) => `${userId}:${id}` })] });
+```
+
+`set` is called without awaiting (fire and forget); `get` is awaited in `beforeStart`, so the tour shows up once the request resolves.
+
+## readTourProgress(adapter, tourId, options?)
+
+Reads the saved state, e.g. to show a "Resume tour" button.
+
+```ts
+const saved = await readTourProgress(localStorageAdapter(), 'onboarding');
+if (saved?.status === 'closed') showResumeButton();
+```
+
+If you gave `persist` a custom `key`, pass the same function:
+
+```ts
+const key = (id: string) => `${user.id}:${id}`;
+persist(adapter, { key });
+await readTourProgress(adapter, 'onboarding', { key });
+```
+
+See the [persistence guide](../../guides/persistence/).

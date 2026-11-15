@@ -1,0 +1,170 @@
+---
+title: Steps
+description: Every field of a step definition, the target forms it accepts, and how missing targets and interactive steps behave.
+sidebar:
+  order: 2
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+A tour is a list of `StepDefinition` objects passed to [`createTour`](../create-tour/) (or declared in JSX with `<Tour.Step>`, see [Tour components](../../components/tour/)).
+
+```ts
+{
+  id: 'create',
+  route: '/projects',
+  target: anchor('create-button'),
+  when: (ctx) => ctx.data.role === 'admin',
+  advanceOn: { event: 'click' },
+  onTargetMissing: 'skip',
+}
+```
+
+## StepDefinition
+
+| Field             | Type                                                         | Default                  | Description                                                                                                                                                   |
+| ----------------- | ------------------------------------------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`              | `TId extends string`                                         | —                        | **Required.** Unique within the tour. Becomes part of the typed step-id union.                                                                               |
+| `target`          | `TargetInput \| null`                                        | —                        | What to highlight. Omit it (or pass `null`) for a centered step. See [targets](#targets).                                                                    |
+| `when`            | `(ctx) => boolean \| Promise<boolean>`                       | —                        | Conditional step: the step is skipped when it resolves to `false`. Errors count as `false` (and emit `error`).                                               |
+| `next`            | `TId \| null \| ((ctx) => TId \| null \| undefined)`         | —                        | Branching. A step id jumps there; `null` completes the tour; `undefined` (from the function) falls back to the next visible step in order.                    |
+| `route`           | `string`                                                     | —                        | Route the step lives on. If the current path doesn't match, the tour navigates there first (patterns like `/p/:id` aren't navigated to); the step stays hidden until the route matches. See [router](../router/). |
+| `advanceOn`       | `AdvanceOn \| AdvanceOn[]`                                   | —                        | Interactive step: advance when the user does something. See [advanceOn](#advanceon).                                                                         |
+| `onTargetMissing` | `'center' \| 'wait' \| 'skip' \| 'error'`                    | tour's, else `'center'`  | Policy when the target can't be found in time. See [missing targets](#missing-targets).                                                                      |
+| `targetTimeout`   | `number`                                                     | tour's, else `3000`      | Milliseconds to wait for the target to appear.                                                                                                               |
+| `scroll`          | `boolean \| ScrollIntoViewOptions`                           | tour's, else `true`      | Scroll the target into view. Only scrolls when the targets aren't already fully in the viewport.                                                             |
+| `modal`           | `boolean`                                                    | tour's `modal`           | Override modality for this step (used by the React components).                                                                                               |
+| `beforeEnter`     | `(ctx) => void \| Promise<void>`                             | —                        | Runs before the step is shown: after navigation, before target resolution. Await data loading, open a menu, etc. Throwing aborts the transition (`error`). |
+| `afterLeave`      | `(ctx) => void \| Promise<void>`                             | —                        | Runs (asynchronously) after the step is left — on navigation, close, skip, complete or pause.                                                                |
+| `meta`            | `Record<string, unknown>`                                    | —                        | Free-form metadata. Forwarded by the [analytics](../analytics/) plugin as `event.meta`.                                                                      |
+
+### Transition order
+
+When a step is entered the tour runs, in order:
+
+1. plugins' `beforeStep` (may cancel or redirect),
+2. the previous step's `stepLeave` event and `afterLeave` (state `phase: 'transitioning'`),
+3. navigation to `route` (if it doesn't match),
+4. `beforeEnter`,
+5. target resolution (`phase: 'resolving'` while waiting, up to `targetTimeout`),
+6. commit: the step becomes current and `stepChange` is emitted,
+7. scroll into view, then `phase: 'ready'` and `advanceOn` listeners are attached.
+
+If the user triggers another transition meanwhile (e.g. double-clicks "Next"), the in-flight one is aborted: `ctx.signal` fires and its result is discarded.
+
+## StepContext
+
+Passed to `when`, `next`, `beforeEnter`, `afterLeave` and `advanceOn.when`.
+
+| Field    | Type             | Description                                                                          |
+| -------- | ---------------- | ------------------------------------------------------------------------------------ |
+| `tour`   | `Tour`           | The tour instance.                                                                   |
+| `step`   | `StepDefinition` | The step being evaluated.                                                            |
+| `data`   | `TData`          | Current tour data (`tour.getState().data`).                                          |
+| `signal` | `AbortSignal`    | Aborted when the transition is superseded. Pass it to `fetch` in async hooks.        |
+
+```ts
+{
+  id: 'report',
+  target: '#report',
+  async beforeEnter({ signal }) {
+    await fetch('/api/report/warmup', { signal });
+  },
+}
+```
+
+## Targets
+
+`TargetInput` accepts several forms. All of them resolve to a list of nodes; several nodes are highlighted as one union rect.
+
+| Form             | Example                                            | Notes                                                                                                                                         |
+| ---------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| CSS selector     | `'#search'`, `'[data-tour="nav"]'`                 | Matches every element (`querySelectorAll`). If nothing matches in the light DOM, open shadow roots are searched.                              |
+| Element          | `document.querySelector('#nav')`                   | Must be connected to the document.                                                                                                            |
+| Ref              | `buttonRef`                                        | Any `{ current: Element \| null }`, read at resolution time.                                                                                  |
+| Anchor           | `anchor('create-button')`                          | Elements registered under that id (`useTourAnchor`, `Tour.Anchor`, `registry.register`). Preferred: no brittle selectors. See [utilities](../utilities/#anchors). |
+| Virtual element  | `{ getBoundingClientRect: () => rect }`            | Anything with a `getBoundingClientRect()` (Floating UI compatible). Optional `contextElement`. Used for canvas regions and 3D objects.          |
+| Function         | `() => document.querySelector('.row:last-child')`  | Called on every resolution attempt; may return any other form, `null` or `undefined`.                                                         |
+| Array            | `['#stat-1', '#stat-3']`                           | Union of all items (deduplicated). The tour waits for **all** items up to the timeout, then continues with whichever were found.            |
+
+Targets that aren't there yet are awaited: the tour re-checks on DOM mutations, anchor registrations and every 100 ms until `targetTimeout`. While waiting, the state has `phase: 'resolving'`.
+
+### Missing targets
+
+`onTargetMissing` decides what happens when the target still isn't found after `targetTimeout`. A `targetMissing` event is emitted in every case.
+
+| Policy     | Behavior                                                                                                                                                           |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `'center'` | Default. Show the step centered with no target; `state.targetMissing` is `true` (and React sets `data-target-missing`).                                            |
+| `'wait'`   | Wait indefinitely (no timeout) for the target to appear.                                                                                                           |
+| `'skip'`   | Move on: forward to the next visible step (completing the tour if there is none), or backward when navigating back.                                               |
+| `'error'`  | Abort the transition and emit an `error` event (`state.error` is set).                                                                                             |
+
+<Aside>
+Call `tour.refresh()` after a layout change that replaced the target element: it re-resolves the current step's target in place.
+</Aside>
+
+## advanceOn
+
+Makes a step interactive. One rule or an array of rules; the first rule that fires advances the tour (once).
+
+| Field    | Type                    | Description                                                                                                                         |
+| -------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `event`  | `string`                | DOM event name (`'click'`, `'input'`, `'submit'`…). Listened on `document` in the capture phase; fires when the event happens inside the target. Shadow DOM aware. |
+| `target` | `TargetInput`           | Where the event must happen. Default: the step's resolved targets.                                                                 |
+| `when`   | `(ctx) => boolean`      | Advance when the predicate becomes true. Re-checked on tour state changes, DOM mutations and every 200 ms.                         |
+| `signal` | `string`                | Advance when the app calls `tour.signal(name)`.                                                                                    |
+| `to`     | `TId`                   | Go to this step instead of the regular next step.                                                                                  |
+
+```ts
+const steps = [
+  { id: 'create', target: anchor('create'), advanceOn: { event: 'click' } },
+  {
+    id: 'search',
+    target: '#search',
+    advanceOn: { when: () => document.querySelector<HTMLInputElement>('#search')!.value.length >= 3 },
+  },
+  {
+    id: 'upload',
+    target: '#dropzone',
+    advanceOn: [
+      { signal: 'file-uploaded' }, // tour.signal('file-uploaded') from your upload handler
+      { event: 'click', target: '#skip-upload', to: 'done' },
+    ],
+  },
+  { id: 'done' },
+];
+```
+
+Listeners are attached when the step becomes `ready` and removed when it is left.
+
+## React-only fields
+
+`ReactStepDefinition` (from `@awesome-tour/react`) extends `StepDefinition` with fields rendered by the [Tour components](../../components/tour/):
+
+| Field         | Type                                                       | Description                                                                                                                       |
+| ------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `title`       | `ReactNode`                                                | Rendered by `Tour.Title` when it has no children.                                                                                 |
+| `description` | `ReactNode`                                                | Rendered by `Tour.Description` when it has no children.                                                                           |
+| `content`     | `ReactNode \| ((props: StepRenderProps) => ReactNode)`     | Rendered by `Tour.StepContent`. The function form receives `{ tour, state, step }`.                                               |
+| `side`        | `'top' \| 'right' \| 'bottom' \| 'left'`                   | Preferred side for this step; overrides `Tour.Content`'s `side`.                                                                  |
+| `align`       | `'start' \| 'center' \| 'end'`                             | Preferred alignment for this step; overrides `Tour.Content`'s `align`.                                                            |
+| `interactive` | `boolean`                                                  | Let the user click/type into the highlighted target. Defaults to `Tour.Root`'s `targetInteraction`, else `true` when `advanceOn.event` is set. |
+
+```tsx
+import type { ReactStepDefinition } from '@awesome-tour/react';
+
+const steps = [
+  {
+    id: 'search',
+    target: '#search',
+    side: 'bottom',
+    interactive: true,
+    title: 'Try the search',
+    content: ({ state }) => <p>Step {state.progress.current} — type at least 3 characters.</p>,
+    advanceOn: { when: () => document.querySelector<HTMLInputElement>('#search')!.value.length >= 3 },
+  },
+] satisfies ReactStepDefinition[];
+```
+
+See also the guides on [targets](../../guides/targets/), [interactive steps](../../guides/interactive-steps/) and [branching](../../guides/branching/).

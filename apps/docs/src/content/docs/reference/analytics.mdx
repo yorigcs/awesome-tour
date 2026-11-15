@@ -1,0 +1,120 @@
+---
+title: Analytics
+description: Turn tour activity into flat analytics events and forward them to any analytics tool.
+sidebar:
+  order: 6
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+```ts
+import { analytics, createTour } from '@awesome-tour/core';
+
+createTour({
+  id: 'onboarding',
+  steps,
+  plugins: [analytics((event) => posthog.capture(event.type, event))],
+});
+```
+
+## analytics(track, options?)
+
+A [plugin](../plugins/) that listens to the tour's [events](../tour-instance/#events) and calls `track` with one flat, serializable object per event. Errors thrown by `track` are caught and logged.
+
+| Option        | Type                                    | Default | Description                                                                 |
+| ------------- | --------------------------------------- | ------- | --------------------------------------------------------------------------- |
+| `includeData` | `boolean`                               | `false` | Attach `tour.getState().data` as `event.data`. Off by default: data may contain PII. |
+| `filter`      | `(event: TourAnalyticsEvent) => boolean` | —      | Return `false` to drop an event.                                            |
+
+## Event types
+
+| `type`           | Emitted on                          | Extra fields                                                   |
+| ---------------- | ----------------------------------- | -------------------------------------------------------------- |
+| `tour_started`   | `start`                             | —                                                              |
+| `step_viewed`    | `stepChange`                        | `direction`, `previousStepId`, `previousStepDurationMs`        |
+| `tour_completed` | `complete`                          | `durationMs`, `stepDurationMs`                                 |
+| `tour_skipped`   | `skip`                              | `durationMs`, `stepDurationMs`                                 |
+| `tour_dismissed` | `close`                             | `durationMs`, `stepDurationMs`                                 |
+| `tour_paused`    | `pause`                             | `durationMs`, `stepDurationMs`                                 |
+| `tour_resumed`   | `resume`                            | —                                                              |
+| `target_missing` | `targetMissing`                     | —                                                              |
+| `tour_error`     | `error`                             | `error` (message string)                                       |
+
+A run produces `tour_started` followed immediately by the `step_viewed` of the first step.
+
+## TourAnalyticsEvent
+
+| Field                    | Type                                | Description                                                                 |
+| ------------------------ | ----------------------------------- | --------------------------------------------------------------------------- |
+| `type`                   | `TourAnalyticsEventType`            | See above.                                                                  |
+| `tourId`                 | `string`                            | Tour id.                                                                    |
+| `tourVersion`            | `number`                            | Tour version — segment funnels by content version.                          |
+| `stepId`                 | `string \| null`                    | Current step.                                                               |
+| `stepIndex`              | `number`                            | 1-based position among visible steps (`0` when unknown).                    |
+| `totalSteps`             | `number`                            | Number of visible steps.                                                    |
+| `timestamp`              | `number`                            | `Date.now()`.                                                               |
+| `direction`              | `'forward' \| 'backward' \| 'jump'` | `step_viewed` only.                                                         |
+| `previousStepId`         | `string \| null`                    | `step_viewed` only: the step that was left (`null` for the first).          |
+| `previousStepDurationMs` | `number`                            | `step_viewed` only: how long the previous step was on screen.               |
+| `durationMs`             | `number`                            | End events: time since `tour_started`.                                      |
+| `stepDurationMs`         | `number`                            | End events: time on the last step.                                          |
+| `meta`                   | `Record<string, unknown>`           | The current step's `meta`, when set.                                        |
+| `data`                   | `unknown`                           | Tour data, only with `includeData`.                                         |
+| `error`                  | `string`                            | `tour_error` only.                                                          |
+
+## Mapping to your tool
+
+<Tabs>
+<TabItem label="PostHog">
+
+```ts
+analytics((e) => posthog.capture(e.type, e));
+```
+
+</TabItem>
+<TabItem label="Segment">
+
+```ts
+import { analytics as tourAnalytics } from '@awesome-tour/core';
+
+const names = {
+  tour_started: 'Tour Started',
+  step_viewed: 'Tour Step Viewed',
+  tour_completed: 'Tour Completed',
+  tour_skipped: 'Tour Skipped',
+  tour_dismissed: 'Tour Dismissed',
+} as const;
+
+tourAnalytics((e) => analytics.track(names[e.type as keyof typeof names], e), {
+  filter: (e) => e.type in names,
+});
+```
+
+</TabItem>
+<TabItem label="Google Analytics">
+
+```ts
+analytics((e) =>
+  gtag('event', e.type, {
+    tour_id: e.tourId,
+    step_id: e.stepId,
+    step_index: e.stepIndex,
+    duration_ms: e.durationMs,
+  }),
+);
+```
+
+</TabItem>
+</Tabs>
+
+<Aside>
+In the Segment tab, `analytics` is Segment's global, so the plugin is imported as `tourAnalytics`.
+</Aside>
+
+Use step `meta` for labels that shouldn't depend on step ids:
+
+```ts
+{ id: 'billing', target: '#billing', meta: { feature: 'billing', funnel: 'activation' } }
+```
+
+See the [analytics guide](../../guides/analytics/).

@@ -77,7 +77,11 @@ export interface StepDefinition<TData = any, TId extends string = string> {
   when?: (ctx: StepContext<TData, TId>) => MaybePromise<boolean>;
   /** Branching: explicit next step id, or a function returning one. `null` completes the tour. */
   next?: TId | null | ((ctx: StepContext<TData, TId>) => TId | null | undefined);
-  /** Route the step lives on. The tour navigates there (via the router adapter) before resolving. */
+  /**
+   * Route the step lives on. The tour navigates there (via the router adapter) before resolving
+   * the target. Patterns (`/projects/:id`, `/docs/*`) aren't navigated to: the step waits until
+   * the user gets there. Until the route matches, the step stays hidden (phase `resolving`).
+   */
   route?: string;
   /** Make the step interactive: the tour advances when the user does something. */
   advanceOn?: AdvanceOn<TData, TId> | readonly AdvanceOn<TData, TId>[];
@@ -194,7 +198,7 @@ export interface RouterAdapter {
   navigate(path: string): MaybePromise<void>;
   /** Optional: notify on route changes. */
   subscribe?(listener: () => void): () => void;
-  /** Optional custom matcher. Default: exact pathname match. */
+  /** Optional custom matcher. Default: `matchRoute` (`:params` and a trailing `*`). */
   match?(route: string, path: string): boolean;
 }
 

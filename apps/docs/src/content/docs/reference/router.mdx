@@ -1,0 +1,145 @@
+---
+title: Router
+description: The RouterAdapter interface, route matching, and ready-made adapters for React Router, Next.js and TanStack Router.
+sidebar:
+  order: 9
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Steps with a `route` live on another page: before showing them, the tour checks the current path and calls `router.navigate(route)` if it doesn't match. The step is only shown once the path actually matches: if navigation is blocked, redirected or times out, the step stays hidden (`phase: 'resolving'`) until the user gets there — targets are never looked up on the wrong page. Likewise, if the user navigates away from a step's route, the step is hidden until they come back.
+
+## RouterAdapter
+
+```ts
+interface RouterAdapter {
+  getPath(): string;
+  navigate(path: string): void | Promise<void>;
+  /** Optional: notify on route changes. */
+  subscribe?(listener: () => void): () => void;
+  /** Optional custom matcher. Default: exact pathname match. */
+  match?(route: string, path: string): boolean;
+}
+```
+
+| Member      | Description                                                                                                                                        |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getPath`   | Current pathname.                                                                                                                                  |
+| `navigate`  | Go to `path`. Return a promise that resolves once the new page is rendered, so the tour resolves the target on the right page.                    |
+| `subscribe` | Lets the tour hide a step when the user leaves its route and show it again when they return.                                                      |
+| `match`     | `(route, path) => boolean`. Default: [`matchRoute`](#matchroute), for every adapter.                                                           |
+
+Pass the adapter to `createTour({ router })`, `createTourManager({ router })` or, in React, `<TourProvider router={router}>` (recommended: it is applied to every registered tour).
+
+## createBrowserRouter(options?)
+
+For apps on the plain History API. `navigate` calls `history.pushState` and dispatches `popstate`, so client routers that listen to it pick up the change. Routes are matched with `matchRoute` unless you pass `match`.
+
+| Option | Type     | Default | Description                                                  |
+| ------ | -------- | ------- | ------------------------------------------------------------ |
+| `base`  | `string`                   | `''`         | Base path stripped from `getPath()` and prepended on `navigate`. |
+| `match` | `(route, path) => boolean` | `matchRoute` | Custom route matcher.                                            |
+
+```ts
+import { createBrowserRouter, createTour } from '@awesome-tour/core';
+
+const tour = createTour({ id: 'onboarding', steps, router: createBrowserRouter({ base: '/app' }) });
+```
+
+## matchRoute(route, path)
+
+The default route matcher:
+
+| Route              | Matches                              | Doesn't match           |
+| ------------------ | ------------------------------------ | ----------------------- |
+| `/projects`        | `/projects`, `/projects/`            | `/projects/1`           |
+| `/projects/:id`    | `/projects/1`, `/projects/abc`       | `/projects`, `/projects/1/edit` |
+| `/docs/*`          | `/docs`, `/docs/a`, `/docs/a/b`      | `/doc`, `/blog/docs`    |
+
+`:param` matches exactly one segment; `*` matches the rest of the path. Query strings and hashes are not part of the pathname.
+
+<Aside>
+A route with `:params` or `*` can be matched but not navigated to — the tour doesn't know which project to open. Such steps wait (hidden) until the user reaches a matching page. Use a concrete path (`/projects/demo`) when the tour should navigate there itself.
+</Aside>
+
+## useRouterAdapter (React)
+
+```ts
+import { useRouterAdapter } from '@awesome-tour/react';
+```
+
+Bridges any router given its current pathname and navigate function. `navigate` resolves once the new pathname has been committed (or after `timeout`).
+
+| Option     | Type                                | Default      | Description                              |
+| ---------- | ----------------------------------- | ------------ | ---------------------------------------- |
+| `pathname` | `string`                            | —            | **Required.** Current pathname.          |
+| `navigate` | `(path: string) => unknown`         | —            | **Required.** Your router's navigate/push. |
+| `match`    | `(route: string, path: string) => boolean` | `matchRoute` | Route matcher.                    |
+| `timeout`  | `number`                            | `3000`       | Max time `navigate` waits for the pathname to change (ms). After it, the tour keeps the step hidden until the route matches. |
+
+```tsx
+function Providers({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const router = useRouterAdapter({ pathname, navigate: (path) => navigate(path) });
+  return <TourProvider tours={[onboarding]} router={router}>{children}</TourProvider>;
+}
+```
+
+## @awesome-tour/router
+
+Ready-made hooks around `useRouterAdapter`. Each lives in its own entry point, and its router is an optional peer dependency.
+
+```bash
+pnpm add @awesome-tour/router
+```
+
+| Entry point                             | Hook                           | Options                               | Requirements                                   |
+| --------------------------------------- | ------------------------------ | ------------------------------------- | ---------------------------------------------- |
+| `@awesome-tour/router/react-router`     | `useReactRouterAdapter`        | `match`, `timeout`                    | `react-router` ≥ 6, rendered inside the router. |
+| `@awesome-tour/router/next`             | `useNextRouterAdapter`         | `match`, `timeout`, `scroll`          | `next` ≥ 13.4 App Router, in a client component. |
+| `@awesome-tour/router/tanstack-router`  | `useTanStackRouterAdapter`     | `match`, `timeout`                    | `@tanstack/react-router` ≥ 1, inside the router. |
+
+`scroll` (Next.js) is forwarded to `router.push(path, { scroll })`; when omitted, Next's default applies.
+
+<Tabs>
+<TabItem label="React Router">
+
+```tsx
+import { useReactRouterAdapter } from '@awesome-tour/router/react-router';
+
+function Providers({ children }: { children: React.ReactNode }) {
+  const router = useReactRouterAdapter();
+  return <TourProvider tours={[onboarding]} router={router}>{children}</TourProvider>;
+}
+```
+
+</TabItem>
+<TabItem label="Next.js">
+
+```tsx
+'use client';
+import { useNextRouterAdapter } from '@awesome-tour/router/next';
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  const router = useNextRouterAdapter({ scroll: false });
+  return <TourProvider tours={[onboarding]} router={router}>{children}</TourProvider>;
+}
+```
+
+</TabItem>
+<TabItem label="TanStack Router">
+
+```tsx
+import { useTanStackRouterAdapter } from '@awesome-tour/router/tanstack-router';
+
+function Providers({ children }: { children: React.ReactNode }) {
+  const router = useTanStackRouterAdapter();
+  return <TourProvider tours={[onboarding]} router={router}>{children}</TourProvider>;
+}
+```
+
+</TabItem>
+</Tabs>
+
+See the [multi-page tours guide](../../guides/multi-page/).

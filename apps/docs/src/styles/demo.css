@@ -1,0 +1,493 @@
+/* ------------------------------------------------------------------------------------------------
+ * Demo styles. awesome-tour ships no CSS: everything below is the "app's" styling of the primitives.
+ * Tokens live on :root because tour content is portalled to <body>.
+ * ----------------------------------------------------------------------------------------------*/
+:root {
+  --at-surface: var(--sl-color-bg-nav);
+  --at-bg: var(--sl-color-bg);
+  --at-text: var(--sl-color-white);
+  --at-muted: var(--sl-color-gray-3);
+  --at-border: var(--sl-color-hairline-light);
+  --at-accent: var(--sl-color-accent);
+  --at-accent-text: var(--sl-color-black);
+  --at-radius: 12px;
+}
+:root[data-theme="light"] {
+  --at-accent-text: #fff;
+}
+
+/* ---- Demo frame ---- */
+.at-frame {
+  margin-block: 1.5rem;
+  border: 1px solid var(--at-border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--at-bg);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--at-text);
+}
+.at-frame__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--at-border);
+  background: var(--at-surface);
+}
+.at-frame__title {
+  margin-right: auto;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--at-muted);
+}
+.at-frame__body {
+  padding: 16px;
+}
+.at-frame__footer {
+  padding: 10px 12px;
+  border-top: 1px solid var(--at-border);
+  background: var(--at-surface);
+  font-size: 12px;
+  color: var(--at-muted);
+}
+
+/* ---- Mock app ---- */
+.at-app {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 12px;
+  min-height: 260px;
+}
+@media (max-width: 40rem) {
+  .at-app {
+    grid-template-columns: 1fr;
+  }
+}
+.at-app__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px;
+  border-radius: var(--at-radius);
+  background: var(--at-surface);
+  border: 1px solid var(--at-border);
+}
+.at-app__nav strong {
+  padding: 4px 8px 10px;
+}
+.at-app__nav span {
+  padding: 6px 8px;
+  border-radius: 7px;
+  color: var(--at-muted);
+}
+.at-app__nav span[aria-current] {
+  background: color-mix(in oklab, var(--at-accent) 16%, transparent);
+  color: var(--at-text);
+}
+.at-app__main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.at-app__toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.at-input {
+  flex: 1;
+  min-width: 140px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--at-border);
+  background: var(--at-surface);
+  color: inherit;
+  font: inherit;
+}
+.at-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+.at-tile {
+  padding: 12px;
+  border-radius: var(--at-radius);
+  background: var(--at-surface);
+  border: 1px solid var(--at-border);
+}
+.at-tile small {
+  display: block;
+  color: var(--at-muted);
+  font-size: 12px;
+}
+.at-tile strong {
+  font-size: 20px;
+}
+
+/* ---- Buttons ---- */
+.at-button {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid var(--at-border);
+  background: var(--at-surface);
+  color: var(--at-text);
+  white-space: nowrap;
+}
+.at-button--primary {
+  background: var(--at-accent);
+  border-color: var(--at-accent);
+  color: var(--at-accent-text);
+}
+.at-button--ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--at-muted);
+}
+.at-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+:is(.at-button, .at-icon-button, .at-dots button):focus-visible {
+  outline: 2px solid var(--at-accent);
+  outline-offset: 2px;
+}
+.at-icon-button {
+  border: 0;
+  background: transparent;
+  color: var(--at-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+.at-select {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--at-border);
+  background: var(--at-surface);
+  color: inherit;
+}
+
+/* ---- Tour ---- */
+[data-tour-overlay] {
+  --tour-overlay-color: rgb(6 4 20 / 0.6);
+  z-index: 1000;
+}
+[data-tour-content-wrapper] {
+  z-index: 1001;
+}
+.at-card {
+  width: min(340px, calc(100vw - 32px));
+  max-height: var(--tour-content-available-height);
+  overflow: auto;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--at-surface);
+  color: var(--at-text);
+  border: 1px solid var(--at-border);
+  box-shadow: 0 18px 50px -12px rgb(0 0 0 / 0.45);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.at-card[data-state="open"] {
+  animation: at-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.at-card[data-state="closed"] {
+  animation: at-out 120ms ease-in forwards;
+}
+.at-card {
+  transform-origin: var(--tour-content-transform-origin);
+}
+.at-arrow {
+  color: var(--at-surface);
+}
+.at-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.at-card__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  font-size: 12px;
+  color: var(--at-muted);
+}
+.at-card__bar {
+  display: block;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    var(--at-accent) calc(var(--tour-progress) * 100%),
+    var(--at-border) 0
+  );
+  transition: background 200ms;
+}
+.at-card__title {
+  margin: 10px 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--at-text);
+}
+.at-card__description {
+  margin: 0;
+  color: var(--at-muted);
+}
+.at-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.at-card__nav {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.at-card__choices {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.at-spotlight {
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 2px var(--at-accent),
+    0 0 0 9999px rgb(6 4 20 / 0.3);
+  transition: all 250ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 999;
+  pointer-events: none;
+}
+
+.at-dots {
+  display: flex;
+  gap: 6px;
+}
+.at-dots button {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border-radius: 50%;
+  border: 0;
+  background: var(--at-border);
+  cursor: pointer;
+}
+.at-dots button[data-state="active"] {
+  background: var(--at-accent);
+}
+.at-dots button[data-state="complete"] {
+  background: color-mix(in oklab, var(--at-accent) 45%, var(--at-border));
+}
+
+/* Theme variants for the styling demo */
+.at-card--brutal {
+  border-radius: 0;
+  border: 2px solid var(--at-text);
+  box-shadow: 6px 6px 0 var(--at-accent);
+}
+.at-card--brutal .at-button {
+  border-radius: 0;
+}
+.at-card--glass {
+  background: color-mix(in oklab, var(--at-surface) 70%, transparent);
+  backdrop-filter: blur(14px) saturate(1.4);
+  border-color: color-mix(in oklab, var(--at-accent) 40%, transparent);
+  border-radius: 20px;
+}
+.at-card--glass .at-arrow {
+  display: none;
+}
+
+/* Hotspot */
+.at-beacon {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  background: var(--at-accent);
+  z-index: 10;
+}
+.at-beacon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--at-accent);
+  animation: at-pulse 1.6s ease-out infinite;
+}
+.at-hotspot {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: auto;
+  max-width: 260px;
+  z-index: 20;
+}
+
+/* Checklist */
+.at-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 340px;
+  padding: 14px;
+  border-radius: var(--at-radius);
+  border: 1px solid var(--at-border);
+  background: var(--at-surface);
+}
+.at-checklist__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.at-checklist__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.at-checklist__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--at-muted);
+}
+.at-checklist__bar {
+  display: block;
+  height: 4px;
+  border-radius: 4px;
+  background: linear-gradient(
+    to right,
+    var(--at-accent) calc(var(--checklist-progress, 0) * 100%),
+    var(--at-border) 0
+  );
+}
+.at-checklist__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.at-checklist__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+}
+.at-checklist__check {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 50%;
+  border: 1.5px solid var(--at-border);
+  font-size: 11px;
+  color: transparent;
+}
+.at-checklist__item[data-state="done"] .at-checklist__check {
+  background: var(--at-accent);
+  border-color: var(--at-accent);
+  color: var(--at-accent-text);
+}
+.at-checklist__trigger {
+  flex: 1;
+  padding: 6px 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.at-checklist__item[data-state="done"] .at-checklist__trigger {
+  color: var(--at-muted);
+  text-decoration: line-through;
+}
+
+/* Event log */
+.at-log {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--__sl-font-mono);
+  font-size: 12px;
+  max-height: 180px;
+  overflow: auto;
+}
+.at-log li {
+  display: flex;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px dashed var(--at-border);
+}
+.at-log li span:first-child {
+  color: var(--at-accent);
+}
+.at-log__empty {
+  color: var(--at-muted);
+}
+.at-code {
+  margin: 0;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--at-surface);
+  border: 1px solid var(--at-border);
+  font-family: var(--__sl-font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.at-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+@keyframes at-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes at-out {
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes at-pulse {
+  to {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .at-beacon::after,
+  .at-card[data-state] {
+    animation: none;
+  }
+  .at-spotlight {
+    transition: none;
+  }
+}

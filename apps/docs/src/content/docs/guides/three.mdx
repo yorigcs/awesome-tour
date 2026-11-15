@@ -1,0 +1,64 @@
+---
+title: 3D scenes
+description: Highlight objects inside react-three-fiber scenes and fly the camera per step.
+sidebar:
+  order: 12
+---
+
+`@awesome-tour/three` lets steps target **objects inside a WebGL scene**. The object's bounding box
+is projected to the screen on demand, so the regular DOM overlay and card follow it as the camera
+moves — no special UI needed.
+
+```bash
+pnpm add @awesome-tour/three   # peers: @react-three/fiber, three
+```
+
+```tsx
+import { anchor, createTour } from '@awesome-tour/react';
+import { TourTarget3D, useTourCamera } from '@awesome-tour/three';
+import { Canvas } from '@react-three/fiber';
+
+const tour = createTour({
+  id: 'car',
+  steps: [
+    { id: 'engine', target: anchor('engine'), title: 'V8 engine' },
+    { id: 'wheels', target: anchor('wheels'), title: 'Carbon wheels' },
+  ],
+});
+
+function CameraRig() {
+  useTourCamera({
+    engine: { position: [3, 2, 4], lookAt: [0, 0.5, 0] },
+    wheels: { position: [-4, 1, 2], lookAt: [-1, 0, 0] },
+  });
+  return null;
+}
+
+export function Showroom() {
+  return (
+    <Tour.Root tour={tour}>
+      <Canvas>
+        <TourTarget3D name="engine">
+          <Engine />
+        </TourTarget3D>
+        <TourTarget3D name="wheels">
+          <Wheels />
+        </TourTarget3D>
+        <CameraRig />
+      </Canvas>
+      <TourCard /> {/* your usual Tour.Portal / Tour.Content */}
+    </Tour.Root>
+  );
+}
+```
+
+- `TourTarget3D` registers an [anchor](../targets/#anchors) whose rect is the projected bounding box
+  of its children (or of the `object` ref you pass).
+- `useTourCamera(shots)` eases the camera to the shot of the current step. Pass
+  `{ controls }` to keep orbit controls in sync, and `smoothing` to change the speed.
+- `projectObjectToRect(object, camera, canvas)` is exported for custom setups.
+
+Because a 3D target is a [virtual element](../targets/#virtual-elements), the same approach works for
+any canvas: maps, charts, editors.
+
+Full API in the [three reference](../../reference/three/).

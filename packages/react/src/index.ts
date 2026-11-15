@@ -1,7 +1,25 @@
 /** The headless tour instance type (`Tour` is the component namespace in this package). */
-export type { Tour as TourInstance } from '@awesome-tour/core';
+export type { Checklist as ChecklistInstance, Tour as TourInstance } from '@awesome-tour/core';
 // Re-export the core so most apps only need one import.
 export * from '@awesome-tour/core';
+export {
+  Checklist,
+  ChecklistDismiss,
+  ChecklistItem,
+  ChecklistItemIndicator,
+  type ChecklistItemIndicatorProps,
+  type ChecklistItemProps,
+  ChecklistItemSkip,
+  ChecklistItemTrigger,
+  type ChecklistItemTriggerProps,
+  ChecklistList,
+  ChecklistProgress,
+  type ChecklistProgressProps,
+  ChecklistRoot,
+  type ChecklistRootProps,
+  useChecklist,
+  useChecklistItem,
+} from './checklist';
 export {
   type ReactStepDefinition,
   type StepRenderProps,
@@ -13,8 +31,11 @@ export {
   useTourManager,
   useTourProvider,
 } from './context';
+export { createTour } from './create-tour';
 export {
+  type ExternalStore,
   type UseTourResult,
+  useStoreSelector,
   useTargetRect,
   useTour,
   useTourAnchor,
@@ -34,6 +55,7 @@ export {
   type HotspotRootProps,
   useResolvedTarget,
 } from './hotspot';
+export { type UseRouterAdapterOptions, useRouterAdapter } from './router';
 export {
   getSpotlightPath,
   type IndicatorItem,

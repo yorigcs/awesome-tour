@@ -1,0 +1,93 @@
+---
+title: Plugins
+description: Hook into a tour's lifecycle to block or resume starts, cancel or redirect steps, and subscribe to events.
+sidebar:
+  order: 4
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Plugins are plain objects passed to `createTour({ plugins })`. The built-in [`persist`](../persistence/) and [`analytics`](../analytics/) are plugins too.
+
+```ts
+interface TourPlugin<TId extends string = string, TData = any> {
+  name: string;
+  setup?: (tour: Tour) => void | (() => void);
+  beforeStart?: (tour: Tour, options: StartOptions) => MaybePromise<void | false | StartResult>;
+  beforeStep?: (tour: Tour, transition: TransitionInfo) => MaybePromise<void | false | TId>;
+}
+```
+
+## Hooks
+
+| Hook          | Called                                                                 | Return value                                                                                                                                                       |
+| ------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `setup`       | Once, synchronously, inside `createTour`.                              | Optional cleanup function, run by `tour.destroy()`. Use it to `tour.on(…)` / `tour.subscribe(…)`.                                                                   |
+| `beforeStart` | On every `start()` (also `restart()`, `goTo()` on an inactive tour), before the first step is resolved. Receives the `StartOptions`. | `false` blocks the start (status goes back to what it was). `{ stepId?, data? }` resumes at a step and/or merges data. `undefined` continues normally. |
+| `beforeStep`  | Before every transition, before the previous step is left. Receives `{ from, to, direction }`. | `false` cancels the transition (the current step stays). A step id redirects the transition there. `undefined` continues.                                |
+
+Plugins run in array order. For `beforeStart`, an explicit `start({ stepId })` takes precedence over a `stepId` returned by a plugin; for `beforeStep`, a redirect returned by one plugin is the `to` the following plugins receive.
+
+Both async hooks are awaited. If the tour is started again (or another transition begins) while a hook is pending, its result is discarded.
+
+### TransitionInfo
+
+| Field       | Type                                | Description                              |
+| ----------- | ----------------------------------- | ---------------------------------------- |
+| `from`      | `TId \| null`                       | Current step (`null` for the first step). |
+| `to`        | `TId`                               | Requested step.                          |
+| `direction` | `'forward' \| 'backward' \| 'jump'` | How the step was requested.              |
+
+### StartResult
+
+| Field    | Type             | Description                    |
+| -------- | ---------------- | ------------------------------ |
+| `stepId` | `TId`            | Step to start at.              |
+| `data`   | `Partial<TData>` | Merged into the tour data.     |
+
+## Examples
+
+### Only for signed-in users
+
+```ts
+import type { TourPlugin } from '@awesome-tour/core';
+
+const requireUser = (getUser: () => { id: string } | null): TourPlugin => ({
+  name: 'require-user',
+  beforeStart: () => (getUser() ? undefined : false),
+});
+```
+
+### Guard a step
+
+```ts
+const guardBilling: TourPlugin = {
+  name: 'guard-billing',
+  async beforeStep(tour, { to }) {
+    if (to !== 'billing') return;
+    const { canManageBilling } = await fetch('/api/me').then((r) => r.json());
+    return canManageBilling ? undefined : 'done'; // redirect
+  },
+};
+```
+
+### Log to the console
+
+```ts
+const logger: TourPlugin = {
+  name: 'logger',
+  setup(tour) {
+    const offs = [
+      tour.on('stepChange', (e) => console.debug(`[${tour.id}]`, e)),
+      tour.on('error', ({ error }) => console.error(`[${tour.id}]`, error)),
+    ];
+    return () => offs.forEach((off) => off());
+  },
+};
+
+const tour = createTour({ id: 'onboarding', steps, plugins: [logger] });
+```
+
+<Aside type="tip">
+Errors thrown by `beforeStep` are reported through the `error` event (and `state.error`) and cancel the transition. Errors in `beforeStart` reset the tour to `idle` and are reported the same way.
+</Aside>

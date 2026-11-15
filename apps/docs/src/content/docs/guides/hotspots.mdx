@@ -1,0 +1,56 @@
+---
+title: Hotspots
+description: Non-blocking beacons for contextual hints and "what's new" callouts.
+sidebar:
+  order: 9
+---
+
+import { HotspotDemo } from '../../../components/demos/HotspotDemo';
+
+Not everything deserves a tour. A hotspot is a pulsing beacon attached to an element that reveals a
+hint when clicked — without blocking the page.
+
+<HotspotDemo client:visible />
+
+```tsx
+import { Hotspot } from '@awesome-tour/react';
+
+<Hotspot.Root target="#reports">
+  <Hotspot.Beacon className="beacon" aria-label="What's new in reports" />
+  <Hotspot.Portal>
+    <Hotspot.Content className="hint" side="bottom">
+      <strong>New:</strong> export any report as PDF.
+      <Hotspot.Close aria-label="Close">✕</Hotspot.Close>
+    </Hotspot.Content>
+  </Hotspot.Portal>
+</Hotspot.Root>;
+```
+
+```css
+.beacon {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.beacon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: inherit;
+  animation: pulse 1.6s ease-out infinite;
+}
+@keyframes pulse {
+  to { transform: scale(2.6); opacity: 0; }
+}
+```
+
+- `target` accepts everything a [step target](../targets/) does, including `anchor()`; the beacon
+  appears once the target exists and follows it.
+- The beacon sits on the target's top-end corner by default; change it with `side`, `align` and
+  the offsets.
+- `open` / `defaultOpen` / `onOpenChange` make it controlled — e.g. to remember dismissed hints.
+- A hotspot is a great entry point to a full tour: put a `Tour.Trigger` inside `Hotspot.Content`.
+
+Full API in the [Hotspot reference](../../components/hotspot/).

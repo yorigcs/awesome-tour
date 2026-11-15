@@ -1,0 +1,446 @@
+---
+title: Tour
+description: Compound components that render a tour step by step, from the overlay to the navigation buttons.
+sidebar:
+  order: 1
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+`Tour` is a namespace of unstyled parts. `Tour.Root` connects to a tour instance. The other parts read its state and render only what you compose.
+
+## Anatomy
+
+```tsx
+import { Tour } from '@awesome-tour/react';
+
+<Tour.Root tour={onboarding}>
+  <Tour.Trigger />
+  <Tour.Step id="…" />
+
+  <Tour.Portal>
+    <Tour.Overlay />
+    <Tour.Spotlight />
+    <Tour.Content>
+      <Tour.Arrow />
+      <Tour.Title />
+      <Tour.Description />
+      <Tour.StepContent />
+      <Tour.Progress />
+      <Tour.Indicators />
+      <Tour.Prev />
+      <Tour.Next />
+      <Tour.Skip />
+      <Tour.Close />
+    </Tour.Content>
+  </Tour.Portal>
+</Tour.Root>;
+
+<Tour.Anchor name="…" />;
+```
+
+Every part that renders an element accepts `asChild`, which merges its props, behavior and ref onto its single child. The exceptions are `Tour.Root`, `Tour.Step`, `Tour.Portal` and `Tour.StepContent`, which render no element of their own. Event handlers you pass run first; call `event.preventDefault()` to cancel the part's default behavior.
+
+## Root
+
+Provides a tour to the parts below. It renders no element, apart from a visually hidden `aria-live` region that announces step changes.
+
+There are three ways to choose the tour:
+
+- `tour`: an instance from `createTour`.
+- `tourId`: the id of a tour registered on [`TourProvider`](../provider/).
+- Inline: give neither. The root then creates a tour from `id`, `steps`, `plugins`, `data` and any `Tour.Step` children.
+
+| Prop                  | Type                                                         | Default                  | Description                                                                                                       |
+| --------------------- | ------------------------------------------------------------ | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `tour`                | `TourInstance`                                               | —                        | A tour created with `createTour`.                                                                                 |
+| `tourId`              | `string`                                                     | —                        | Id of a tour registered on the `TourProvider`. Throws if not found.                                               |
+| `id`                  | `string`                                                     | generated                | Inline tour id.                                                                                                   |
+| `steps`               | `ReactStepDefinition[]`                                      | —                        | Steps. These come before any declarative `Tour.Step` children. Changing the array updates the tour.               |
+| `plugins`             | `TourPlugin[]`                                               | `[]`                     | Inline tour plugins. Read once, on mount.                                                                         |
+| `data`                | `TData`                                                      | `{}`                     | Inline tour initial data. Read once, on mount.                                                                    |
+| `open`                | `boolean`                                                    | —                        | Controlled open state. `true` starts the tour (at `step` or `defaultStep`); `false` closes it.                    |
+| `defaultOpen`         | `boolean`                                                    | —                        | Start the tour on mount.                                                                                          |
+| `onOpenChange`        | `(open: boolean) => void`                                    | —                        | Called when the tour's status enters or leaves `active`.                                                          |
+| `step`                | `string`                                                     | —                        | Controlled step id. When the tour is active, a different value triggers `goTo`.                                   |
+| `defaultStep`         | `string`                                                     | —                        | Step to start from when opened through `open` or `defaultOpen`.                                                   |
+| `onStepChange`        | `(stepId: string) => void`                                   | —                        | Called on every `stepChange` event.                                                                               |
+| `modal`               | `boolean`                                                    | tour's `modal`           | Focus trap, `inert` outside, and an overlay that blocks clicks. A step's own `modal` wins.                        |
+| `targetInteraction`   | `boolean`                                                    | —                        | Let users interact with highlighted targets on every step. A step's own `interactive` wins.                       |
+| `dir`                 | `'ltr' \| 'rtl'`                                             | `'ltr'`                  | Reading direction. Flips arrow-key navigation and alignment.                                                      |
+| `keyboardNavigation`  | `boolean`                                                    | `true`                   | <kbd>←</kbd> / <kbd>→</kbd> move between steps.                                                                   |
+| `closeOnEscape`       | `boolean`                                                    | `true`                   | <kbd>Esc</kbd> closes the tour.                                                                                   |
+| `closeOnOverlayClick` | `boolean`                                                    | `false`                  | Clicking the overlay closes the tour.                                                                             |
+| `restoreFocus`        | `boolean`                                                    | `true`                   | When the tour closes, return focus to the element that had it when the tour started.                              |
+| `announce`            | `false \| ({ state, step }) => string`                       | `"Step n of m"`          | Text for the polite live region on each step. `false` removes the region.                                         |
+
+A target is interactive when the first of these is set:
+
+1. The step's `interactive`.
+2. The root's `targetInteraction`.
+3. Otherwise, it is interactive when the step has an `advanceOn.event` rule with no `target` of its own.
+
+When a target is not interactive, the overlay places a transparent blocker over the cutout.
+
+### Uncontrolled and controlled
+
+```tsx
+// Uncontrolled: start on mount, let the tour drive itself.
+<Tour.Root tour={onboarding} defaultOpen defaultStep="welcome">…</Tour.Root>
+
+// Controlled: mirror open state and the current step in React state.
+const [open, setOpen] = React.useState(false);
+const [step, setStep] = React.useState('welcome');
+
+<Tour.Root
+  tour={onboarding}
+  open={open}
+  onOpenChange={setOpen}
+  step={step}
+  onStepChange={setStep}
+>
+  …
+</Tour.Root>;
+```
+
+<Aside>
+The tour instance is the source of truth. Controlled props are synced to it: `open` calls `start` or `close`, and `step` calls `goTo`. Calling `tour.next()` or any other method directly also works and reports back through the callbacks.
+</Aside>
+
+If a `TourProvider` is present, a root given a `tour` or an inline tour registers it on the provider's manager. Starting the tour then goes through the manager, so it waits in the queue if another tour is on screen.
+
+## Step
+
+Declares a step in JSX. Steps register in render order, after any `steps` passed to `Tour.Root`. A step renders nothing itself. Its `children` become the step's content and are rendered by `Tour.StepContent`.
+
+```tsx
+<Tour.Root id="inline" defaultOpen>
+  <Tour.Step id="stats" target="#stats" title="Your numbers" side="bottom">
+    <p>Any React content.</p>
+  </Tour.Step>
+</Tour.Root>
+```
+
+Props: every field of a [step definition](../../reference/steps/), plus the React-only fields below, plus `children`. The `when`, `next`, `beforeEnter` and `afterLeave` callbacks always see the latest props, so inline functions never go stale.
+
+| Prop          | Type                                 | Default | Description                                                                                  |
+| ------------- | ------------------------------------ | ------- | -------------------------------------------------------------------------------------------- |
+| `title`       | `ReactNode`                          | —       | Rendered by `Tour.Title`.                                                                    |
+| `description` | `ReactNode`                          | —       | Rendered by `Tour.Description`.                                                              |
+| `content`     | `ReactNode \| (props) => ReactNode`  | —       | Rendered by `Tour.StepContent` when no `Tour.Step` children are declared for this step.       |
+| `side`        | `'top' \| 'right' \| 'bottom' \| 'left'` | —   | Preferred side for this step. Overrides `Tour.Content` `side`.                               |
+| `align`       | `'start' \| 'center' \| 'end'`       | —       | Preferred alignment for this step. Overrides `Tour.Content` `align`.                         |
+| `interactive` | `boolean`                            | —       | Let users click or type into the target.                                                     |
+| `children`    | `ReactNode`                          | —       | Step content.                                                                                |
+
+The React-only fields are also accepted in `createTour({ steps })` through the `ReactStepDefinition` type.
+
+## Trigger
+
+A `button` that starts the tour. If the tour is registered on a `TourProvider`, it starts through the manager.
+
+| Prop      | Type      | Default | Description                                                                   |
+| --------- | --------- | ------- | ----------------------------------------------------------------------------- |
+| `restart` | `boolean` | `true`  | Start from the beginning even if the tour is active, completed or skipped (`force`). |
+| `stepId`  | `string`  | —       | Step to start from.                                                           |
+| `asChild` | `boolean` | `false` | Render the child element instead.                                             |
+
+| Data attribute | Values             |
+| -------------- | ------------------ |
+| `data-state`   | `"open" \| "closed"` |
+
+It also sets `aria-haspopup="dialog"`, `aria-expanded`, and `aria-controls` while the tour is open.
+
+## Portal
+
+Renders its children into `document.body`, or into `container`. It renders nothing during SSR and the first client render.
+
+| Prop        | Type                               | Default         | Description          |
+| ----------- | ---------------------------------- | --------------- | -------------------- |
+| `container` | `Element \| DocumentFragment \| null` | `document.body` | Where to render.     |
+
+## Overlay
+
+A fixed full-viewport `div` holding an SVG path. The path covers the page and leaves a rounded cutout around the step's targets, using an even-odd fill. A centered step gets no cutout.
+
+Only the SVG path catches pointer events, so the wrapper never blocks the page by itself. The overlay registers as a layer, which keeps it out of the modal `inert` treatment.
+
+| Prop         | Type                                          | Default | Description                                                          |
+| ------------ | --------------------------------------------- | ------- | -------------------------------------------------------------------- |
+| `padding`    | `number \| Partial<Record<Side, number>>`     | `4`     | Space between the target and the edge of the cutout.                 |
+| `radius`     | `number`                                      | `4`     | Corner radius of the cutout. Clamped to half the cutout size.        |
+| `forceMount` | `boolean`                                     | —       | Keep it mounted while closed (for JS animation libraries).           |
+| `asChild`    | `boolean`                                     | `false` | Render the child element instead.                                    |
+
+| Data attribute      | Values             |
+| ------------------- | ------------------ |
+| `data-state`        | `"open" \| "closed"` |
+| `data-tour-overlay` | present            |
+
+| CSS variable                                  | Description                                                     |
+| --------------------------------------------- | --------------------------------------------------------------- |
+| `--tour-overlay-color`                        | Fill color. You set it. Default `rgb(0 0 0 / 0.5)`.             |
+| `--tour-spotlight-x` / `--tour-spotlight-y`   | Top-left corner of the cutout, in px. Set by the overlay.       |
+| `--tour-spotlight-width` / `--tour-spotlight-height` | Size of the cutout, in px. Set by the overlay.          |
+
+```css
+[data-tour-overlay] {
+  --tour-overlay-color: rgb(10 8 24 / 0.55);
+  z-index: 1000;
+}
+```
+
+## Spotlight
+
+A fixed `div` the size of the target rect, inflated by `padding`. Style it as a ring, a glow, or a `box-shadow` backdrop to replace the SVG overlay. It mounts only when the step has a target.
+
+| Prop         | Type                                       | Default | Description                         |
+| ------------ | ------------------------------------------ | ------- | ----------------------------------- |
+| `padding`    | `number \| Partial<Record<Side, number>>`  | `4`     | Space between the target and the box. |
+| `forceMount` | `boolean`                                  | —       | Keep it mounted while closed.       |
+| `asChild`    | `boolean`                                  | `false` | Render the child element instead.   |
+
+| Data attribute        | Values             |
+| --------------------- | ------------------ |
+| `data-state`          | `"open" \| "closed"` |
+| `data-tour-spotlight` | present            |
+
+```css
+.spotlight {
+  border-radius: 10px;
+  box-shadow: 0 0 0 2px var(--accent), 0 0 0 9999px rgb(0 0 0 / 0.25);
+  transition: all 250ms ease;
+}
+```
+
+## Content
+
+The popover: a `div` with `role="dialog"`, placed next to the targets with Floating UI, or centered in the viewport when the step has no target.
+
+The dialog sits inside a positioned wrapper `div`, marked `data-tour-content-wrapper`. Put `z-index` on the wrapper, and visual styles and animations on the content.
+
+| Prop               | Type                                       | Default     | Description                                                                         |
+| ------------------ | ------------------------------------------ | ----------- | ----------------------------------------------------------------------------------- |
+| `side`             | `'top' \| 'right' \| 'bottom' \| 'left'`   | `'bottom'`  | Preferred side. A step's `side` wins.                                               |
+| `align`            | `'start' \| 'center' \| 'end'`             | `'center'`  | Preferred alignment. A step's `align` wins.                                         |
+| `sideOffset`       | `number`                                   | `8`         | Distance from the target in px. The arrow's height is added on top.                 |
+| `alignOffset`      | `number`                                   | `0`         | Offset along the alignment axis.                                                    |
+| `avoidCollisions`  | `boolean`                                  | `true`      | Flip and shift to stay in the viewport.                                             |
+| `collisionPadding` | `number \| Partial<Record<Side, number>>`  | `8`         | Distance to keep from the viewport edges.                                           |
+| `arrowPadding`     | `number`                                   | `0`         | Keep the arrow this far from the content's corners.                                 |
+| `sticky`           | `'partial' \| 'always'`                    | `'partial'` | `'partial'` limits shifting so the content stays attached to the target; `'always'` keeps it in view. |
+| `hideWhenDetached` | `boolean`                                  | `false`     | Hide the content when the target is clipped out of view.                            |
+| `autoFocus`        | `boolean`                                  | `true`      | Focus the dialog on every step (unless focus is already inside).                    |
+| `onEscapeKeyDown`  | `(event: KeyboardEvent) => void`           | —           | Called on <kbd>Esc</kbd>. `event.preventDefault()` keeps the tour open.             |
+| `forceMount`       | `boolean`                                  | —           | Keep it mounted while closed.                                                       |
+| `asChild`          | `boolean`                                  | `false`     | Render the child element instead.                                                   |
+
+| Data attribute        | Values                                                      |
+| --------------------- | ----------------------------------------------------------- |
+| `data-state`          | `"open" \| "closed"`                                          |
+| `data-side`           | `"top" \| "right" \| "bottom" \| "left" \| "none"` (the side it was placed on; `none` when centered) |
+| `data-align`          | `"start" \| "center" \| "end"`                                |
+| `data-placement`      | `"anchored" \| "center"`                                      |
+| `data-step`           | current step id                                              |
+| `data-phase`          | `"transitioning" \| "resolving" \| "ready"`                   |
+| `data-direction`      | `"forward" \| "backward" \| "jump"`                           |
+| `data-target-missing` | present when the target wasn't found and the step fell back to centered |
+
+| CSS variable (on the wrapper)                         | Description                                                    |
+| ----------------------------------------------------- | -------------------------------------------------------------- |
+| `--tour-content-transform-origin`                     | Origin computed from the placed side and arrow position (`center` when centered). Use it for scale animations. |
+| `--tour-content-available-width` / `-height`          | Space left between the target and the edge of the viewport.    |
+| `--tour-target-width` / `--tour-target-height`        | Size of the target rect.                                       |
+
+Content behavior:
+
+- **Modal tours:** everything outside the content, the targets and the registered layers becomes `inert`. <kbd>Tab</kbd> cycles focus inside the content.
+- **Targets:** each element target gets `aria-describedby` pointing to the dialog, plus `data-tour-target`. Both are removed when the step ends.
+- **Labels:** the dialog's `aria-labelledby` and `aria-describedby` point to `Tour.Title` and `Tour.Description`, if they are rendered.
+- **Virtual targets** (for example 3D objects) are repositioned on every animation frame.
+
+```css
+.tour-card {
+  max-height: var(--tour-content-available-height);
+  transform-origin: var(--tour-content-transform-origin);
+}
+.tour-card[data-state='open'] { animation: in 180ms ease-out; }
+.tour-card[data-state='closed'] { animation: out 120ms ease-in forwards; }
+```
+
+## Arrow
+
+An SVG triangle that points at the target. It must be rendered inside `Tour.Content`. It renders nothing for centered steps, and it is hidden when it can't point at the target's center. Its color is `currentColor`.
+
+| Prop      | Type      | Default | Description                                                      |
+| --------- | --------- | ------- | ---------------------------------------------------------------- |
+| `width`   | `number`  | `10`    | Width in px.                                                     |
+| `height`  | `number`  | `5`     | Height in px.                                                    |
+| `asChild` | `boolean` | `false` | Render your own arrow as the child (`width`/`height` are ignored). |
+
+Other SVG props are forwarded to the `svg`.
+
+| Data attribute    | Values                                   |
+| ----------------- | ---------------------------------------- |
+| `data-tour-arrow` | present (on the wrapping `span`)         |
+| `data-side`       | `"top" \| "right" \| "bottom" \| "left"` |
+
+## Title
+
+An `h2`. Its default content is the step's `title`. It registers its `id` as the dialog's `aria-labelledby`. Must be rendered inside `Tour.Content`. Accepts `asChild` and any `h2` props; pass `id` to override the generated one.
+
+## Description
+
+A `p`. Its default content is the step's `description`. It registers its `id` as the dialog's `aria-describedby`. Must be rendered inside `Tour.Content`. Accepts `asChild` and any `p` props.
+
+## StepContent
+
+Renders the current step's content inside a `Suspense` boundary, so a step's content can be lazy. Renders no wrapper element. It uses the first of these that exists:
+
+1. A `children` render function.
+2. The `Tour.Step` children declared for the step.
+3. The step's `content` field (a node, or a function that receives `{ tour, state, step }`).
+
+| Prop       | Type                                           | Default | Description                                |
+| ---------- | ---------------------------------------------- | ------- | ------------------------------------------ |
+| `fallback` | `ReactNode`                                    | `null`  | Shown while the content suspends.          |
+| `children` | `({ tour, state, step }) => ReactNode`         | —       | Render function that receives the current step. |
+
+```tsx
+<Tour.StepContent>{({ step }) => <Markdown source={step.meta?.body} />}</Tour.StepContent>
+```
+
+## Next
+
+A `button` that calls `tour.next()`. On the last step, `next()` completes the tour, so you can label it from state, for example with `useTourStep().isLast`.
+
+| Data attribute | Values                           |
+| -------------- | -------------------------------- |
+| `data-last`    | present on the last visible step |
+
+## Prev
+
+A `button` that calls `tour.prev()`. `prev()` walks back through the steps actually visited. The button is disabled on the first step unless you pass `disabled` yourself.
+
+| Data attribute  | Values                 |
+| --------------- | ---------------------- |
+| `data-disabled` | present when disabled  |
+
+## Close
+
+A `button` that calls `tour.close()`. A closed tour can be resumed later. If the button has no children, it gets `aria-label="Close tour"`.
+
+## Skip
+
+A `button` that calls `tour.skip()`. Skipping records that the user opted out of the tour; persistence plugins use this to stop showing it.
+
+## Progress
+
+A `div` that shows the progress through the visible steps. Default content: `"current / total"`.
+
+| Prop       | Type                                                    | Default | Description                          |
+| ---------- | ------------------------------------------------------- | ------- | ------------------------------------ |
+| `children` | `ReactNode \| ({ current, total }) => ReactNode`        | —       | Custom content or a render function. |
+| `asChild`  | `boolean`                                               | `false` | Render the child element instead.    |
+
+| Data attribute | Values                         |
+| -------------- | ------------------------------ |
+| `data-current` | 1-based position of the step   |
+| `data-total`   | number of visible steps        |
+
+| CSS variable      | Description                       |
+| ----------------- | --------------------------------- |
+| `--tour-progress` | `current / total`, from `0` to `1` |
+
+```tsx
+<Tour.Progress className="progress">
+  {({ current, total }) => <span>Step {current} of {total}</span>}
+</Tour.Progress>
+```
+
+```css
+.progress::after {
+  content: '';
+  display: block;
+  height: 3px;
+  background: linear-gradient(to right, var(--accent) calc(var(--tour-progress) * 100%), #ddd 0);
+}
+```
+
+## Indicators
+
+A `div role="group"` with one indicator per visible step (steps hidden by `when` are skipped). By default each indicator is a `button` that jumps to its step.
+
+| Prop        | Type                                   | Default                 | Description                                         |
+| ----------- | -------------------------------------- | ----------------------- | --------------------------------------------------- |
+| `navigable` | `boolean`                              | `true`                  | Allow jumping by clicking. When `false`, the default buttons are disabled. |
+| `getLabel`  | `(item: IndicatorItem) => string`      | `"Go to step n"`        | Accessible label of each default button.            |
+| `children`  | `(item: IndicatorItem) => ReactNode`   | —                       | Custom indicator renderer.                          |
+| `asChild`   | `boolean`                              | `false`                 | Render the child element instead.                   |
+
+`IndicatorItem` is `{ id, index, status: 'complete' | 'active' | 'upcoming', goTo }`.
+
+| Data attribute (on each default button) | Values                                   |
+| --------------------------------------- | ---------------------------------------- |
+| `data-state`                            | `"complete" \| "active" \| "upcoming"`   |
+
+The active button also gets `aria-current="step"`.
+
+## Anchor
+
+A `div` that registers itself, or its child when `asChild` is set, as a named target. Reference it from a step with `anchor(name)`. It is the component form of [`useTourAnchor`](../../reference/hooks/#usetouranchor).
+
+| Prop      | Type      | Default | Description                       |
+| --------- | --------- | ------- | --------------------------------- |
+| `name`    | `string`  | —       | Anchor id.                        |
+| `asChild` | `boolean` | `false` | Register the child element instead. |
+
+| Data attribute     | Values      |
+| ------------------ | ----------- |
+| `data-tour-anchor` | anchor name |
+
+```tsx
+<Tour.Anchor name="create" asChild>
+  <button>Create</button>
+</Tour.Anchor>
+// step: { id: 'create', target: anchor('create') }
+```
+
+## Keyboard interactions
+
+These are active while `Tour.Content` is open.
+
+| Key                              | Action                                                                          |
+| -------------------------------- | ------------------------------------------------------------------------------- |
+| <kbd>→</kbd> (<kbd>←</kbd> in RTL) | Next step (`keyboardNavigation`).                                             |
+| <kbd>←</kbd> (<kbd>→</kbd> in RTL) | Previous step (`keyboardNavigation`).                                         |
+| <kbd>Esc</kbd>                   | Close the tour (`closeOnEscape`, `onEscapeKeyDown`).                            |
+| <kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd> | In modal tours, cycle focus within the content.                 |
+
+Some key presses are ignored:
+
+- Arrow keys pressed with a modifier, or while focus is in an editable element (input, textarea, contenteditable).
+- Every key whose event comes from inside a `data-tour-keep` element.
+- Every key event that is already `defaultPrevented`.
+
+See [Accessibility](../../guides/accessibility/).
+
+## Low-level utilities
+
+- **`getSpotlightPath(rect, radius?)`** returns the SVG path that `Tour.Overlay` draws: the full viewport with a rounded-rect hole. Use it to build a custom overlay. `rect` is `null` for a solid overlay.
+- **`useTourLayer()`** returns a ref callback. It registers an element that must stay interactive while a modal tour is open, so `inert` skips it. Use it for custom overlays and floating UI rendered next to the tour.
+- **`useTourContentContext()`** gives the placement state inside `Tour.Content`: `placedSide`, `placedAlign`, `arrowX`, `arrowY` and `shouldHideArrow`. Use it to build custom arrows or side-aware animations. It throws outside `Tour.Content`.
+
+```tsx
+function CustomOverlay() {
+  const rect = useTargetRect();
+  const ref = useTourLayer();
+  return (
+    <div ref={ref} className="overlay" style={{ position: 'fixed', inset: 0 }}>
+      <svg width="100%" height="100%">
+        <path d={getSpotlightPath(rect, 12)} fillRule="evenodd" />
+      </svg>
+    </div>
+  );
+}
+```

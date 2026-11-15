@@ -1,6 +1,7 @@
 import {
   createVirtualTarget,
   defaultAnchors,
+  isAnchorTarget,
   resolveTarget,
   type TargetInput,
   type TourTargetNode,
@@ -15,6 +16,20 @@ import { Presence } from './utils/presence';
 import { Primitive, type PrimitiveProps } from './utils/primitive';
 
 /** Resolve a target and keep it in sync with DOM changes and anchor registrations. */
+/**
+ * A stable identity for a target: selectors and `anchor()` calls are compared by value, so inline
+ * `target={anchor('x')}` doesn't resubscribe on every render. Other targets compare by reference.
+ */
+function targetKey(target: TargetInput | null | undefined): unknown {
+  if (typeof target === 'string') return target;
+  if (isAnchorTarget(target)) return `anchor:${target.__tourAnchor}`;
+  if (Array.isArray(target)) {
+    const keys = target.map(targetKey);
+    return keys.every((k) => typeof k === 'string') ? keys.join('\u0000') : target;
+  }
+  return target;
+}
+
 export function useResolvedTarget(target: TargetInput | null | undefined): TourTargetNode[] {
   const provider = useTourProvider();
   const anchors = provider?.anchors ?? defaultAnchors;
@@ -36,7 +51,7 @@ export function useResolvedTarget(target: TargetInput | null | undefined): TourT
       unsubscribe();
       mo?.disconnect();
     };
-  }, [anchors, typeof target === 'string' ? target : target]);
+  }, [anchors, targetKey(target)]);
   return nodes;
 }
 

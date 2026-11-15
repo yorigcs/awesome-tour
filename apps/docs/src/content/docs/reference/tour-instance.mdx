@@ -1,0 +1,155 @@
+---
+title: Tour instance
+description: Methods, properties, state, statuses and events of the object returned by createTour.
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+`createTour()` returns a `Tour<TStep, TData>`. In React, the component namespace is also called `Tour`, so `@awesome-tour/react` exports the instance type as `TourInstance`.
+
+```ts
+import type { TourInstance } from '@awesome-tour/react'; // = Tour from @awesome-tour/core
+```
+
+## Properties
+
+| Property  | Type             | Description                                                     |
+| --------- | ---------------- | --------------------------------------------------------------- |
+| `id`      | `string`         | The tour id.                                                    |
+| `version` | `number`         | `options.version`, `1` by default.                              |
+| `modal`   | `boolean`        | `options.modal`, `true` by default.                             |
+| `anchors` | `AnchorRegistry` | Registry used for `anchor()` targets (`defaultAnchors` by default). |
+
+## Navigation
+
+All navigation methods are safe to call at any time: they no-op when they don't apply to the current status.
+
+| Method                    | Returns         | Description                                                                                                                                                                                 |
+| ------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `start(options?)`         | `Promise<void>` | Start the tour. Ignored while `active`/`starting` unless `force: true`. Runs plugins' `beforeStart` (which may block it or resume it at a saved step). Completes immediately if no step is visible. |
+| `next()`                  | `Promise<void>` | Go to the next step, honoring `next` (branching) and `when`. Completes the tour after the last step. Only while `active`.                                                                  |
+| `prev()`                  | `Promise<void>` | Go back through the path actually taken (`state.history`), falling back to the previous visible step in order. Only while `active`.                                                        |
+| `goTo(stepId)`            | `Promise<void>` | Jump to a step (`direction: 'jump'`). If the tour isn't active, starts it at that step (`force: true`). Unknown ids emit `error`.                                                           |
+| `complete()`              | `void`          | Finish successfully → `completed`. From `active`, `paused` or `starting`.                                                                                                                   |
+| `skip()`                  | `void`          | The user opted out → `skipped`. From `active`, `paused` or `starting`.                                                                                                                      |
+| `close()`                 | `void`          | Dismiss → `closed`; can be resumed later. From `active`, `paused` or `starting`.                                                                                                                        |
+| `pause()`                 | `void`          | Hide the tour temporarily → `paused`. Only from `active`.                                                                                                                                   |
+| `resume()`                | `Promise<void>` | Re-enter the current step from `paused` or `closed` (emits `resume`). Restarts the tour if there is no current step.                                                                        |
+| `restart()`               | `Promise<void>` | `start({ force: true })` from the first visible step (persisted progress is ignored).                                                                                                       |
+
+### StartOptions
+
+| Option   | Type             | Description                                                                                                          |
+| -------- | ---------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `stepId` | `TId`            | Start at this step instead of the first visible one. Takes precedence over a step returned by a plugin (`persist`). Unknown ids are ignored. |
+| `data`   | `Partial<TData>` | Merged into the tour data before starting.                                                                           |
+| `force`  | `boolean`        | Restart even if already active, and bypass `persist`'s `once`/`resume`.                                              |
+
+## Data, signals and refresh
+
+| Method               | Description                                                                                                                         |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `setData(update)`    | Merge a partial object into `data`, or replace it with `(data) => newData`. Emits `dataChange`. `progress` is recomputed immediately, since `when` conditions may depend on `data`. |
+| `signal(name)`       | Fire a named signal; advances steps whose `advanceOn.signal` equals `name`.                                                         |
+| `refresh()`          | Re-resolve the current step's target (e.g. after the element was re-mounted). Re-runs the step if the target is gone.               |
+| `setRouter(router)`  | Set or replace the [router adapter](../router/). `TourProvider` calls it for you.                                                   |
+
+## Reading state
+
+| Method                 | Returns                       | Description                                                                                         |
+| ---------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------- |
+| `getState()`           | `TourState`                   | Current immutable snapshot. A new object is created on every change.                                |
+| `subscribe(listener)`  | `() => void`                  | Called after every state change. Returns an unsubscribe function. Works with `useSyncExternalStore`. |
+| `on(event, handler)`   | `() => void`                  | Subscribe to a [tour event](#events). Returns an unsubscribe function.                              |
+| `getSteps()`           | `readonly TStep[]`            | All steps.                                                                                          |
+| `getVisibleSteps()`    | `TStep[]`                     | Steps whose `when` currently passes. Async `when` predicates count as visible; throwing ones don't.  |
+| `getStep(id)`          | `TStep \| undefined`          | A step by id.                                                                                       |
+| `getCurrentStep()`     | `TStep \| undefined`          | The current step.                                                                                   |
+| `setSteps(steps)`      | `void`                        | Replace the step list (used by declarative `<Tour.Step>`).                                          |
+| `isOpen()`             | `boolean`                     | `status === 'active'`.                                                                              |
+| `destroy()`            | `void`                        | Abort transitions, run plugin cleanups, clear event handlers and signals, unsubscribe from the router. |
+
+```ts
+const unsubscribe = tour.subscribe(() => {
+  const { status, stepId, progress } = tour.getState();
+  console.log(status, stepId, `${progress.current}/${progress.total}`);
+});
+```
+
+## TourState
+
+| Field           | Type                                    | Description                                                                                         |
+| --------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `status`        | `TourStatus`                            | See [statuses](#statuses).                                                                          |
+| `phase`         | `'transitioning' \| 'resolving' \| 'ready' \| null` | See [phases](#phases). `null` when no step is running.                                 |
+| `stepId`        | `TId \| null`                           | Current step id. Kept after the tour finishes (useful for `resume`).                                |
+| `stepIndex`     | `number`                                | Index of the current step in the steps array, `-1` if none.                                         |
+| `direction`     | `'forward' \| 'backward' \| 'jump' \| null` | How the current step was reached.                                                               |
+| `history`       | `readonly TId[]`                        | Steps visited in this run, in order. `prev()` walks it back.                                        |
+| `targets`       | `readonly (Element \| VirtualElement)[]` | Resolved targets of the current step. Empty for centered steps and while finished.                 |
+| `targetMissing` | `boolean`                               | The target wasn't found and the step fell back to centered (`onTargetMissing: 'center'`).           |
+| `progress`      | `{ current: number; total: number }`    | 1-based position among **visible** steps (`when` taken into account). `current` is `0` when unknown. |
+| `data`          | `TData`                                 | Tour data.                                                                                          |
+| `error`         | `unknown`                               | Last error (from hooks, unknown steps, `onTargetMissing: 'error'`…), cleared on the next successful step. |
+
+### Statuses
+
+| Status      | Meaning                                                                         | Reached by                              |
+| ----------- | ------------------------------------------------------------------------------- | --------------------------------------- |
+| `idle`      | Never started (or start was blocked / failed).                                  | creation                                |
+| `starting`  | `start()` is running plugins and resolving the first step.                      | `start()`                               |
+| `active`    | A step is current. UI is shown when `phase !== 'resolving'`.                    | first successful transition, `resume()` |
+| `paused`    | Temporarily hidden.                                                             | `pause()`                               |
+| `completed` | Finished successfully.                                                          | `next()` on the last step, `complete()`, a `next: null` branch |
+| `skipped`   | The user opted out.                                                             | `skip()`                                |
+| `closed`    | Dismissed; resumable.                                                           | `close()`                               |
+
+```text
+idle ──start()──▶ starting ──▶ active ◀──resume()── paused / closed
+                                 │
+                                 ├─ pause()     ──▶ paused
+                                 ├─ close()     ──▶ closed
+                                 ├─ skip()      ──▶ skipped
+                                 └─ complete()  ──▶ completed
+any finished status ──start()/restart()──▶ starting
+```
+
+### Phases
+
+| Phase           | Meaning                                                                                                     |
+| --------------- | ----------------------------------------------------------------------------------------------------------- |
+| `transitioning` | Leaving the previous step, navigating, running `beforeEnter`.                                               |
+| `resolving`     | Waiting for the target to appear — or the user navigated away from the step's `route` (the UI hides until they return). |
+| `ready`         | Step is current, scrolled into view, and `advanceOn` listeners are attached.                                |
+
+During `transitioning` the previous step's id is still in `stepId`; the new step is committed (and `stepChange` emitted) right before scrolling, while the phase is still `transitioning`.
+
+## Events
+
+Subscribe with `tour.on(event, handler)`. Handlers that throw are caught and logged.
+
+| Event           | Payload                                         | When                                                             |
+| --------------- | ----------------------------------------------- | ---------------------------------------------------------------- |
+| `start`         | `{ stepId }`                                    | Right before the first `stepChange` of a run.                   |
+| `stepChange`    | `{ from, to, direction }`                       | A step became current. `from` is `null` for the first step.      |
+| `stepLeave`     | `{ stepId }`                                    | The current step is being left (any reason).                     |
+| `targetMissing` | `{ stepId }`                                    | A target wasn't found within the timeout (any policy).           |
+| `complete`      | `{ stepId }`                                    | Status became `completed`.                                       |
+| `skip`          | `{ stepId }`                                    | Status became `skipped`.                                         |
+| `close`         | `{ stepId }`                                    | Status became `closed`.                                          |
+| `pause`         | `{ stepId }`                                    | Status became `paused`.                                          |
+| `resume`        | `{ stepId }`                                    | `resume()` re-entered a step.                                    |
+| `dataChange`    | `{ data }`                                      | `setData()` was called.                                          |
+| `error`         | `{ error, stepId }`                             | A hook threw, a step id is unknown, or `onTargetMissing: 'error'`. |
+
+```ts
+const off = tour.on('stepChange', ({ from, to, direction }) => {
+  console.log(`${from ?? 'start'} → ${to} (${direction})`);
+});
+```
+
+<Aside>
+In React, use `useTourEvent('complete', handler)` to subscribe with a handler that can change between renders, and `useTourState` / `useTourSelector` to read state.
+</Aside>

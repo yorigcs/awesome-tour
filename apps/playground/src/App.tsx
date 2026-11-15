@@ -1,15 +1,18 @@
+import { TourDevtools } from '@awesome-tour/devtools';
 import { MotionContent, MotionOverlay } from '@awesome-tour/motion';
 import {
+  Checklist,
   Hotspot,
   Tour,
   TourProvider,
+  useStoreSelector,
   useTour,
   useTourAnchor,
   useTourState,
 } from '@awesome-tour/react';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { navigate, router, usePath } from './router';
-import { type OnboardingData, onboarding } from './tours';
+import { eventLog, gettingStarted, type OnboardingData, onboarding } from './tours';
 
 const Scene = lazy(() => import('./Scene').then((m) => ({ default: m.Scene })));
 
@@ -41,7 +44,9 @@ function OnboardingUI() {
               </>
             )}
           </Tour.Progress>
-          <Tour.Close className="tour-icon-button">✕</Tour.Close>
+          <Tour.Close className="tour-icon-button" aria-label="Close tour">
+            ✕
+          </Tour.Close>
         </header>
         <Tour.Title className="tour-card__title" />
         <Tour.Description className="tour-card__description" />
@@ -111,22 +116,100 @@ function Sidebar() {
     ['/3d', '3D scene'],
   ] as const;
   return (
-    <nav ref={navRef} className="sidebar" aria-label="Main">
-      <strong className="logo">Acme</strong>
-      {links.map(([href, label]) => (
-        <a
-          key={href}
-          href={href}
-          aria-current={path === href ? 'page' : undefined}
-          onClick={(e) => {
-            e.preventDefault();
-            navigate(href);
-          }}
-        >
-          {label}
-        </a>
-      ))}
-    </nav>
+    <div className="sidebar-col">
+      <nav ref={navRef} className="sidebar" aria-label="Main">
+        <strong className="logo">Acme</strong>
+        {links.map(([href, label]) => (
+          <a
+            key={href}
+            href={href}
+            aria-current={path === href ? 'page' : undefined}
+            onClick={(e) => {
+              e.preventDefault();
+              navigate(href);
+            }}
+          >
+            {label}
+          </a>
+        ))}
+      </nav>
+      <ChecklistPanel />
+    </div>
+  );
+}
+
+function ChecklistPanel() {
+  const { dismissed } = useStoreSelector(gettingStarted);
+  if (dismissed) {
+    return (
+      <button
+        type="button"
+        className="button checklist-reopen"
+        onClick={() => gettingStarted.restore()}
+      >
+        Show checklist
+      </button>
+    );
+  }
+  return (
+    <Checklist.Root
+      checklist={gettingStarted}
+      className="checklist"
+      aria-labelledby="checklist-title"
+    >
+      <header className="checklist__header">
+        <h2 id="checklist-title">Getting started</h2>
+        <Checklist.Dismiss className="tour-icon-button" aria-label="Dismiss checklist">
+          ✕
+        </Checklist.Dismiss>
+      </header>
+      <Checklist.Progress className="checklist__progress">
+        {({ completed, total }) => (
+          <>
+            <span>
+              {completed} of {total} done
+            </span>
+            <span className="checklist__bar" aria-hidden="true" />
+          </>
+        )}
+      </Checklist.Progress>
+      <Checklist.List className="checklist__list">
+        {gettingStarted.getItems().map((item) => (
+          <Checklist.Item key={item.id} value={item.id} className="checklist__item">
+            <Checklist.ItemIndicator className="checklist__check" forceMount>
+              ✓
+            </Checklist.ItemIndicator>
+            <Checklist.ItemTrigger className="checklist__trigger">
+              {item.meta?.title as string}
+            </Checklist.ItemTrigger>
+          </Checklist.Item>
+        ))}
+      </Checklist.List>
+      <button
+        type="button"
+        className="tour-button tour-button--ghost"
+        onClick={() => gettingStarted.reset()}
+      >
+        Reset
+      </button>
+    </Checklist.Root>
+  );
+}
+
+function AnalyticsLog() {
+  const events = useStoreSelector(eventLog, (s) => s.events);
+  return (
+    <div className="card">
+      <h2>Analytics events</h2>
+      <ol className="event-log" data-testid="event-log">
+        {events.length === 0 && <li className="event-log__empty">Start a tour to see events.</li>}
+        {events.map((e) => (
+          <li key={`${e.timestamp}-${e.type}-${e.stepId}`}>
+            <code>{e.type}</code> {e.stepId && <span>· {e.stepId}</span>}
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
 
@@ -137,7 +220,15 @@ function Header() {
   const [count, setCount] = useState(0);
   return (
     <header className="topbar">
-      <input id="search" className="search" placeholder="Search…" aria-label="Search" />
+      <input
+        id="search"
+        className="search"
+        placeholder="Search…"
+        aria-label="Search"
+        onChange={(e) => {
+          if (e.target.value.length >= 3) gettingStarted.signal('searched');
+        }}
+      />
       <label className="role">
         Role
         <select
@@ -152,7 +243,10 @@ function Header() {
         ref={createRef}
         type="button"
         className="button"
-        onClick={() => setCount((c) => c + 1)}
+        onClick={() => {
+          setCount((c) => c + 1);
+          gettingStarted.signal('project-created');
+        }}
       >
         New project{count ? ` (${count})` : ''}
       </button>
@@ -187,7 +281,9 @@ function Home() {
             <Hotspot.Portal>
               <Hotspot.Content className="tour-card hotspot-card" aria-label="New: reports">
                 <strong>New!</strong> Export reports as PDF.
-                <Hotspot.Close className="tour-icon-button">✕</Hotspot.Close>
+                <Hotspot.Close className="tour-icon-button" aria-label="Close hint">
+                  ✕
+                </Hotspot.Close>
               </Hotspot.Content>
             </Hotspot.Portal>
           </Hotspot.Root>
@@ -201,6 +297,7 @@ function Home() {
         <div className="card">
           <CssTour />
         </div>
+        <AnalyticsLog />
       </section>
     </>
   );
@@ -274,6 +371,8 @@ export function App() {
         </div>
         <OnboardingUI />
       </Tour.Root>
+      {/* In an app: {import.meta.env.DEV && <TourDevtools />} — always on in the playground. */}
+      <TourDevtools checklists={[gettingStarted]} position="bottom-right" />
     </TourProvider>
   );
 }

@@ -1,6 +1,7 @@
 import { defaultAnchors } from './anchors';
 import { isElement, scrollTargetsIntoView } from './dom';
 import { createEmitter } from './emitter';
+import { matchRoute } from './router';
 import { createStore } from './store';
 import { resolveTarget, waitForTarget } from './targets';
 import type {
@@ -35,8 +36,11 @@ function toArray<T>(value: T | readonly T[] | undefined): readonly T[] {
   return Array.isArray(value) ? (value as readonly T[]) : [value as T];
 }
 
-function defaultMatch(route: string, path: string) {
-  return route === path;
+const defaultMatch = matchRoute;
+
+/** `/projects/:id` or `/docs/*` can be matched but not navigated to. */
+function isRoutePattern(route: string) {
+  return /(^|\/)(:|\*)/.test(route);
 }
 
 /**
@@ -78,6 +82,8 @@ export function createTour<
   /** Controls listeners that live while a step is shown (advanceOn). */
   let stepController: AbortController | null = null;
   const signalHandlers = new Map<string, Set<() => void>>();
+  /** Set by `start()`: emit `start` right before the first `stepChange` of the run. */
+  let pendingStart = false;
   const cleanups: (() => void)[] = [];
 
   /* ---------------------------------------------------------------------------------------------
@@ -178,6 +184,31 @@ export function createTour<
     return (router.match ?? defaultMatch)(route, router.getPath());
   }
 
+  /** Resolves when the router reaches `route` (or rejects on abort). */
+  function waitForRoute(route: string, signal: AbortSignal) {
+    return new Promise<void>((resolve, reject) => {
+      let unsubscribe: (() => void) | undefined;
+      let timer: ReturnType<typeof setInterval> | undefined;
+      const cleanup = () => {
+        unsubscribe?.();
+        if (timer) clearInterval(timer);
+        signal.removeEventListener('abort', onAbort);
+      };
+      const check = () => {
+        if (!routeMatches(route)) return;
+        cleanup();
+        resolve();
+      };
+      const onAbort = () => {
+        cleanup();
+        reject(signal.reason);
+      };
+      signal.addEventListener('abort', onAbort);
+      if (router?.subscribe) unsubscribe = router.subscribe(check);
+      else timer = setInterval(check, 100); // adapters without `subscribe`: poll the path
+    });
+  }
+
   /* ---------------------------------------------------------------------------------------------
    * Transition pipeline
    * -------------------------------------------------------------------------------------------*/
@@ -206,8 +237,17 @@ export function createTour<
       store.setState({ phase: 'transitioning', direction });
 
       if (step.route && router && !routeMatches(step.route)) {
-        await router.navigate(step.route);
-        if (signal.aborted) return false;
+        if (!isRoutePattern(step.route)) {
+          await router.navigate(step.route);
+          if (signal.aborted) return false;
+        }
+        // Navigation may not have landed (blocked, redirected, timed out) and patterns can't be
+        // navigated to: never resolve targets on the wrong page — hide the step until it's there.
+        if (!routeMatches(step.route)) {
+          store.setState({ phase: 'resolving' });
+          await waitForRoute(step.route, signal);
+          if (signal.aborted) return false;
+        }
       }
 
       if (step.beforeEnter) {
@@ -267,6 +307,10 @@ export function createTour<
         progress: computeProgress(step.id),
         error: null,
       });
+      if (pendingStart) {
+        pendingStart = false;
+        emitter.emit('start', { stepId: step.id });
+      }
       emitter.emit('stepChange', { from, to: step.id, direction });
 
       const scroll = step.scroll ?? options.scroll ?? true;
@@ -285,6 +329,10 @@ export function createTour<
       store.setState({ phase: getState().stepId ? 'ready' : null });
       reportError(error);
       return false;
+    } finally {
+      // Cancelled/redirected transitions must not leave a stale controller behind: route changes
+      // are ignored while one is in flight.
+      if (transitionController === controller) transitionController = null;
     }
   }
 
@@ -399,6 +447,7 @@ export function createTour<
 
     const controller = new AbortController();
     transitionController = controller;
+    pendingStart = true;
     let stepId = startOptions.stepId;
     try {
       for (const plugin of plugins) {
@@ -423,10 +472,13 @@ export function createTour<
         return;
       }
       const ok = await transition(first, 'forward');
-      if (ok) emitter.emit('start', { stepId: getState().stepId as TId });
-      else if (getState().status === 'starting') store.setState({ status: 'idle', phase: null });
+      if (!ok && getState().status === 'starting') {
+        pendingStart = false;
+        store.setState({ status: 'idle', phase: null });
+      }
     } catch (error) {
       if (isAbortError(error)) return;
+      pendingStart = false;
       store.setState({ status: 'idle', phase: null });
       reportError(error);
     }
@@ -503,7 +555,7 @@ export function createTour<
     routerUnsubscribe = router.subscribe(() => {
       const state = getState();
       const step = getStep(state.stepId);
-      if (state.status !== 'active' || !step?.route || state.phase === 'transitioning') return;
+      if (state.status !== 'active' || !step?.route || transitionController) return;
       if (routeMatches(step.route)) {
         if (state.phase === 'resolving') void transition(step.id, 'jump');
       } else {
@@ -544,7 +596,7 @@ export function createTour<
     },
     close: () => {
       const s = getState().status;
-      if (s === 'active' || s === 'starting') finish('closed');
+      if (s === 'active' || s === 'paused' || s === 'starting') finish('closed');
     },
     pause: () => {
       if (getState().status === 'active') finish('paused');
@@ -557,6 +609,14 @@ export function createTour<
           ? (update as (d: TData) => TData)(getState().data)
           : ({ ...getState().data, ...update } as TData);
       store.setState({ data });
+      // Data can flip `when` conditions: keep "Step n of m" in sync.
+      const { stepId, progress } = getState();
+      if (stepId !== null) {
+        const next = computeProgress(stepId);
+        if (next.current !== progress.current || next.total !== progress.total) {
+          store.setState({ progress: next });
+        }
+      }
       emitter.emit('dataChange', { data });
     },
     signal(name) {

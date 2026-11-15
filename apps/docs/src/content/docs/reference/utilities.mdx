@@ -1,0 +1,121 @@
+---
+title: Utilities
+description: Anchors, DOM helpers, stores and target resolution exported by the core for custom integrations.
+sidebar:
+  order: 10
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Lower-level building blocks used by the React package. Useful when integrating another framework, a canvas renderer or custom UI.
+
+## Anchors
+
+Anchors let components register themselves as targets under a stable name, so tours don't depend on CSS selectors.
+
+```ts
+import { anchor, defaultAnchors } from '@awesome-tour/core';
+
+const unregister = defaultAnchors.register('create-button', buttonElement);
+// step: { id: 'create', target: anchor('create-button') }
+unregister();
+```
+
+| Export                     | Signature                                       | Description                                                                                                  |
+| -------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `anchor(id)`               | `(id: string) => AnchorTarget`                  | Reference a registered anchor as a step target.                                                              |
+| `isAnchorTarget(value)`    | `(value: unknown) => value is AnchorTarget`     | Type guard.                                                                                                  |
+| `createAnchorRegistry()`   | `() => AnchorRegistry`                          | A new, isolated registry (pass it to `createTour({ anchors })` and `TourProvider anchors`).                 |
+| `defaultAnchors`           | `AnchorRegistry`                                | Process-wide registry used when none is given.                                                               |
+
+### AnchorRegistry
+
+| Method                 | Description                                                                                                       |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `register(id, node)`   | Register an element or virtual element under `id`; returns an unregister function. Several nodes per id are allowed (highlighted together). |
+| `get(id)`              | Registered nodes for `id`.                                                                                        |
+| `subscribe(listener)`  | Called on every register/unregister — tours waiting for an anchor resolve as soon as it registers.                |
+
+In React use `useTourAnchor(id)` or `<Tour.Anchor>`; in react-three-fiber, `<TourTarget3D name>` registers a virtual element.
+
+## Targets
+
+| Export                                       | Description                                                                                                                                         |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `resolveTarget(input, anchors)`              | Synchronously resolve a [`TargetInput`](../steps/#targets) into nodes. Disconnected elements are dropped; returns `[]` during SSR.                  |
+| `waitForTarget(input, { anchors, timeout, signal? })` | Resolve, waiting up to `timeout` ms for the target to appear (DOM mutations, anchor registrations, 100 ms polling). Resolves `[]` on timeout; rejects with an `AbortError` when `signal` aborts. Arrays resolve as soon as every item is present, or with whatever was found at timeout. |
+| `deepQuerySelectorAll(selector, root?)`      | `querySelectorAll` that searches open shadow roots when the light DOM has no match.                                                                 |
+
+## Geometry
+
+| Export                                   | Description                                                                                                                                  |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `observeRect(targets, onChange, options?)` | Calls `onChange` with the union rect whenever it changes (resize, any scroll, window resize, DOM mutations). With `{ animationFrame: true }` it polls every frame instead — the default when a target is a virtual element. Returns a cleanup. |
+| `getRect(node)`                          | Viewport `RectLike` of an element or virtual element.                                                                                        |
+| `getTargetsRect(targets)`                | Union rect of several nodes, or `null`.                                                                                                      |
+| `unionRects(rects)`                      | Bounding box of rects, or `null` for an empty list.                                                                                          |
+| `inflateRect(rect, padding)`             | Grow a rect by a number or `{ top, right, bottom, left }`.                                                                                   |
+| `rectsEqual(a, b)`                       | Compare position and size.                                                                                                                   |
+| `toRect(x, y, width, height)`            | Build a `RectLike`.                                                                                                                          |
+| `createVirtualTarget(targets)`           | Wrap targets as one virtual element whose rect is their union (for positioning libraries). `null` for an empty list.                         |
+| `isElement(value)` / `isVirtualElement(value)` | Type guards.                                                                                                                          |
+
+```ts
+import { inflateRect, observeRect } from '@awesome-tour/core';
+
+const stop = observeRect(tour.getState().targets, (rect) => {
+  if (!rect) return;
+  const r = inflateRect(rect, 8);
+  highlight.style.transform = `translate(${r.x}px, ${r.y}px)`;
+  highlight.style.width = `${r.width}px`;
+  highlight.style.height = `${r.height}px`;
+});
+```
+
+## Scrolling
+
+| Export                                              | Description                                                                                                                                                 |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scrollTargetsIntoView(targets, options?, maxWait?)` | If the targets aren't fully visible (8px margin), scrolls the first element into view (`block: 'center'`, smooth unless reduced motion; `options` override) — nested scroll containers included — then resolves when the layout is stable. `maxWait` defaults to `800` ms. |
+| `waitForStableRect(targets, maxWait?)`              | Resolves after two identical animation frames, or `maxWait` ms (default `800`).                                                                             |
+| `lockScroll()`                                      | Locks page scroll (`overflow: hidden`, compensating the scrollbar width). Ref-counted; returns a release function.                                          |
+
+## Modality
+
+| Export                    | Description                                                                                                                                                         |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `inertOthers(keep)`       | Make everything outside the `keep` elements `inert` (non-focusable, hidden from assistive tech). Skips `aria-live` regions, elements with `data-tour-keep`, and elements the app already made inert. Ref-counted; returns a restore function. |
+| `KEEP_ATTRIBUTE`          | `'data-tour-keep'`. Elements with it (and their subtrees) are never made inert, and tour keyboard shortcuts ignore events from them.                               |
+| `isFromKeptElement(event)` | Whether an event originated inside a `data-tour-keep` subtree (shadow DOM aware).                                                                                 |
+| `prefersReducedMotion()`  | `matchMedia('(prefers-reduced-motion: reduce)')`, `false` on the server.                                                                                            |
+| `isBrowser`               | `true` when `window` and `document` exist.                                                                                                                          |
+
+```html
+<!-- Stays usable while a modal tour is open -->
+<div id="toasts" data-tour-keep></div>
+```
+
+<Aside>
+`inert` is applied to the siblings along the path from each kept element up to `body`, so only top-level branches are marked — the cost doesn't grow with the size of the page.
+</Aside>
+
+## Stores and events
+
+The primitives behind tours, checklists and the manager — reuse them for your own state that needs to work with `useStoreSelector`.
+
+```ts
+import { createEmitter, createStore } from '@awesome-tour/core';
+
+const store = createStore({ count: 0 });
+store.subscribe(() => console.log(store.getState().count));
+store.setState((s) => ({ count: s.count + 1 }));
+
+const emitter = createEmitter<{ saved: { id: string } }>();
+const off = emitter.on('saved', ({ id }) => console.log(id));
+emitter.emit('saved', { id: '1' });
+```
+
+| Export                     | Description                                                                                                                                       |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createStore(initial)`     | `{ getState, setState, subscribe }`. `setState` takes a partial object or `(state) => partial`, shallow-merges into a **new** snapshot, and only notifies when a value changed (`Object.is`). |
+| `createEmitter(onError?)`  | Typed `{ on, emit, clear }`. `on` returns an unsubscribe function. Handler errors go to `onError` when given, otherwise they are rethrown.        |

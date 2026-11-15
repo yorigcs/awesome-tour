@@ -5,7 +5,9 @@
       "@awesome-tour/core": ["./packages/core/src/index.ts"],
       "@awesome-tour/react": ["./packages/react/src/index.ts"],
       "@awesome-tour/motion": ["./packages/motion/src/index.ts"],
-      "@awesome-tour/three": ["./packages/three/src/index.ts"]
+      "@awesome-tour/three": ["./packages/three/src/index.ts"],
+      "@awesome-tour/router/*": ["./packages/router/src/*.ts"],
+      "@awesome-tour/devtools": ["./packages/devtools/src/index.ts"]
     }
   },
   "include": ["./packages/*/src", "packages/*/test", "apps/*/src", "e2e", "*.ts"]

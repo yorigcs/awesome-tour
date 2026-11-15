@@ -1,0 +1,113 @@
+---
+title: Targets
+description: Point steps at elements with selectors, refs, anchors, virtual elements — and handle targets that load late or never.
+sidebar:
+  order: 1
+---
+
+import { Aside } from '@astrojs/starlight/components';
+import { TargetsDemo } from '../../../components/demos/TargetsDemo';
+
+A step's `target` is what gets highlighted and what the content is positioned against. Leave it out
+for a centered step.
+
+<TargetsDemo client:visible />
+
+## Target types
+
+| `target`                                   | Notes                                                                         |
+| ------------------------------------------ | ----------------------------------------------------------------------------- |
+| `'#search'`                                | CSS selector. Also searches inside open shadow roots.                         |
+| `element`                                  | Any `Element`.                                                                |
+| `ref`                                      | A React ref (`{ current }`), read when the step starts.                       |
+| `anchor('billing')`                        | A named anchor registered from your components. Recommended.                  |
+| `() => document.querySelector('.row')`     | A function returning any of the above, called on resolution.                  |
+| `{ getBoundingClientRect }`                | A [virtual element](#virtual-elements): canvas regions, 3D objects, text…     |
+| `['#a', '#b']`                             | Several targets: the highlight covers the union of their rects.               |
+
+## Anchors
+
+Selectors couple tours to markup. Anchors invert that: components register themselves under a name,
+and steps refer to the name.
+
+```tsx
+import { anchor, createTour, Tour, useTourAnchor } from '@awesome-tour/react';
+
+const tour = createTour({
+  id: 'billing',
+  steps: [{ id: 'plan', target: anchor('plan-picker'), title: 'Pick a plan' }],
+});
+
+function PlanPicker() {
+  const ref = useTourAnchor<HTMLDivElement>('plan-picker');
+  return <div ref={ref}>…</div>;
+}
+
+// or, without a hook:
+<Tour.Anchor name="plan-picker" asChild>
+  <PlanPicker />
+</Tour.Anchor>;
+```
+
+If the anchored component mounts after the step starts (a lazy route, a modal opening), the tour
+waits for it — see below. Anchors live in a registry; the global one is used by default, and
+`TourProvider` or `createTour({ anchors })` can scope them with `createAnchorRegistry()`.
+
+## Async and missing targets
+
+When a step starts, the tour **waits** for its target: it watches the DOM (`MutationObserver`) and
+the anchor registry until the target shows up or `targetTimeout` (default `3000` ms) passes. Then
+`onTargetMissing` decides:
+
+| Policy               | Behavior                                                                  |
+| -------------------- | ------------------------------------------------------------------------- |
+| `'center'` (default) | Show the step centered. `data-target-missing` is set on the content.      |
+| `'wait'`             | Keep waiting with no timeout — for content that loads slowly.             |
+| `'skip'`             | Skip to the next step, in the current direction.                          |
+| `'error'`            | Stop the tour with an error (`state.error`, `error` event).               |
+
+Both options can be set per step or as tour-wide defaults:
+
+```ts
+createTour({
+  id: 'reports',
+  targetTimeout: 5000,
+  onTargetMissing: 'skip',
+  steps: [
+    { id: 'chart', target: '#chart', onTargetMissing: 'wait' }, // async widget
+    { id: 'beta', target: anchor('beta-flag') }, // skipped for users without the flag
+  ],
+});
+```
+
+A `targetMissing` event fires whenever a target couldn't be found — useful for catching stale tours
+in production (the [analytics plugin](../analytics/) reports it as `target_missing`).
+
+## Scrolling
+
+Targets are scrolled into view before the step is shown, including inside nested scroll containers.
+Disable or customize per step or tour-wide with `scroll: false` or `scroll: ScrollIntoViewOptions`.
+
+Layout changes are tracked automatically (resize, scroll, DOM mutations). If you move a target in a
+way that can't be observed, call `tour.refresh()` to resolve it again.
+
+## Virtual elements
+
+Anything with `getBoundingClientRect()` can be a target. That's how
+[`@awesome-tour/three`](../three/) highlights objects in a WebGL scene:
+
+```ts
+const selection = window.getSelection()!.getRangeAt(0);
+
+tour.goTo('explain-selection'); // with target: () => ({
+//   getBoundingClientRect: () => selection.getBoundingClientRect(),
+//   contextElement: document.querySelector('#editor')!,
+// })
+```
+
+Set `contextElement` so the tour can find the scroll ancestors of a virtual element.
+
+<Aside>
+  Highlighted targets get `data-tour-target` and an `aria-describedby` that points to the step
+  content, so screen readers connect the two.
+</Aside>

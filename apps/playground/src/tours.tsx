@@ -1,11 +1,22 @@
 import {
+  analytics,
   anchor,
+  type ChecklistSnapshot,
+  createChecklist,
+  createStore,
   createTour,
   localStorageAdapter,
   persist,
   type ReactStepDefinition,
+  type TourAnalyticsEvent,
 } from '@awesome-tour/react';
 import { router } from './router';
+
+/** Last analytics events, shown in the playground (would go to Segment/PostHog in an app). */
+export const eventLog = createStore<{ events: TourAnalyticsEvent[] }>({ events: [] });
+const track = (event: TourAnalyticsEvent) => {
+  eventLog.setState((s) => ({ events: [event, ...s.events].slice(0, 6) }));
+};
 
 export interface OnboardingData {
   role: 'admin' | 'member';
@@ -102,5 +113,16 @@ export const onboarding = createTour({
   data: { role: 'admin' } as OnboardingData,
   steps,
   router,
-  plugins: [persist(localStorageAdapter())],
+  plugins: [persist(localStorageAdapter()), analytics(track)],
+});
+
+export const gettingStarted = createChecklist({
+  id: 'getting-started',
+  persistence: localStorageAdapter<ChecklistSnapshot>({ prefix: 'awesome-checklist:' }),
+  items: [
+    { id: 'onboarding', tour: 'onboarding', meta: { title: 'Take the product tour' } },
+    { id: 'css-tour', tour: 'css-tour', meta: { title: 'Try the CSS-only tour' } },
+    { id: 'search', signal: 'searched', meta: { title: 'Search for something' } },
+    { id: 'project', signal: 'project-created', meta: { title: 'Create a project' } },
+  ],
 });

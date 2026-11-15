@@ -1,0 +1,131 @@
+---
+title: Hotspot
+description: A non-blocking beacon attached to an element that reveals a hint when clicked.
+sidebar:
+  order: 2
+---
+
+A hotspot is a small pulsing dot pinned to an element. Clicking it opens a popover. It doesn't block the page and isn't tied to a tour, so use it for contextual tips, "New!" badges, or as the entry point to a full tour. See the [Hotspots guide](../../guides/hotspots/).
+
+## Anatomy
+
+```tsx
+import { Hotspot } from '@awesome-tour/react';
+
+<Hotspot.Root target="#reports">
+  <Hotspot.Beacon />
+  <Hotspot.Portal>
+    <Hotspot.Content>
+      New: export reports as PDF.
+      <Hotspot.Close />
+    </Hotspot.Content>
+  </Hotspot.Portal>
+</Hotspot.Root>;
+```
+
+## Root
+
+Resolves the target and holds the open state. It renders no element. The target is re-resolved on DOM mutations and when anchors are registered, so it can appear later.
+
+| Prop           | Type                      | Default | Description                                                              |
+| -------------- | ------------------------- | ------- | ------------------------------------------------------------------------ |
+| `target`       | `TargetInput`             | —       | What to point at: a selector, element, ref, `anchor(id)`, virtual element, function or array. |
+| `open`         | `boolean`                 | —       | Controlled open state.                                                   |
+| `defaultOpen`  | `boolean`                 | `false` | Initial open state when uncontrolled.                                    |
+| `onOpenChange` | `(open: boolean) => void` | —       | Called when the beacon, Close, <kbd>Esc</kbd> or an outside click changes the state. |
+
+## Beacon
+
+A `button` placed next to the target with Floating UI. By default it sits on the target's top-end corner, overlapping it. Clicking it toggles the content. It renders nothing until the target resolves, and it is hidden while the target is scrolled out of view.
+
+| Prop               | Type                                      | Default   | Description                                     |
+| ------------------ | ----------------------------------------- | --------- | ----------------------------------------------- |
+| `side`             | `'top' \| 'right' \| 'bottom' \| 'left'`  | `'top'`   | Side of the target.                             |
+| `align`            | `'start' \| 'center' \| 'end'`            | `'end'`   | Alignment along that side.                      |
+| `sideOffset`       | `number`                                  | `-8`      | Negative values overlap the target.             |
+| `alignOffset`      | `number`                                  | `-8`      | Offset along the alignment axis.                |
+| `avoidCollisions`  | `boolean`                                 | `false`   | Flip/shift to stay in the viewport.             |
+| `collisionPadding` | `number \| Partial<Record<Side, number>>` | `8`       | Viewport padding for collisions.                |
+| `sticky`           | `'partial' \| 'always'`                   | `'partial'` | See `Tour.Content`.                           |
+| `hideWhenDetached` | `boolean`                                 | `true`    | Hide when the target is clipped out of view.    |
+| `animationFrame`   | `boolean`                                 | `false`   | Reposition every frame (virtual targets).       |
+| `asChild`          | `boolean`                                 | `false`   | Render the child element instead.               |
+
+If the beacon has no children, it gets `aria-label="Show hint"`. It also sets `aria-haspopup="dialog"`, `aria-expanded`, and `aria-controls` while open.
+
+| Data attribute     | Values             |
+| ------------------ | ------------------ |
+| `data-state`       | `"open" \| "closed"` |
+| `data-tour-beacon` | present            |
+
+The beacon is positioned but not styled. Give it a size, a shape and a `z-index`:
+
+```css
+.beacon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--accent);
+  z-index: 10;
+}
+.beacon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: inherit;
+  animation: pulse 1.6s ease-out infinite;
+}
+@keyframes pulse { to { transform: scale(2.6); opacity: 0; } }
+```
+
+## Portal
+
+Same as [`Tour.Portal`](../tour/#portal): renders its children into `document.body` or into a `container`.
+
+## Content
+
+A `div role="dialog"` positioned next to the target. When it opens, it takes focus. <kbd>Esc</kbd> closes it and returns focus to the beacon. A pointer-down outside the content and the beacon also closes it.
+
+| Prop               | Type                                      | Default    | Description                                      |
+| ------------------ | ----------------------------------------- | ---------- | ------------------------------------------------ |
+| `side`             | `'top' \| 'right' \| 'bottom' \| 'left'`  | `'bottom'` | Preferred side.                                  |
+| `align`            | `'start' \| 'center' \| 'end'`            | `'center'` | Preferred alignment.                             |
+| `sideOffset`       | `number`                                  | `8`        | Distance from the target.                        |
+| `alignOffset`      | `number`                                  | `0`        | Offset along the alignment axis.                 |
+| `avoidCollisions`  | `boolean`                                 | `true`     | Flip/shift to stay in the viewport.              |
+| `collisionPadding` | `number \| Partial<Record<Side, number>>` | `8`        | Viewport padding for collisions.                 |
+| `sticky`           | `'partial' \| 'always'`                   | `'partial'`| See `Tour.Content`.                              |
+| `hideWhenDetached` | `boolean`                                 | `false`    | Hide when the target is clipped out of view.     |
+| `animationFrame`   | `boolean`                                 | `false`    | Reposition every frame (virtual targets).        |
+| `forceMount`       | `boolean`                                 | —          | Keep it mounted while closed.                    |
+| `asChild`          | `boolean`                                 | `false`    | Render the child element instead.                |
+
+| Data attribute | Values                                   |
+| -------------- | ---------------------------------------- |
+| `data-state`   | `"open" \| "closed"`                       |
+| `data-side`    | `"top" \| "right" \| "bottom" \| "left"`   |
+| `data-align`   | `"start" \| "center" \| "end"`             |
+
+| CSS variable                      | Description                                  |
+| --------------------------------- | -------------------------------------------- |
+| `--tour-content-transform-origin` | Origin based on the side it was placed on, for scale animations. |
+
+The content gets no accessible name automatically. Pass `aria-label` or `aria-labelledby`.
+
+## Close
+
+A `button` that closes the content and returns focus to the beacon. If it has no children, it gets `aria-label="Close hint"`.
+
+## useResolvedTarget
+
+```ts
+function useResolvedTarget(target: TargetInput | null | undefined): TourTargetNode[];
+```
+
+Resolves a target and keeps it up to date. It re-resolves on DOM mutations (a `MutationObserver` on `body`) and on anchor registrations from the provider's registry, or the global one. Use it to attach your own floating UI to tour targets.
+
+```tsx
+const [node] = useResolvedTarget(anchor('create'));
+```

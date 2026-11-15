@@ -1,0 +1,122 @@
+---
+title: Styling
+description: Style tours with your own CSS — data attributes, CSS variables, asChild and z-index.
+sidebar:
+  order: 10
+---
+
+import { Aside } from '@astrojs/starlight/components';
+import { StylingDemo } from '../../../components/demos/StylingDemo';
+import { NonModalDemo } from '../../../components/demos/NonModalDemo';
+
+awesome-tour ships **no CSS**. Every part renders a plain element you style with classes, Tailwind,
+CSS-in-JS or anything else. The demo below is one tour with four different stylesheets.
+
+<StylingDemo client:visible />
+
+## Data attributes
+
+Style states without JavaScript:
+
+| Attribute                                    | On                       | Values                                    |
+| -------------------------------------------- | ------------------------ | ----------------------------------------- |
+| `data-state`                                 | Overlay, Spotlight, Content | `open` · `closed` (during exit animations) |
+| `data-side` / `data-align`                   | Content                  | placed side / alignment after collisions   |
+| `data-placement`                             | Content                  | `anchored` · `center`                     |
+| `data-step`                                  | Content                  | current step id                           |
+| `data-phase`                                 | Content                  | `transitioning` · `resolving` · `ready`   |
+| `data-direction`                             | Content                  | `forward` · `backward` · `jump`           |
+| `data-target-missing`                        | Content                  | present when the step fell back to center |
+| `data-disabled` / `data-last`                | Prev / Next              | first step / last step                    |
+| `data-tour-target`                           | highlighted elements     | present while highlighted                 |
+
+```css
+.tour-card[data-placement='center'] {
+  width: 420px; /* centered steps get a roomier card */
+}
+.tour-card[data-direction='backward'] {
+  --slide-from: -8px;
+}
+[data-tour-target] {
+  position: relative; /* useful for z-index tricks on targets */
+}
+```
+
+## CSS variables
+
+| Variable                                                 | Set on    | Meaning                                       |
+| -------------------------------------------------------- | --------- | --------------------------------------------- |
+| `--tour-overlay-color`                                   | Overlay   | Read by the overlay for its fill. Set it.     |
+| `--tour-content-transform-origin`                        | Content wrapper¹ | Origin for scale animations, from the arrow side. |
+| `--tour-content-available-width` / `-height`             | Content wrapper¹ | Space available before colliding.             |
+| `--tour-target-width` / `-height`                        | Content wrapper¹ | Size of the highlighted area.                 |
+| `--tour-spotlight-x` / `-y` / `-width` / `-height`       | Spotlight | Geometry of the highlighted area.             |
+| `--tour-progress`                                        | Progress  | 0–1, for progress bars.                       |
+
+¹ Set on the positioned wrapper (`data-tour-content-wrapper`) and inherited by `Tour.Content`.
+
+```css
+.tour-card {
+  max-height: var(--tour-content-available-height);
+  transform-origin: var(--tour-content-transform-origin);
+}
+.tour-progress-bar {
+  background: linear-gradient(to right, var(--accent) calc(var(--tour-progress) * 100%), #ddd 0);
+}
+```
+
+## Overlay or spotlight
+
+- **`Tour.Overlay`** is an SVG covering the viewport with a cutout around the target (`padding`,
+  `radius`). It blocks clicks outside the target.
+- **`Tour.Spotlight`** is a plain `div` sized and positioned over the target — style it as a ring, a
+  glow, or a huge `box-shadow` that dims the page. Combine it with `modal={false}` for tours that
+  leave the page usable:
+
+<NonModalDemo client:visible />
+
+```css
+.spotlight {
+  border-radius: 10px;
+  box-shadow: 0 0 0 2px var(--accent), 0 0 0 9999px rgb(0 0 0 / 0.3);
+  transition: all 250ms ease;
+  pointer-events: none;
+}
+```
+
+## `asChild`
+
+Every part accepts `asChild` to render your own component instead of the default element, merging
+props, refs and event handlers:
+
+```tsx
+<Tour.Next asChild>
+  <Button variant="primary">Continue</Button>
+</Tour.Next>
+```
+
+## CSS animations
+
+Parts that animate (`Overlay`, `Spotlight`, `Content`) stay mounted until their CSS exit animation
+ends, so keyframes on `data-state` just work:
+
+```css
+.tour-card[data-state='open'] { animation: in 180ms ease-out; }
+.tour-card[data-state='closed'] { animation: out 120ms ease-in forwards; }
+```
+
+For spring physics and a spotlight that morphs between targets, see [Animation](../animation/).
+
+## Stacking
+
+Give the overlay and content a `z-index` above your app's chrome:
+
+```css
+[data-tour-overlay] { z-index: 1000; }
+[data-tour-content-wrapper] { z-index: 1001; } /* the positioned wrapper around Tour.Content */
+```
+
+<Aside type="tip">
+  With Tailwind, target states with data variants: `data-[state=closed]:animate-out`,
+  `data-[side=top]:slide-in-from-bottom-2`.
+</Aside>

@@ -1,0 +1,64 @@
+---
+title: Installation
+description: Install awesome-tour and the optional adapters.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add @awesome-tour/react
+    ```
+  </TabItem>
+  <TabItem label="npm">
+    ```bash
+    npm install @awesome-tour/react
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn add @awesome-tour/react
+    ```
+  </TabItem>
+  <TabItem label="bun">
+    ```bash
+    bun add @awesome-tour/react
+    ```
+  </TabItem>
+</Tabs>
+
+`@awesome-tour/react` re-exports everything from `@awesome-tour/core`, so most apps need a single
+import. Requires React 18 or 19.
+
+## Optional packages
+
+| Install                                  | When                                                 | Peer dependencies                  |
+| ---------------------------------------- | ---------------------------------------------------- | ---------------------------------- |
+| `@awesome-tour/motion motion`            | Spring-animated overlay and content                  | `motion`                           |
+| `@awesome-tour/router`                   | Multi-page tours with React Router, Next.js, TanStack | your router                        |
+| `@awesome-tour/three`                    | Targets inside a react-three-fiber scene             | `@react-three/fiber`, `three`      |
+| `-D @awesome-tour/devtools`              | Inspect and drive tours while developing             | —                                  |
+| `@awesome-tour/core`                     | Using the engine without React                       | —                                  |
+
+## Framework notes
+
+- **Next.js App Router / React Server Components:** every package is marked `'use client'`. Create
+  tours in a client module and render `Tour.Root` from a client component.
+- **SSR:** nothing touches `window` during render; tours only start in the browser.
+- **No CSS to import.** Style the parts yourself — see [Styling](../guides/styling/).
+
+## TypeScript
+
+Types ship with every package. Step ids are inferred from your step definitions, so
+`tour.goTo('typo')` is a type error:
+
+```ts
+const tour = createTour({
+  id: 'onboarding',
+  steps: [{ id: 'welcome' }, { id: 'nav', target: '#nav' }],
+});
+
+tour.goTo('nav'); // ✓
+tour.goTo('nope'); // ✗ Argument of type '"nope"' is not assignable…
+```

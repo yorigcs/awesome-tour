@@ -6,13 +6,21 @@ import type { RouterAdapter } from './types';
  * `popstate` so client routers that listen to it (React Router, etc.) pick up the change.
  * For framework routers, prefer writing a tiny adapter around their navigate function.
  */
-export function createBrowserRouter(options: { base?: string } = {}): RouterAdapter {
+export function createBrowserRouter(
+  options: {
+    /** Path prefix the app is served under, e.g. `/app`. */
+    base?: string;
+    /** Route matcher. Default: `matchRoute` (`/projects/:id`, `/docs/*`). */
+    match?: (route: string, path: string) => boolean;
+  } = {},
+): RouterAdapter {
   const base = options.base ?? '';
   const listeners = new Set<() => void>();
   const notify = () => {
     for (const listener of [...listeners]) listener();
   };
   return {
+    ...(options.match ? { match: options.match } : {}),
     getPath: () => (isBrowser ? window.location.pathname.slice(base.length) || '/' : '/'),
     navigate(path) {
       if (!isBrowser) return;

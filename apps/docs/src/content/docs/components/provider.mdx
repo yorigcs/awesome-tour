@@ -1,0 +1,96 @@
+---
+title: TourProvider
+description: App-level provider that coordinates several tours, shares a router adapter and the anchor registry.
+sidebar:
+  order: 4
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+`TourProvider` is optional. A single `Tour.Root` with a `tour` works without it. Add the provider when you need any of these:
+
+- **Several tours.** Only one is on screen at a time; the others wait in a priority queue (see [Multiple tours](../../guides/multiple-tours/)).
+- **Tours by id.** `Tour.Root tourId`, `useTour('id')`, checklist items with `tour: 'id'`, and devtools all look tours up on the provider.
+- **Multi-page tours.** One router adapter is shared by every tour (see [Multi-page tours](../../guides/multi-page/)).
+- **A scoped anchor registry.** For tests, micro-frontends, or several apps on one page.
+
+```tsx
+import { TourProvider } from '@awesome-tour/react';
+
+<TourProvider tours={[onboarding, whatsNew]} router={router}>
+  <App />
+</TourProvider>;
+```
+
+## Props
+
+| Prop      | Type             | Default             | Description                                                                 |
+| --------- | ---------------- | ------------------- | --------------------------------------------------------------------------- |
+| `tours`   | `TourInstance[]` | —                   | Tours to register. They are registered on the first render, so children can look them up right away. |
+| `router`  | `RouterAdapter`  | —                   | Router adapter set on every registered tour.                                |
+| `anchors` | `AnchorRegistry` | the global registry | Registry used by `useTourAnchor`, `Tour.Anchor`, hotspots, inline tours and `TourTarget3D`. |
+| `manager` | `TourManager`    | created internally  | Bring your own manager, for example one created outside React with `createTourManager`. |
+
+## How things flow through context
+
+- **Tours.** These tours register on the provider's [manager](../../reference/manager/):
+  - tours passed to `tours`;
+  - tours rendered by a `Tour.Root` given a `tour` prop;
+  - inline `Tour.Root` tours.
+
+  `Tour.Root tourId="…"` only looks a tour up and does not register it. A tour leaves the manager when its root unmounts or when it is removed from `tours`.
+- **Starting.** `Tour.Trigger`, `Tour.Root` `open` / `defaultOpen`, and `Checklist.ItemTrigger` start registered tours through `manager.start()`. If another tour is on screen, the new one is queued instead of overlapping. Calling `tour.start()` directly bypasses the queue.
+- **Router.** When the provider has a `router`, the manager calls `tour.setRouter(router)` on every tour it registers, and again whenever the prop changes. Without one, tours keep the `router` they were created with.
+- **Anchors.** `useTourAnchor` and `Tour.Anchor` register elements in the provider's registry. Inline tours created by `Tour.Root` resolve `anchor(id)` against that same registry. Tours created with `createTour` use their own `anchors` option, which defaults to the global registry, so they match the provider unless you pass a custom registry to both.
+
+<Aside>
+The provider's `router` takes precedence over the `router` option of the tours it manages. Removing it later resets those tours to no router.
+</Aside>
+
+## useTourProvider
+
+```ts
+function useTourProvider(): { manager: TourManager; anchors: AnchorRegistry } | null;
+```
+
+Returns the nearest provider's value, or `null` outside a provider. Library code uses it to work with or without a provider.
+
+## useTourManager
+
+```ts
+function useTourManager(): TourManager;
+```
+
+Returns the provider's manager. Throws outside a `TourProvider`. Read its state with `useStoreSelector`:
+
+```tsx
+function ActiveTourBadge() {
+  const manager = useTourManager();
+  const { activeId, queue } = useStoreSelector(manager);
+  return activeId ? <span>{activeId} (+{queue.length} queued)</span> : null;
+}
+
+// Queue a tour with a priority, or interrupt the active one:
+manager.start('whats-new', { priority: 10 });
+manager.start('critical-update', { interrupt: true });
+```
+
+## TourContext
+
+`TourContext` is the React context provided by each `Tour.Root`. `useTourContext(componentName?)` reads it and throws outside a root. It's meant for building your own parts. The value contains:
+
+- `tour`, `state`, `step`, and `open` (whether the tour UI should be on screen).
+- `modal`, `interactive`, `dir`, `keyboardNavigation`, `closeOnEscape` and `closeOnOverlayClick`.
+- `contentId`, the id of `Tour.Content`.
+- `registerLayer`, to keep custom layers interactive under a modal tour. You will usually use [`useTourLayer`](../tour/#low-level-utilities) instead.
+
+```tsx
+import { useTourContext } from '@awesome-tour/react';
+
+function StepBadge() {
+  const { state, open } = useTourContext('StepBadge');
+  return open ? <span data-step={state.stepId}>{state.progress.current}</span> : null;
+}
+```
+
+For most needs, prefer the higher-level hooks: [`useTourState`, `useTourStep` and `useTour`](../../reference/hooks/).

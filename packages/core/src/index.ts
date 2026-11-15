@@ -1,5 +1,16 @@
+export type { AnalyticsOptions, TourAnalyticsEvent, TourAnalyticsEventType } from './analytics';
+export { analytics } from './analytics';
 export type { AnchorRegistry } from './anchors';
 export { anchor, createAnchorRegistry, defaultAnchors, isAnchorTarget } from './anchors';
+export type {
+  Checklist,
+  ChecklistItemDefinition,
+  ChecklistItemStatus,
+  ChecklistOptions,
+  ChecklistSnapshot,
+  ChecklistState,
+} from './checklist';
+export { createChecklist } from './checklist';
 export type { ObserveRectOptions } from './dom';
 export {
   createVirtualTarget,
@@ -9,7 +20,9 @@ export {
   inflateRect,
   isBrowser,
   isElement,
+  isFromKeptElement,
   isVirtualElement,
+  KEEP_ATTRIBUTE,
   lockScroll,
   observeRect,
   prefersReducedMotion,

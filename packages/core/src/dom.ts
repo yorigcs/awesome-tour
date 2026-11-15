@@ -245,6 +245,19 @@ export function lockScroll(): () => void {
 const inertCounts = new WeakMap<Element, number>();
 
 /**
+ * Elements with this attribute (and their subtrees) are never made inert by modal tours and
+ * their keyboard events are ignored by tour shortcuts. Use it for devtools, toasts, chat widgets.
+ */
+export const KEEP_ATTRIBUTE = 'data-tour-keep';
+
+/** Whether an event originated inside a `data-tour-keep` subtree (shadow DOM aware). */
+export function isFromKeptElement(event: Event): boolean {
+  return event
+    .composedPath()
+    .some((node) => node instanceof Element && node.hasAttribute(KEEP_ATTRIBUTE));
+}
+
+/**
  * Makes everything outside `keep` inert (non-focusable, hidden from assistive tech), walking
  * from each kept element up to <body> and marking the siblings along the way. Ref-counted so
  * nested calls compose. Returns a restore function.
@@ -268,7 +281,7 @@ export function inertOthers(keep: readonly Element[]): () => void {
         continue;
       }
       if (['SCRIPT', 'STYLE', 'TEMPLATE', 'LINK', 'META'].includes(child.tagName)) continue;
-      if (child.hasAttribute('aria-live')) continue;
+      if (child.hasAttribute('aria-live') || child.hasAttribute(KEEP_ATTRIBUTE)) continue;
       const count = inertCounts.get(child) ?? 0;
       if (count === 0 && child.hasAttribute('inert')) continue; // inert by the app, leave it
       inertCounts.set(child, count + 1);

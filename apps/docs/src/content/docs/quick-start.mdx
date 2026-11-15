@@ -1,0 +1,109 @@
+---
+title: Quick start
+description: Build your first tour in five minutes.
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+import { BasicDemo } from '../../components/demos/BasicDemo';
+
+<BasicDemo client:visible />
+
+<Steps>
+
+1. **Define the tour.** A tour is a list of steps. A step without `target` is centered; `target`
+   accepts a selector, an element, a ref, an [anchor](../guides/targets/#anchors) or an array.
+
+   ```ts title="tours.ts"
+   import { createTour } from '@awesome-tour/react';
+
+   export const onboarding = createTour({
+     id: 'onboarding',
+     steps: [
+       { id: 'welcome', title: 'Welcome to Acme 👋', description: 'A quick look around.' },
+       { id: 'nav', target: '#nav', side: 'right', title: 'Navigation' },
+       { id: 'search', target: '#search', title: 'Search' },
+       { id: 'new', target: '#new-project', title: 'Create a project' },
+     ],
+   });
+   ```
+
+2. **Compose the UI.** `Tour.Root` connects the tour; everything inside `Tour.Portal` is rendered
+   only while the tour is open. Every part is optional and unstyled.
+
+   ```tsx title="Onboarding.tsx"
+   import { Tour } from '@awesome-tour/react';
+   import { onboarding } from './tours';
+
+   export function Onboarding() {
+     return (
+       <Tour.Root tour={onboarding}>
+         <Tour.Trigger className="button">Take the tour</Tour.Trigger>
+         <Tour.Portal>
+           <Tour.Overlay className="tour-overlay" />
+           <Tour.Content className="tour-card" sideOffset={12}>
+             <Tour.Arrow className="tour-arrow" />
+             <Tour.Progress />
+             <Tour.Close aria-label="Close">✕</Tour.Close>
+             <Tour.Title />
+             <Tour.Description />
+             <Tour.StepContent />
+             <Tour.Prev>Back</Tour.Prev>
+             <Tour.Next>Next</Tour.Next>
+           </Tour.Content>
+         </Tour.Portal>
+       </Tour.Root>
+     );
+   }
+   ```
+
+3. **Style it.** Parts expose data attributes and CSS variables. A minimal theme:
+
+   ```css title="tour.css"
+   [data-tour-overlay] {
+     --tour-overlay-color: rgb(0 0 0 / 0.55);
+     z-index: 1000;
+   }
+   [data-tour-content-wrapper] {
+     z-index: 1001;
+   }
+   .tour-card {
+     width: 320px;
+     padding: 16px;
+     border-radius: 12px;
+     background: white;
+     box-shadow: 0 20px 50px -12px rgb(0 0 0 / 0.35);
+   }
+   .tour-arrow {
+     color: white; /* the arrow is an SVG filled with currentColor */
+   }
+   ```
+
+4. **Start it** from anywhere: `Tour.Trigger`, `onboarding.start()`, or `useTour().start()`.
+   Add [persistence](../guides/persistence/) so it shows once and resumes where the user left off:
+
+   ```ts {1,6}
+   import { createTour, localStorageAdapter, persist } from '@awesome-tour/react';
+
+   export const onboarding = createTour({
+     id: 'onboarding',
+     version: 1, // bump to show the tour again after meaningful changes
+     plugins: [persist(localStorageAdapter())],
+     steps: [/* … */],
+   });
+
+   // e.g. on first login
+   onboarding.start();
+   ```
+
+</Steps>
+
+<Aside type="tip">
+  Prefer JSX? Steps can be declared with `<Tour.Step>` — see the [Tour component](../components/tour/#tourstep).
+</Aside>
+
+## Next steps
+
+- [Targets](../guides/targets/) — anchors, refs, async and missing targets.
+- [Interactive steps](../guides/interactive-steps/) — advance when the user clicks or types.
+- [Styling](../guides/styling/) and [Animation](../guides/animation/).
+- [Accessibility](../guides/accessibility/) — what you get for free.

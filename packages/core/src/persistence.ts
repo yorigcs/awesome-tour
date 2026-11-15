@@ -10,16 +10,16 @@ export interface PersistedTourState {
 }
 
 /** Storage backend. Can be sync (localStorage) or async (your API). */
-export interface PersistenceAdapter {
-  get(key: string): MaybePromise<PersistedTourState | null | undefined>;
-  set(key: string, value: PersistedTourState): MaybePromise<void>;
+export interface PersistenceAdapter<T = PersistedTourState> {
+  get(key: string): MaybePromise<T | null | undefined>;
+  set(key: string, value: T): MaybePromise<void>;
   remove(key: string): MaybePromise<void>;
   /** Optional: notify about changes made elsewhere (other tabs, server push). */
-  subscribe?(key: string, listener: (value: PersistedTourState | null) => void): () => void;
+  subscribe?(key: string, listener: (value: T | null) => void): () => void;
 }
 
-export function memoryStorage(): PersistenceAdapter {
-  const map = new Map<string, PersistedTourState>();
+export function memoryStorage<T = PersistedTourState>(): PersistenceAdapter<T> {
+  const map = new Map<string, T>();
   return {
     get: (key) => map.get(key) ?? null,
     set: (key, value) => {
@@ -31,17 +31,19 @@ export function memoryStorage(): PersistenceAdapter {
   };
 }
 
-function parse(raw: string | null): PersistedTourState | null {
+function parse<T>(raw: string | null): T | null {
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as PersistedTourState;
+    return JSON.parse(raw) as T;
   } catch {
     return null;
   }
 }
 
 /** localStorage-backed adapter with cross-tab sync through the `storage` event. */
-export function localStorageAdapter(options: { prefix?: string } = {}): PersistenceAdapter {
+export function localStorageAdapter<T = PersistedTourState>(
+  options: { prefix?: string } = {},
+): PersistenceAdapter<T> {
   const prefix = options.prefix ?? 'awesome-tour:';
   const storage = (): Storage | null => {
     try {
@@ -51,7 +53,7 @@ export function localStorageAdapter(options: { prefix?: string } = {}): Persiste
     }
   };
   return {
-    get: (key) => parse(storage()?.getItem(prefix + key) ?? null),
+    get: (key) => parse<T>(storage()?.getItem(prefix + key) ?? null),
     set: (key, value) => {
       try {
         storage()?.setItem(prefix + key, JSON.stringify(value));
@@ -69,7 +71,7 @@ export function localStorageAdapter(options: { prefix?: string } = {}): Persiste
     subscribe(key, listener) {
       if (!isBrowser) return () => {};
       const onStorage = (event: StorageEvent) => {
-        if (event.key === prefix + key) listener(parse(event.newValue));
+        if (event.key === prefix + key) listener(parse<T>(event.newValue));
       };
       window.addEventListener('storage', onStorage);
       return () => window.removeEventListener('storage', onStorage);
@@ -149,10 +151,15 @@ export function persist(adapter: PersistenceAdapter, options: PersistOptions = {
   };
 }
 
-/** Read a tour's persisted state, e.g. to decide whether to show a "Resume tour" button. */
+/**
+ * Read a tour's persisted state, e.g. to decide whether to show a "Resume tour" button.
+ * Pass the same `key` you gave `persist()` if you customized it.
+ */
 export async function readTourProgress(
   adapter: PersistenceAdapter,
   tourId: string,
+  options: Pick<PersistOptions, 'key'> = {},
 ): Promise<PersistedTourState | null> {
-  return (await adapter.get(tourId)) ?? null;
+  const key = options.key ?? ((id: string) => id);
+  return (await adapter.get(key(tourId))) ?? null;
 }

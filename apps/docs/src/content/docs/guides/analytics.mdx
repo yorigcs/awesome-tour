@@ -1,0 +1,54 @@
+---
+title: Analytics
+description: Measure where users drop off with flat, tool-agnostic events.
+sidebar:
+  order: 6
+---
+
+import { AnalyticsDemo } from '../../../components/demos/AnalyticsDemo';
+
+The `analytics` plugin turns tour activity into flat events you can send to any tool.
+
+```ts
+import { analytics, createTour } from '@awesome-tour/react';
+
+createTour({
+  id: 'onboarding',
+  plugins: [analytics((event) => posthog.capture(event.type, event))],
+  steps,
+});
+```
+
+<AnalyticsDemo client:visible />
+
+## Events
+
+| `type`           | When                                                                          |
+| ---------------- | ----------------------------------------------------------------------------- |
+| `tour_started`   | The tour starts.                                                              |
+| `step_viewed`    | A step is shown — with `direction`, `previousStepId` and `previousStepDurationMs`. |
+| `tour_completed` | The user finished the tour.                                                   |
+| `tour_skipped`   | The user opted out (`skip()`).                                                |
+| `tour_dismissed` | The tour was closed (`close()`, Escape, ✕).                                   |
+| `tour_paused` / `tour_resumed` | `pause()` / `resume()`.                                         |
+| `target_missing` | A step's target wasn't found — a sign the tour is out of date.               |
+| `tour_error`     | The tour stopped with an error.                                               |
+
+Every event carries `tourId`, `tourVersion`, `stepId`, `stepIndex`, `totalSteps`, `timestamp`, and
+the step's `meta`. End events add `durationMs` and `stepDurationMs`.
+
+```ts
+analytics(track, {
+  includeData: false, // set true to attach tour.data (beware of PII)
+  filter: (event) => event.type !== 'step_viewed', // drop what you don't need
+});
+```
+
+Use step `meta` for labels your analytics team cares about:
+
+```ts
+{ id: 'invite', target: '#invite', meta: { funnel: 'activation', label: 'invite-cta' } }
+```
+
+Recipes for Segment, PostHog, GA4 and Amplitude are in the
+[analytics reference](../../reference/analytics/).

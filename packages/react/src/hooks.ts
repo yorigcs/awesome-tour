@@ -14,12 +14,17 @@ import { useCallbackRef, useIsomorphicLayoutEffect } from './utils/hooks';
 
 const identity = <T>(x: T) => x;
 
+export interface ExternalStore<TState> {
+  subscribe(listener: () => void): () => void;
+  getState(): TState;
+}
+
 /**
- * Subscribe to any tour's state with a selector. Concurrent-safe (`useSyncExternalStore`):
- * components re-render only when the selected value changes.
+ * Subscribe to any `{ subscribe, getState }` store (tours, checklists, the tour manager) with a
+ * selector. Concurrent-safe (`useSyncExternalStore`): re-renders only when the selection changes.
  */
-export function useTourSelector<TState extends TourState, TSelected = TState>(
-  tour: Pick<Tour<any, any>, 'subscribe' | 'getState'>,
+export function useStoreSelector<TState, TSelected = TState>(
+  store: ExternalStore<TState>,
   selector: (state: TState) => TSelected = identity as (state: TState) => TSelected,
   isEqual: (a: TSelected, b: TSelected) => boolean = Object.is,
 ): TSelected {
@@ -30,7 +35,7 @@ export function useTourSelector<TState extends TourState, TSelected = TState>(
   isEqualRef.current = isEqual;
 
   const getSelection = React.useCallback(() => {
-    const snapshot = tour.getState() as TState;
+    const snapshot = store.getState();
     const prev = cache.current;
     if (prev && prev.snapshot === snapshot) return prev.selected;
     const selected = selectorRef.current(snapshot);
@@ -40,15 +45,24 @@ export function useTourSelector<TState extends TourState, TSelected = TState>(
     }
     cache.current = { snapshot, selected };
     return selected;
-  }, [tour]);
+  }, [store]);
 
   // Reset cache when the selector identity changes so a new selector is applied immediately.
   // biome-ignore lint/correctness/useExhaustiveDependencies: selector identity is the trigger
   React.useMemo(() => {
     cache.current = null;
-  }, [selector, tour]);
+  }, [selector, store]);
 
-  return React.useSyncExternalStore(tour.subscribe, getSelection, getSelection);
+  return React.useSyncExternalStore(store.subscribe, getSelection, getSelection);
+}
+
+/** `useStoreSelector` for tours. */
+export function useTourSelector<TState extends TourState, TSelected = TState>(
+  tour: Pick<Tour<any, any>, 'subscribe' | 'getState'>,
+  selector?: (state: TState) => TSelected,
+  isEqual?: (a: TSelected, b: TSelected) => boolean,
+): TSelected {
+  return useStoreSelector(tour as ExternalStore<TState>, selector, isEqual);
 }
 
 /** Select from the state of the tour of the nearest `Tour.Root`. */

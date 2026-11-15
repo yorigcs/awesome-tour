@@ -1,0 +1,130 @@
+---
+title: Multi-page tours
+description: Tours that follow the user across routes, with adapters for React Router, Next.js and TanStack Router.
+sidebar:
+  order: 4
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+Give a step a `route` and the tour navigates there before resolving its target:
+
+```ts
+const onboarding = createTour({
+  id: 'onboarding',
+  steps: [
+    { id: 'home', route: '/', target: '#stats' },
+    { id: 'projects', route: '/projects', target: '#project-list' },
+    { id: 'widget', route: '/projects', target: '#analytics', onTargetMissing: 'wait' },
+  ],
+});
+```
+
+- Going **back** navigates back to the previous step's route.
+- If the user **navigates away** while a step is shown, the step is hidden (phase `resolving`) and
+  reappears when they return to its route.
+- The new page's targets are awaited like any [async target](../targets/#async-and-missing-targets).
+
+## Router adapters
+
+The tour talks to your router through a tiny `RouterAdapter`. Pass one to `TourProvider` (shared by
+all tours) or to `createTour({ router })`.
+
+<Tabs syncKey="router">
+  <TabItem label="React Router">
+    ```tsx
+    import { useReactRouterAdapter } from '@awesome-tour/router/react-router';
+
+    // Render inside <RouterProvider> / <BrowserRouter>
+    function TourProviders({ children }) {
+      const router = useReactRouterAdapter();
+      return (
+        <TourProvider tours={[onboarding]} router={router}>
+          {children}
+        </TourProvider>
+      );
+    }
+    ```
+  </TabItem>
+  <TabItem label="Next.js">
+    ```tsx
+    'use client';
+    import { useNextRouterAdapter } from '@awesome-tour/router/next';
+
+    // app/providers.tsx (App Router)
+    export function Providers({ children }) {
+      const router = useNextRouterAdapter({ scroll: false });
+      return (
+        <TourProvider tours={[onboarding]} router={router}>
+          {children}
+        </TourProvider>
+      );
+    }
+    ```
+  </TabItem>
+  <TabItem label="TanStack Router">
+    ```tsx
+    import { useTanStackRouterAdapter } from '@awesome-tour/router/tanstack-router';
+
+    // Render inside <RouterProvider>, e.g. in your root route component
+    function TourProviders({ children }) {
+      const router = useTanStackRouterAdapter();
+      return (
+        <TourProvider tours={[onboarding]} router={router}>
+          {children}
+        </TourProvider>
+      );
+    }
+    ```
+  </TabItem>
+  <TabItem label="Anything else">
+    ```tsx
+    import { useRouterAdapter } from '@awesome-tour/react';
+
+    function TourProviders({ children }) {
+      const { pathname, push } = useMyRouter();
+      const router = useRouterAdapter({ pathname, navigate: push });
+      return <TourProvider router={router}>{children}</TourProvider>;
+    }
+    ```
+  </TabItem>
+</Tabs>
+
+The React adapters resolve `navigate()` only once the new pathname has been rendered, so the tour
+never looks for targets on the old page. They match routes with `matchRoute` (the default for every adapter),
+which supports `:params` and a trailing `*` (`/projects/:id`, `/settings/*`); pass `match` to
+customize.
+
+Install with `pnpm add @awesome-tour/router` — each router is an optional peer dependency, imported
+from its own subpath.
+
+## Without React
+
+`createBrowserRouter()` from the core uses the History API (`pushState` + `popstate`):
+
+```ts
+import { createBrowserRouter, createTour } from '@awesome-tour/core';
+
+createTour({ id: 'docs', router: createBrowserRouter({ base: '/app' }), steps: [/* … */] });
+```
+
+## Patterns and failed navigation
+
+A step is shown only once the current path matches its `route` — targets are never looked up on
+the wrong page:
+
+- **Concrete paths** (`/projects/demo`) are navigated to. If navigation doesn't land (an auth guard
+  redirects, the adapter times out), the step stays hidden until the user gets there.
+- **Patterns** (`/projects/:id`, `/settings/*`) can't be navigated to — the tour doesn't know which
+  project to open. The step waits, hidden, until the user opens a matching page:
+
+```ts
+{ id: 'project-header', route: '/projects/:id', target: '#project-header' } // any project
+```
+
+<Aside>
+  While a step waits for its route, `phase` is `resolving` and nothing is rendered. Devtools show the
+  `resolving` phase and the route the step is waiting for.
+</Aside>
+
+See the [router reference](../../reference/router/) for the full adapter interface.

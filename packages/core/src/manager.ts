@@ -5,6 +5,8 @@ export interface TourManagerState {
   activeId: string | null;
   /** Tours waiting for the active one to finish, highest priority first. */
   queue: readonly string[];
+  /** Ids of registered tours. */
+  tourIds: readonly string[];
 }
 
 export interface QueueOptions extends StartOptions {
@@ -39,7 +41,19 @@ export function createTourManager(
   let queue: { id: string; options: QueueOptions; order: number }[] = [];
   let order = 0;
   let router = options.router;
-  let state: TourManagerState = { activeId: null, queue: [] };
+  let state: TourManagerState = { activeId: null, queue: [], tourIds: [] };
+  // Tours whose router was set by this manager — only those are reset when the router is removed,
+  // so a tour's own `createTour({ router })` survives a manager (or provider) without one.
+  const routed = new WeakSet<Tour<any, any>>();
+  const applyRouter = (tour: Tour<any, any>) => {
+    if (router) {
+      tour.setRouter(router);
+      routed.add(tour);
+    } else if (routed.has(tour)) {
+      tour.setRouter(undefined);
+      routed.delete(tour);
+    }
+  };
 
   const computeActive = () => {
     for (const { tour } of tours.values())
@@ -50,8 +64,13 @@ export function createTourManager(
   const update = () => {
     const activeId = computeActive();
     const queueIds = queue.map((q) => q.id);
-    if (activeId !== state.activeId || queueIds.join() !== state.queue.join()) {
-      state = { activeId, queue: queueIds };
+    const tourIds = [...tours.keys()];
+    if (
+      activeId !== state.activeId ||
+      queueIds.join() !== state.queue.join() ||
+      tourIds.join() !== state.tourIds.join()
+    ) {
+      state = { activeId, queue: queueIds, tourIds };
       for (const listener of [...listeners]) listener();
     }
     if (activeId === null && queue.length > 0) {
@@ -65,7 +84,7 @@ export function createTourManager(
   const manager: TourManager = {
     register(tour) {
       tours.get(tour.id)?.unsubscribe();
-      if (router) tour.setRouter(router);
+      applyRouter(tour);
       const unsubscribe = tour.subscribe(update);
       tours.set(tour.id, { tour, unsubscribe });
       update();
@@ -102,7 +121,7 @@ export function createTourManager(
     },
     setRouter(next) {
       router = next;
-      for (const { tour } of tours.values()) tour.setRouter(next);
+      for (const { tour } of tours.values()) applyRouter(tour);
     },
     getState: () => state,
     subscribe(listener) {

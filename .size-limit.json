@@ -1,9 +1,13 @@
 [
-  { "name": "@awesome-tour/core", "path": "packages/core/dist/index.js", "limit": "8 kB" },
+  {
+    "name": "@awesome-tour/core",
+    "path": "packages/core/dist/index.js",
+    "limit": "9 kB"
+  },
   {
     "name": "@awesome-tour/react",
     "path": "packages/react/dist/index.js",
-    "limit": "16 kB",
+    "limit": "18 kB",
     "ignore": ["react", "react-dom", "@awesome-tour/core"]
   },
   {
@@ -17,5 +21,17 @@
     "path": "packages/three/dist/index.js",
     "limit": "3 kB",
     "ignore": ["react", "three", "@react-three/fiber", "@awesome-tour/core", "@awesome-tour/react"]
+  },
+  {
+    "name": "@awesome-tour/router (react-router)",
+    "path": "packages/router/dist/react-router.js",
+    "limit": "1 kB",
+    "ignore": ["react", "react-router", "@awesome-tour/react"]
+  },
+  {
+    "name": "@awesome-tour/devtools",
+    "path": "packages/devtools/dist/index.js",
+    "limit": "6 kB",
+    "ignore": ["react", "react-dom", "@awesome-tour/react"]
   }
 ]

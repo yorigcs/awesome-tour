@@ -14,6 +14,7 @@ export default defineConfig({
       '@awesome-tour/react': src('react'),
       '@awesome-tour/motion': src('motion'),
       '@awesome-tour/three': src('three'),
+      '@awesome-tour/devtools': src('devtools'),
     },
   },
   server: { port: 5173 },

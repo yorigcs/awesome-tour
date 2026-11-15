@@ -1,0 +1,113 @@
+---
+title: Checklist
+description: The headless onboarding checklist — items completed by tours, signals, predicates or by hand, with persistence.
+sidebar:
+  order: 8
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+```ts
+import { createChecklist, localStorageAdapter, type ChecklistSnapshot } from '@awesome-tour/core';
+
+export const gettingStarted = createChecklist({
+  id: 'getting-started',
+  persistence: localStorageAdapter<ChecklistSnapshot>({ prefix: 'checklist:' }),
+  onComplete: () => confetti(),
+  items: [
+    { id: 'tour', tour: 'onboarding', meta: { title: 'Take the tour' } },
+    { id: 'invite', signal: 'invited', meta: { title: 'Invite a teammate' } },
+    { id: 'avatar', when: () => user.hasAvatar, meta: { title: 'Add a photo' } },
+    { id: 'docs', meta: { title: 'Read the docs' } }, // completed by hand
+  ],
+});
+```
+
+Render it with the [Checklist components](../../components/checklist/). In React, `@awesome-tour/react` exports the instance type as `ChecklistInstance` (the `Checklist` name is the component namespace).
+
+## createChecklist(options)
+
+| Option        | Type                                       | Description                                                                                  |
+| ------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| `id`          | `string`                                   | **Required.** Also the persistence key.                                                      |
+| `items`       | `readonly ChecklistItemDefinition[]`       | **Required.** The tasks, in display order.                                                   |
+| `persistence` | `PersistenceAdapter<ChecklistSnapshot>`    | Where to save item statuses and `dismissed`. Any [persistence adapter](../persistence/#adapters). |
+| `onComplete`  | `() => void`                               | Called when the last pending item is completed (again after a `reset`). Not called for a checklist that was already complete when loaded. |
+
+### ChecklistItemDefinition
+
+| Field    | Type                      | Description                                                                                                         |
+| -------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `id`     | `string`                  | **Required.** Unique within the checklist.                                                                          |
+| `tour`   | `string \| Tour`          | A tour that completes this item when it completes (`complete` event, or already `completed` when linked). A tour **id** needs a connected manager (`connect(manager)`; automatic under `TourProvider`). |
+| `signal` | `string`                  | Complete when `checklist.signal(name)` is called.                                                                   |
+| `when`   | `() => boolean`           | Complete when the predicate returns `true`, checked on `refresh()` (and after loading persisted state).             |
+| `meta`   | `Record<string, unknown>` | Free-form data for rendering: title, description, icon…                                                             |
+
+An item can combine several of these; any of them completes it. Items can always be completed manually with `complete(id)`.
+
+## Checklist instance
+
+| Method / property     | Returns                              | Description                                                                                                |
+| --------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `id`                  | `string`                             | The checklist id.                                                                                          |
+| `getItems()`          | `readonly ChecklistItemDefinition[]` | Item definitions.                                                                                          |
+| `getItem(id)`         | `ChecklistItemDefinition \| undefined` | One item.                                                                                                |
+| `getState()`          | `ChecklistState`                     | Immutable snapshot.                                                                                        |
+| `subscribe(listener)` | `() => void`                         | Called on every state change. Works with `useStoreSelector(checklist)`.                                    |
+| `complete(id)`        | `void`                               | Mark an item `done`.                                                                                       |
+| `skip(id)`            | `void`                               | Mark an item `skipped` (counts as completed for progress).                                                 |
+| `reset(id?)`          | `void`                               | Reset one item to `pending`, or every item **and** `dismissed` when called without an id.                  |
+| `dismiss()`           | `void`                               | Hide the checklist (`dismissed: true`).                                                                    |
+| `restore()`           | `void`                               | Show it again (`dismissed: false`).                                                                        |
+| `signal(name)`        | `void`                               | Complete every item whose `signal` is `name`.                                                              |
+| `refresh()`           | `void`                               | Re-evaluate the `when` predicates of pending items.                                                        |
+| `connect(manager?)`   | `() => void`                         | Link items' `tour` ids through a [manager](../manager/), following tours registered later. Returns a disconnect function. `Checklist.Root` does this with the provider's manager. |
+| `startItem(id)`       | `Promise<void>`                      | Start the item's tour with `force: true` — through the manager with `interrupt: true` when it's an id (throws if no manager is connected). No-op for items without a tour. |
+| `ready()`             | `Promise<void>`                      | Resolves once persisted state has been loaded.                                                             |
+| `destroy()`           | `void`                               | Stop listening to tours.                                                                                   |
+
+Unknown item ids are ignored by `complete`, `skip` and `reset`.
+
+## ChecklistState
+
+| Field       | Type                                         | Description                                                           |
+| ----------- | -------------------------------------------- | --------------------------------------------------------------------- |
+| `items`     | `Record<string, 'pending' \| 'done' \| 'skipped'>` | Status of every item.                                          |
+| `completed` | `number`                                     | Items `done` or `skipped`.                                            |
+| `total`     | `number`                                     | Number of items.                                                      |
+| `progress`  | `number`                                     | `completed / total`, from `0` to `1`.                                 |
+| `done`      | `boolean`                                    | Every item is done or skipped.                                        |
+| `dismissed` | `boolean`                                    | The user hid the checklist.                                           |
+| `hydrated`  | `boolean`                                    | Persisted state has been loaded (`true` immediately without `persistence`). |
+
+## ChecklistSnapshot
+
+What is written to `persistence` (key: the checklist `id`) after every change once hydrated:
+
+| Field       | Type                                     |
+| ----------- | ---------------------------------------- |
+| `items`     | `Record<string, ChecklistItemStatus>`    |
+| `dismissed` | `boolean`                                |
+| `updatedAt` | `number`                                 |
+
+<Aside>
+Items completed before persisted state finishes loading are kept: loaded statuses are merged with them.
+</Aside>
+
+## Without React
+
+```ts
+const manager = createTourManager({ tours: [onboarding] });
+const disconnect = gettingStarted.connect(manager);
+
+gettingStarted.subscribe(() => {
+  const { completed, total } = gettingStarted.getState();
+  badge.textContent = `${completed}/${total}`;
+});
+
+document.querySelector('#invite')!.addEventListener('click', () => gettingStarted.signal('invited'));
+window.addEventListener('focus', () => gettingStarted.refresh());
+```
+
+See the [checklist guide](../../guides/checklist/).

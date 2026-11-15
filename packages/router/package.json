@@ -1,0 +1,84 @@
+{
+  "name": "@awesome-tour/router",
+  "version": "0.1.0",
+  "description": "Router adapters for awesome-tour multi-page tours: React Router, Next.js App Router, TanStack Router.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./react-router": {
+      "import": {
+        "types": "./dist/react-router.d.ts",
+        "default": "./dist/react-router.js"
+      },
+      "require": {
+        "types": "./dist/react-router.d.cts",
+        "default": "./dist/react-router.cjs"
+      }
+    },
+    "./next": {
+      "import": {
+        "types": "./dist/next.d.ts",
+        "default": "./dist/next.js"
+      },
+      "require": {
+        "types": "./dist/next.d.cts",
+        "default": "./dist/next.cjs"
+      }
+    },
+    "./tanstack-router": {
+      "import": {
+        "types": "./dist/tanstack-router.d.ts",
+        "default": "./dist/tanstack-router.js"
+      },
+      "require": {
+        "types": "./dist/tanstack-router.d.cts",
+        "default": "./dist/tanstack-router.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "tour",
+    "onboarding",
+    "react-router",
+    "nextjs",
+    "tanstack-router"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "@awesome-tour/react": "workspace:^",
+    "@tanstack/react-router": ">=1",
+    "next": ">=13.4",
+    "react": ">=18",
+    "react-router": ">=6"
+  },
+  "peerDependenciesMeta": {
+    "@tanstack/react-router": {
+      "optional": true
+    },
+    "next": {
+      "optional": true
+    },
+    "react-router": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@awesome-tour/core": "workspace:^",
+    "@awesome-tour/react": "workspace:^",
+    "@tanstack/react-router": "^1.170.46",
+    "next": "^16.4.6",
+    "react-router": "^8.5.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

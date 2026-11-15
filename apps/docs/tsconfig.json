@@ -1,0 +1,15 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["dist"],
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "paths": {
+      "@awesome-tour/core": ["../../packages/core/src/index.ts"],
+      "@awesome-tour/react": ["../../packages/react/src/index.ts"],
+      "@awesome-tour/motion": ["../../packages/motion/src/index.ts"],
+      "@awesome-tour/devtools": ["../../packages/devtools/src/index.ts"]
+    }
+  }
+}

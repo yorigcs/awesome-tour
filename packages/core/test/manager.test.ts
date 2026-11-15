@@ -11,7 +11,11 @@ describe('tour manager', () => {
     await manager.start('a');
     await manager.start('b', { priority: 1 });
     await manager.start('c', { priority: 5 });
-    expect(manager.getState()).toEqual({ activeId: 'a', queue: ['c', 'b'] });
+    expect(manager.getState()).toEqual({
+      activeId: 'a',
+      queue: ['c', 'b'],
+      tourIds: ['a', 'b', 'c'],
+    });
 
     a.complete();
     await new Promise((r) => setTimeout(r, 0));

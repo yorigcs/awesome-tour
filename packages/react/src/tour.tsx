@@ -4,6 +4,7 @@ import {
   inertOthers,
   inflateRect,
   isElement,
+  isFromKeptElement,
   type RectLike,
   type StartOptions,
   type Tour as TourInstance,
@@ -664,7 +665,7 @@ const TourContentImpl = React.forwardRef<HTMLDivElement, Omit<TourContentProps, 
     React.useEffect(() => {
       if (!open) return;
       const onKey = (event: KeyboardEvent) => {
-        if (event.defaultPrevented) return;
+        if (event.defaultPrevented || isFromKeptElement(event)) return;
         if (event.key === 'Escape') {
           handleEscape(event);
           if (!event.defaultPrevented && ctx.closeOnEscape) {

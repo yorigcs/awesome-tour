@@ -1,0 +1,67 @@
+---
+title: Persistence
+description: Show tours once, resume where users left off, invalidate progress with versions, sync tabs and devices.
+sidebar:
+  order: 5
+---
+
+import { PersistenceDemo } from '../../../components/demos/PersistenceDemo';
+
+Persistence is a [plugin](../../reference/plugins/). Add it and a tour remembers its progress:
+
+```ts
+import { createTour, localStorageAdapter, persist } from '@awesome-tour/react';
+
+const onboarding = createTour({
+  id: 'onboarding',
+  version: 2,
+  plugins: [persist(localStorageAdapter())],
+  steps: [/* … */],
+});
+```
+
+<PersistenceDemo client:visible />
+
+## What it does
+
+| Option        | Default | Effect                                                                    |
+| ------------- | ------- | ------------------------------------------------------------------------- |
+| `resume`      | `true`  | `start()` continues from the last step seen.                              |
+| `once`        | `true`  | Completed or skipped tours don't start again — unless `start({ force: true })`. |
+| `persistData` | `false` | Also save `tour.data` (answers, choices).                                 |
+| `sync`        | `true`  | Finishing the tour in one tab closes it in the others.                    |
+| `key`         | tour id | Storage key for a tour id.                                                |
+
+`Tour.Trigger` is meant for "Take the tour again" buttons, so it restarts by default (`force`). Use
+`<Tour.Trigger restart={false}>` to resume instead.
+
+**Versioning.** Saved progress records the tour's `version`. When you change a tour meaningfully,
+bump `version` and everyone sees it again from the start.
+
+## Adapters
+
+- `localStorageAdapter({ prefix })` — default prefix `awesome-tour:`; cross-tab sync via the
+  `storage` event.
+- `memoryStorage()` — for tests and SSR.
+- Your own: anything implementing `get`, `set`, `remove` (sync or async), optionally `subscribe`.
+
+Saving to your backend makes onboarding follow users across devices:
+
+```ts
+import type { PersistenceAdapter } from '@awesome-tour/react';
+
+const serverAdapter: PersistenceAdapter = {
+  get: (key) => fetch(`/api/tours/${key}`).then((r) => (r.ok ? r.json() : null)),
+  set: (key, value) =>
+    fetch(`/api/tours/${key}`, { method: 'PUT', body: JSON.stringify(value) }).then(() => {}),
+  remove: (key) => fetch(`/api/tours/${key}`, { method: 'DELETE' }).then(() => {}),
+};
+
+createTour({ id: 'onboarding', plugins: [persist(serverAdapter)], steps });
+```
+
+Read saved progress without starting a tour (e.g. to show a "Resume tour" button) with
+`readTourProgress(adapter, tourId, { key })`.
+
+Checklists use the same adapters — see [Onboarding checklist](../checklist/). Full API in the
+[persistence reference](../../reference/persistence/).

@@ -344,8 +344,10 @@ const MotionPanel = React.forwardRef<HTMLDivElement, MotionPanelProps>(function 
   const factory = typeof preset === 'function' ? preset : tourPresets[preset];
   const p = reduced ? REDUCED : factory(placedSide);
   const motionProps = props as unknown as HTMLMotionProps<'div'>;
-  // Step changes animate in place (no remount): controls keep focus and are never duplicated.
+  // Step changes animate the panel itself, in place (no remount, no wrapper element): controls
+  // keep focus, are never duplicated, and the card's own layout (flex/grid) is untouched.
   const [scope, animate] = useAnimate<HTMLDivElement>();
+  const composedRef = useComposedRefs<HTMLDivElement>(ref, scope as React.Ref<HTMLDivElement>);
   const firstStep = React.useRef(true);
   React.useEffect(() => {
     if (stepKey === undefined) return;
@@ -358,14 +360,14 @@ const MotionPanel = React.forwardRef<HTMLDivElement, MotionPanelProps>(function 
   return (
     <motion.div
       {...motionProps}
-      ref={ref}
+      ref={composedRef}
       initial={p.initial}
       animate={p.animate}
       exit={p.exit}
       transition={transition ?? p.transition}
       style={{ transformOrigin: 'var(--tour-content-transform-origin)', ...(style as object) }}
     >
-      <div ref={scope}>{children}</div>
+      {children}
     </motion.div>
   );
 });

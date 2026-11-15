@@ -1,0 +1,69 @@
+---
+title: Onboarding checklist
+description: A persistent list of onboarding tasks completed by tours, signals or conditions.
+sidebar:
+  order: 8
+---
+
+import { ChecklistDemo } from '../../../components/demos/ChecklistDemo';
+
+A checklist tracks onboarding across tours and actions: "Take the tour", "Invite a teammate",
+"Connect your data". It is headless like tours: `createChecklist` holds the state, `Checklist.*`
+renders it.
+
+<ChecklistDemo client:visible />
+
+```tsx
+import { Checklist, createChecklist, localStorageAdapter } from '@awesome-tour/react';
+
+export const gettingStarted = createChecklist({
+  id: 'getting-started',
+  persistence: localStorageAdapter({ prefix: 'checklist:' }),
+  onComplete: () => confetti(),
+  items: [
+    { id: 'tour', tour: 'onboarding', meta: { title: 'Take the product tour' } },
+    { id: 'invite', signal: 'invited', meta: { title: 'Invite a teammate' } },
+    { id: 'avatar', when: () => user.hasAvatar, meta: { title: 'Add a profile photo' } },
+    { id: 'billing', meta: { title: 'Set up billing' } }, // completed manually
+  ],
+});
+```
+
+## How items complete
+
+| Item field           | Completes when…                                                                     |
+| -------------------- | ----------------------------------------------------------------------------------- |
+| `tour: 'onboarding'` | That tour completes. A tour **id** needs a `TourProvider`; a tour **instance** works anywhere. |
+| `signal: 'invited'`  | Your app calls `gettingStarted.signal('invited')`.                                  |
+| `when: () => bool`   | The predicate is true when `gettingStarted.refresh()` runs.                         |
+| —                    | You call `gettingStarted.complete('billing')`.                                      |
+
+Users can also `skip(id)` items, and `dismiss()` / `restore()` the whole checklist.
+
+## Rendering
+
+```tsx
+<Checklist.Root checklist={gettingStarted} aria-labelledby="checklist-title">
+  <h2 id="checklist-title">Getting started</h2>
+  <Checklist.Progress>{({ completed, total }) => `${completed} of ${total}`}</Checklist.Progress>
+  <Checklist.List>
+    {gettingStarted.getItems().map((item) => (
+      <Checklist.Item key={item.id} value={item.id}>
+        <Checklist.ItemIndicator forceMount>✓</Checklist.ItemIndicator>
+        <Checklist.ItemTrigger>{item.meta?.title as string}</Checklist.ItemTrigger>
+        <Checklist.ItemSkip>Skip</Checklist.ItemSkip>
+      </Checklist.Item>
+    ))}
+  </Checklist.List>
+  <Checklist.Dismiss aria-label="Dismiss checklist">✕</Checklist.Dismiss>
+</Checklist.Root>
+```
+
+- `Checklist.ItemTrigger` starts the item's tour when it has one; add an `onClick` for anything else.
+- Items expose `data-state="pending|done|skipped"`; `Checklist.Root` sets `--checklist-progress`
+  (0–1) for progress bars.
+- `Checklist.Progress` is a `progressbar`, and each trigger announces its status to screen readers.
+
+Hide the checklist once it's dismissed with `useStoreSelector(gettingStarted, (s) => s.dismissed)`.
+See the [component reference](../../components/checklist/) and the
+[checklist API](../../reference/checklist/).

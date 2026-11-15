@@ -1,0 +1,76 @@
+---
+title: Interactive steps
+description: Advance the tour when the user clicks, types or completes an action.
+sidebar:
+  order: 2
+---
+
+import { InteractiveDemo } from '../../../components/demos/InteractiveDemo';
+
+The best onboarding teaches by doing. `advanceOn` makes a step wait for the user instead of a
+"Next" button.
+
+<InteractiveDemo client:visible />
+
+```ts
+createTour({
+  id: 'create-project',
+  steps: [
+    // 1. A DOM event on the target (or on advanceOn.target)
+    { id: 'click', target: '#new', advanceOn: { event: 'click' } },
+
+    // 2. A predicate, re-checked on DOM mutations and on an interval
+    {
+      id: 'type',
+      target: '#name',
+      interactive: true,
+      advanceOn: { when: () => document.querySelector<HTMLInputElement>('#name')!.value.length >= 3 },
+    },
+
+    // 3. A named signal from your app: tour.signal('saved')
+    { id: 'save', target: '#save', interactive: true, advanceOn: { signal: 'saved' } },
+
+    { id: 'done', title: 'Done!' },
+  ],
+});
+```
+
+```tsx
+function SaveButton() {
+  const { signal } = useTour();
+  return <button onClick={() => save().then(() => signal('saved'))}>Save</button>;
+}
+```
+
+## Options
+
+| `advanceOn` | Type                      | Description                                                       |
+| ----------- | ------------------------- | ----------------------------------------------------------------- |
+| `event`     | `string`                  | DOM event that advances the tour.                                 |
+| `target`    | `TargetInput`             | Where to listen for `event`. Default: the step's resolved target. |
+| `when`      | `(ctx) => boolean`        | Advance when it becomes true.                                     |
+| `signal`    | `string`                  | Advance when the app calls `tour.signal(name)`.                   |
+| `to`        | step id                   | Go to this step instead of the regular next one.                  |
+
+Pass an array to accept several triggers — e.g. a click on either of two buttons, each with its own
+`to`:
+
+```ts
+{
+  id: 'choose',
+  target: ['#grid-view', '#list-view'],
+  advanceOn: [
+    { event: 'click', target: '#grid-view', to: 'grid' },
+    { event: 'click', target: '#list-view', to: 'list' },
+  ],
+}
+```
+
+## Letting users reach the target
+
+Modal tours block the page. A step's target is clickable when the step is `interactive: true`
+(implied when `advanceOn.event` is set). To make every target clickable, set
+`targetInteraction` on `Tour.Root`.
+
+You can still render `Tour.Next` on an interactive step to let users move on without doing the
+action — or leave it out to require it.

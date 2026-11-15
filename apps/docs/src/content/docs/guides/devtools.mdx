@@ -1,0 +1,63 @@
+---
+title: Devtools
+description: Inspect tours, check target health, jump between steps and watch events while developing.
+sidebar:
+  order: 14
+---
+
+import { DevtoolsDemo } from '../../../components/demos/DevtoolsDemo';
+
+```bash
+pnpm add -D @awesome-tour/devtools
+```
+
+```tsx
+import { TourDevtools } from '@awesome-tour/devtools';
+
+<TourProvider tours={[onboarding]}>
+  <App />
+  {import.meta.env.DEV && <TourDevtools checklists={[gettingStarted]} />}
+</TourProvider>;
+```
+
+<DevtoolsDemo client:visible />
+
+## What you get
+
+- **Tours** — every tour registered on the `TourProvider` (plus any passed in `tours`), with status,
+  phase, version and progress. Buttons to restart, go back and forth, pause, resume, complete and
+  close.
+- **Steps** — each step's target health: _centered_, _found_, _missing_, _on /route_ (lives on
+  another page) or _hidden_ (`when` is false). Hover a step to highlight its target on the page;
+  click it to jump there (navigating if needed).
+- **Data** — the tour's `data` and its last error.
+- **Events** — a live timeline of every tour event.
+- **Checklists** — progress per checklist; click an item to toggle it.
+
+Toggle the panel with <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> (`shortcut` prop, `false` to
+disable). It renders inside a shadow root, so your CSS and its CSS never mix (`isolate={false}` to
+opt out), and it remembers whether it was open.
+
+## Usable during modal tours
+
+The panel carries the `data-tour-keep` attribute: modal tours don't make it `inert`, and tour
+keyboard shortcuts ignore keys pressed inside it. Use the same attribute for your own toasts or
+support widgets.
+
+## Keep it out of production
+
+Render it behind a development check so bundlers drop it:
+
+```tsx
+{process.env.NODE_ENV !== 'production' && <TourDevtools />}
+```
+
+Or lazy-load it only for internal users:
+
+```tsx
+const TourDevtools = lazy(() =>
+  import('@awesome-tour/devtools').then((m) => ({ default: m.TourDevtools })),
+);
+```
+
+Full API in the [devtools reference](../../reference/devtools/).
