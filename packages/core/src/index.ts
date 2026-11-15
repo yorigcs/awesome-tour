@@ -35,11 +35,25 @@ export {
 export type { Emitter } from './emitter';
 export { createEmitter } from './emitter';
 export { type FrameInput, frameTarget } from './frames';
-export type { QueueOptions, TourManager, TourManagerState } from './manager';
+export type { QueueOptions, TourManager, TourManagerOptions, TourManagerState } from './manager';
 export { createTourManager } from './manager';
-export type { PersistedTourState, PersistenceAdapter, PersistOptions } from './persistence';
-export { localStorageAdapter, memoryStorage, persist, readTourProgress } from './persistence';
+export type {
+  HttpAdapterOptions,
+  PersistedTourState,
+  PersistenceAdapter,
+  PersistOptions,
+} from './persistence';
+export {
+  httpAdapter,
+  localStorageAdapter,
+  memoryStorage,
+  migrateState,
+  persist,
+  readTourProgress,
+  sessionStorageAdapter,
+} from './persistence';
 export { createBrowserRouter, matchRoute } from './router';
+export { emptyImpression, evaluateRules, type ImpressionRecord } from './rules';
 export type { Store } from './store';
 export { createStore } from './store';
 export type { WaitForTargetOptions } from './targets';

@@ -54,6 +54,7 @@ const DEMO_PAGES = [
   'guides/animation',
   'guides/devtools',
   'guides/i18n',
+  'guides/display-rules',
   'registry/tour',
   'registry/checklist',
   'registry/hotspot',
@@ -84,6 +85,22 @@ test('i18n demo translates the primitives', async ({ page }) => {
   await expect(dialog).toContainText('Navegação');
   await expect(dialog.getByRole('button', { name: 'Fechar tour' })).toBeVisible();
   await expect(page.locator('[data-tour-announcer]', { hasText: 'Passo 1 de 3' })).toHaveCount(1);
+});
+
+test('display rules demo: audience blocks, then the signal starts the tour', async ({ page }) => {
+  await page.goto(`${DOCS}/guides/display-rules/`);
+  const frame = page.locator('[data-demo-frame]');
+  await frame.getByRole('button', { name: /Open billing/ }).click();
+  await page.waitForTimeout(300);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(frame.getByRole('list', { name: 'Rule checks' })).toContainText(
+    'audience() returned false',
+  );
+  await frame.getByRole('button', { name: 'pro' }).click();
+  await frame.getByRole('button', { name: /Open billing/ }).click();
+  await expect(page.getByRole('dialog')).toContainText('Download invoices');
+  await page.getByRole('button', { name: 'Remind me in 10s' }).click();
+  await expect(frame.getByRole('list', { name: 'Rule checks' })).toContainText('snoozed until');
 });
 
 test('landing workbench swaps parts while the tour runs', async ({ page }) => {

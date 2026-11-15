@@ -42,6 +42,12 @@ Toggle the panel with <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> (`shortcut` p
 disable). It renders inside a shadow root, so your CSS and its CSS never mix (`isolate={false}` to
 opt out), and it remembers whether it was open.
 
+### Rules
+
+The **Rules** tab answers "why didn't my tour show?": for every tour on the provider it lists each
+[display rule](../display-rules/) — audience, schedule, once, max shows, cooldown, snooze — with
+whether it passes and why, plus buttons to start a tour if eligible and to reset impressions.
+
 ## Usable during modal tours
 
 The panel carries the `data-tour-keep` attribute: modal tours don't make it `inert`, and tour

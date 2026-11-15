@@ -5,6 +5,7 @@ import {
   createChecklist,
   createStore,
   createTour,
+  type ImpressionRecord,
   localStorageAdapter,
   persist,
   type ReactStepDefinition,
@@ -125,4 +126,30 @@ export const gettingStarted = createChecklist({
     { id: 'search', signal: 'searched', meta: { title: 'Search for something' } },
     { id: 'project', signal: 'project-created', meta: { title: 'Create a project' } },
   ],
+});
+
+/**
+ * A one-step announcement with display rules: it starts by itself on /projects (when no other
+ * tour is on screen), at most once, and "Remind me later" snoozes it. See devtools → Rules.
+ */
+export const whatsNew = createTour({
+  id: 'whats-new',
+  modal: false,
+  steps: [
+    {
+      id: 'table',
+      target: '#project-list',
+      side: 'bottom',
+      title: 'New: project table',
+      description: 'Owners and status at a glance. Sorting and filters are next.',
+    },
+  ],
+  rules: {
+    trigger: { route: '/projects' },
+    frequency: { once: true, maxShows: 3 },
+  },
+});
+
+export const impressions = localStorageAdapter<ImpressionRecord>({
+  prefix: 'awesome-impressions:',
 });

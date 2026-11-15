@@ -5,11 +5,14 @@ import { Topbar } from './layout/Topbar';
 import { Page } from './pages';
 import { router } from './router';
 import { OnboardingUI } from './tour/OnboardingUI';
-import { gettingStarted, onboarding } from './tours';
+import { WhatsNewUI } from './tour/WhatsNew';
+import { gettingStarted, impressions, onboarding, whatsNew } from './tours';
+
+const TOURS = [onboarding, whatsNew];
 
 export function App() {
   return (
-    <TourProvider tours={[onboarding]} router={router}>
+    <TourProvider tours={TOURS} router={router} impressions={impressions}>
       <Tour.Root tourId="onboarding">
         <div className="grid min-h-svh md:grid-cols-[16rem_1fr]">
           <AppSidebar />
@@ -22,6 +25,7 @@ export function App() {
         </div>
         <OnboardingUI />
       </Tour.Root>
+      <WhatsNewUI />
       {/* In an app: {import.meta.env.DEV && <TourDevtools />} — always on in the playground. */}
       <TourDevtools checklists={[gettingStarted]} position="bottom-right" />
     </TourProvider>

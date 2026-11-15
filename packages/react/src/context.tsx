@@ -2,6 +2,8 @@ import {
   type AnchorRegistry,
   createTourManager,
   defaultAnchors,
+  type ImpressionRecord,
+  type PersistenceAdapter,
   type RouterAdapter,
   type StepDefinition,
   type Tour,
@@ -55,6 +57,11 @@ export interface TourProviderProps {
   anchors?: AnchorRegistry;
   /** Bring your own manager (e.g. created outside React). */
   manager?: TourManager;
+  /**
+   * Where the manager remembers impressions for display `rules` (shows, outcome, snooze).
+   * Read once. Default: in memory. Ignored when you pass `manager`.
+   */
+  impressions?: PersistenceAdapter<ImpressionRecord>;
   /** Translations for every string the primitives render (merged over the English defaults). */
   messages?: TourMessagesInput;
   children?: React.ReactNode;
@@ -69,11 +76,15 @@ export function TourProvider({
   router,
   anchors,
   manager: managerProp,
+  impressions,
   messages,
   children,
 }: TourProviderProps) {
   // Register initial tours synchronously so children can look them up on the first render.
-  const [internal] = React.useState(() => managerProp ?? createTourManager({ router, tours }));
+  const [internal] = React.useState(
+    () =>
+      managerProp ?? createTourManager({ router, tours, ...(impressions ? { impressions } : {}) }),
+  );
   const manager = managerProp ?? internal;
 
   React.useEffect(() => {

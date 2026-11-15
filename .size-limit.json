@@ -2,48 +2,82 @@
   {
     "name": "@awesome-tour/core",
     "path": "packages/core/dist/index.js",
-    "limit": "9 kB"
+    "limit": "10 kB"
   },
   {
     "name": "@awesome-tour/react",
     "path": "packages/react/dist/index.js",
     "limit": "18 kB",
-    "ignore": ["react", "react-dom", "@awesome-tour/core"]
+    "ignore": [
+      "react",
+      "react-dom",
+      "@awesome-tour/core"
+    ]
   },
   {
     "name": "@awesome-tour/motion",
     "path": "packages/motion/dist/index.js",
     "limit": "4 kB",
-    "ignore": ["react", "react-dom", "motion", "@awesome-tour/core", "@awesome-tour/react"]
+    "ignore": [
+      "react",
+      "react-dom",
+      "motion",
+      "@awesome-tour/core",
+      "@awesome-tour/react"
+    ]
   },
   {
     "name": "@awesome-tour/three",
     "path": "packages/three/dist/index.js",
     "limit": "3 kB",
-    "ignore": ["react", "three", "@react-three/fiber", "@awesome-tour/core", "@awesome-tour/react"]
+    "ignore": [
+      "react",
+      "three",
+      "@react-three/fiber",
+      "@awesome-tour/core",
+      "@awesome-tour/react"
+    ]
   },
   {
     "name": "@awesome-tour/router (react-router)",
     "path": "packages/router/dist/react-router.js",
     "limit": "1 kB",
-    "ignore": ["react", "react-router", "@awesome-tour/react"]
+    "ignore": [
+      "react",
+      "react-router",
+      "@awesome-tour/react"
+    ]
   },
   {
     "name": "@awesome-tour/devtools",
     "path": "packages/devtools/dist/index.js",
     "limit": "6 kB",
-    "ignore": ["react", "react-dom", "@awesome-tour/react"]
+    "ignore": [
+      "react",
+      "react-dom",
+      "@awesome-tour/react"
+    ]
   },
   {
     "name": "@awesome-tour/router (next)",
     "path": "packages/router/dist/next.js",
     "limit": "1 kB",
-    "ignore": ["react", "next", "@tanstack/react-router", "@awesome-tour/react"]
+    "ignore": [
+      "react",
+      "next",
+      "@tanstack/react-router",
+      "@awesome-tour/react"
+    ]
   },
   {
     "name": "@awesome-tour/router (tanstack-router)",
     "path": "packages/router/dist/tanstack-router.js",
     "limit": "1 kB",
-    "ignore": ["react", "next", "@tanstack/react-router", "@awesome-tour/react"]
+    "ignore": [
+      "react",
+      "next",
+      "@tanstack/react-router",
+      "@awesome-tour/react"
+    ]
   }
 ]

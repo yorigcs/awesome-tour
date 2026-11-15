@@ -948,7 +948,16 @@ const TourContentImpl = React.forwardRef<HTMLDivElement, Omit<TourContentProps, 
           visibility: positioner.isReferenceHidden ? 'hidden' : undefined,
         };
 
+    // `advanceOn: { delay }` → expose the duration so CSS can draw a countdown.
+    const autoAdvance = React.useMemo(() => {
+      const rules = step?.advanceOn;
+      const list = rules ? (Array.isArray(rules) ? rules : [rules]) : [];
+      const delays = list.map((r) => r.delay).filter((d): d is number => d != null);
+      return delays.length ? Math.min(...delays) : null;
+    }, [step]);
+
     const cssVars = {
+      '--tour-auto-advance': autoAdvance != null ? `${autoAdvance}ms` : undefined,
       '--tour-content-transform-origin': centered ? 'center' : positioner.transformOrigin,
       '--tour-content-available-width':
         positioner.availableWidth !== undefined ? `${positioner.availableWidth}px` : undefined,
@@ -1000,6 +1009,7 @@ const TourContentImpl = React.forwardRef<HTMLDivElement, Omit<TourContentProps, 
             data-phase={state.phase ?? undefined}
             data-direction={state.direction ?? undefined}
             data-target-missing={state.targetMissing ? '' : undefined}
+            data-auto-advance={autoAdvance != null ? '' : undefined}
             {...contentProps}
             ref={contentRef}
             onKeyDown={handleKeyDown}
@@ -1145,15 +1155,19 @@ function TourStepContent({ fallback = null, children }: TourStepContentProps) {
  * -----------------------------------------------------------------------------------------------*/
 
 const TourNext = React.forwardRef<HTMLButtonElement, PrimitiveProps<'button'>>(function TourNext(
-  { onClick, ...props },
+  { onClick, disabled, ...props },
   ref,
 ) {
   const { tour, state } = useTourContext('<Tour.Next>');
   const isLast = state.progress.current >= state.progress.total;
+  // A step's `canNext` predicate gates moving forward.
+  const blocked = disabled ?? !state.canNext;
   return (
     <Primitive.button
       type="button"
       data-last={isLast ? '' : undefined}
+      disabled={blocked}
+      data-disabled={blocked ? '' : undefined}
       {...props}
       ref={ref}
       onClick={composeEventHandlers(onClick, () => void tour.next())}

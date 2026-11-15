@@ -1,4 +1,12 @@
-import type { Listener, RouterAdapter, StartOptions, Tour } from './types';
+import { memoryStorage, type PersistenceAdapter } from './persistence';
+import {
+  emptyImpression,
+  evaluateRules,
+  type ImpressionRecord,
+  trackImpressions,
+  watchTriggers,
+} from './rules';
+import type { EligibilityReport, Listener, RouterAdapter, StartOptions, Tour } from './types';
 
 export interface TourManagerState {
   /** Id of the tour currently on screen (active or starting). */
@@ -23,6 +31,14 @@ export interface TourManager {
   /** Start a tour, or queue it if another tour is on screen. */
   start(id: string, options?: QueueOptions): Promise<void>;
   setRouter(router: RouterAdapter | undefined): void;
+  /** Evaluate a tour's display rules (audience, schedule, frequency, snooze). */
+  explain(id: string): Promise<EligibilityReport>;
+  /** Start (or queue) the tour only if its rules allow it. Resolves to whether it was started. */
+  startIfEligible(id: string, options?: QueueOptions): Promise<boolean>;
+  /** Fire tours whose `rules.trigger.signal` is `name`. */
+  signal(name: string): void;
+  /** Forget impressions (shows, outcome, snooze) of one tour, or of all. */
+  resetImpressions(id?: string): Promise<void>;
   getState(): TourManagerState;
   subscribe(listener: Listener): () => void;
   destroy(): void;
@@ -33,14 +49,37 @@ const ON_SCREEN = new Set(['active', 'starting']);
 /**
  * Coordinates several tours: only one is on screen at a time, others wait in a priority queue.
  */
-export function createTourManager(
-  options: { tours?: Tour<any, any>[]; router?: RouterAdapter } = {},
-): TourManager {
-  const tours = new Map<string, { tour: Tour<any, any>; unsubscribe: () => void }>();
+export interface TourManagerOptions {
+  tours?: Tour<any, any>[];
+  router?: RouterAdapter;
+  /**
+   * Where impressions (shows, outcome, snooze) are remembered for `rules`. Default: in memory.
+   * Use `localStorageAdapter({ prefix: 'tour-impressions:' })` or your API to keep them.
+   */
+  impressions?: PersistenceAdapter<ImpressionRecord>;
+}
+
+export function createTourManager(options: TourManagerOptions = {}): TourManager {
+  const impressions = options.impressions ?? memoryStorage<ImpressionRecord>();
+  const tours = new Map<
+    string,
+    {
+      tour: Tour<any, any>;
+      unsubscribe: () => void;
+      triggers: ReturnType<typeof watchTriggers>;
+    }
+  >();
   const listeners = new Set<Listener>();
   let queue: { id: string; options: QueueOptions; order: number }[] = [];
   let order = 0;
   let router = options.router;
+  let routerOff: (() => void) | undefined;
+  const watchRouter = () => {
+    routerOff?.();
+    routerOff = router?.subscribe?.(() => {
+      for (const entry of tours.values()) entry.triggers.onRoute();
+    });
+  };
   let state: TourManagerState = { activeId: null, queue: [], tourIds: [] };
   // Tours whose router was set by this manager — only those are reset when the router is removed,
   // so a tour's own `createTour({ router })` survives a manager (or provider) without one.
@@ -85,8 +124,24 @@ export function createTourManager(
     register(tour) {
       tours.get(tour.id)?.unsubscribe();
       applyRouter(tour);
-      const unsubscribe = tour.subscribe(update);
-      tours.set(tour.id, { tour, unsubscribe });
+      const offState = tour.subscribe(update);
+      const offImpressions = trackImpressions(tour, impressions);
+      const triggers = watchTriggers(
+        tour,
+        () => {
+          // Triggered tours never interrupt or queue behind one on screen: the trigger fires
+          // again next time (next route change, signal…).
+          if (computeActive() !== null || queue.some((q) => q.id === tour.id)) return;
+          void manager.startIfEligible(tour.id);
+        },
+        () => router,
+      );
+      const unsubscribe = () => {
+        offState();
+        offImpressions();
+        triggers.cleanup();
+      };
+      tours.set(tour.id, { tour, unsubscribe, triggers });
       update();
       return () => {
         const entry = tours.get(tour.id);
@@ -122,6 +177,27 @@ export function createTourManager(
     setRouter(next) {
       router = next;
       for (const { tour } of tours.values()) applyRouter(tour);
+      watchRouter();
+      for (const entry of tours.values()) entry.triggers.onRoute();
+    },
+    async explain(id) {
+      const tour = tours.get(id)?.tour;
+      if (!tour) throw new Error(`[awesome-tour] No tour registered with id "${id}"`);
+      return evaluateRules(tour, (await impressions.get(id)) ?? emptyImpression());
+    },
+    async startIfEligible(id, startOptions = {}) {
+      const report = await manager.explain(id);
+      if (!report.eligible) return false;
+      const priority = tours.get(id)?.tour.rules?.priority;
+      await manager.start(id, { ...(priority != null ? { priority } : {}), ...startOptions });
+      return true;
+    },
+    signal(name) {
+      for (const entry of tours.values()) entry.triggers.onSignal(name);
+    },
+    async resetImpressions(id) {
+      const ids = id ? [id] : [...tours.keys()];
+      await Promise.all(ids.map((t) => impressions.remove(t)));
     },
     getState: () => state,
     subscribe(listener) {
@@ -131,6 +207,7 @@ export function createTourManager(
       };
     },
     destroy() {
+      routerOff?.();
       for (const { unsubscribe } of tours.values()) unsubscribe();
       tours.clear();
       queue = [];
@@ -138,6 +215,7 @@ export function createTourManager(
     },
   };
 
+  watchRouter();
   for (const tour of options.tours ?? []) manager.register(tour);
   return manager;
 }

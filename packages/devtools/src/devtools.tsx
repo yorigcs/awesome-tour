@@ -1,5 +1,6 @@
 import {
   type ChecklistInstance,
+  type EligibilityReport,
   getTargetsRect,
   KEEP_ATTRIBUTE,
   matchRoute,
@@ -41,6 +42,7 @@ const EVENT_NAMES: (keyof TourEvents)[] = [
   'resume',
   'dataChange',
   'error',
+  'snooze',
 ];
 
 interface LoggedEvent {
@@ -192,7 +194,7 @@ export function TourDevtools({
   }, [shortcut]);
 
   const events = useEventLog(tours);
-  const [tab, setTab] = React.useState<'tours' | 'events' | 'checklists'>('tours');
+  const [tab, setTab] = React.useState<'tours' | 'rules' | 'events' | 'checklists'>('tours');
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const selected =
     tours.find((t) => t.id === selectedId) ??
@@ -211,7 +213,7 @@ export function TourDevtools({
           <section className="atd-panel" aria-label="awesome-tour devtools">
             <header className="atd-header">
               <span className="atd-title">awesome-tour</span>
-              {(['tours', 'events', 'checklists'] as const).map((t) => (
+              {(['tours', 'rules', 'events', 'checklists'] as const).map((t) => (
                 <button
                   key={t}
                   type="button"
@@ -221,9 +223,11 @@ export function TourDevtools({
                 >
                   {t === 'tours'
                     ? `Tours (${tours.length})`
-                    : t === 'events'
-                      ? `Events (${events.length})`
-                      : `Checklists (${checklists.length})`}
+                    : t === 'rules'
+                      ? 'Rules'
+                      : t === 'events'
+                        ? `Events (${events.length})`
+                        : `Checklists (${checklists.length})`}
                 </button>
               ))}
             </header>
@@ -256,6 +260,7 @@ export function TourDevtools({
                     No tours. Register tours on a TourProvider or pass `tours`.
                   </p>
                 ))}
+              {tab === 'rules' && <RulesPanel tours={tours} />}
               {tab === 'events' && <EventList events={events} />}
               {tab === 'checklists' &&
                 (checklists.length ? (
@@ -279,6 +284,95 @@ export function TourDevtools({
       </div>
     </>,
     container,
+  );
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * Rules: "why didn't my tour show?"
+ * -----------------------------------------------------------------------------------------------*/
+
+function RulesPanel({ tours }: { tours: TourInstance<any, any>[] }) {
+  const manager = useTourProvider()?.manager;
+  const [reports, setReports] = React.useState<Record<string, EligibilityReport>>({});
+  const [version, setVersion] = React.useState(0);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `version` forces a re-evaluation
+  React.useEffect(() => {
+    if (!manager) return;
+    let cancelled = false;
+    void Promise.all(tours.filter((t) => manager.get(t.id)).map((t) => manager.explain(t.id))).then(
+      (list) => {
+        if (!cancelled) setReports(Object.fromEntries(list.map((r) => [r.tourId, r])));
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [manager, tours, version]);
+
+  if (!manager) {
+    return <p className="atd-empty">Rules are evaluated by the TourProvider's manager.</p>;
+  }
+  const refresh = () => setVersion((v) => v + 1);
+  return (
+    <>
+      <div className="atd-row">
+        <button type="button" className="atd-btn" onClick={refresh}>
+          Re-evaluate
+        </button>
+        <button
+          type="button"
+          className="atd-btn"
+          onClick={() => void manager.resetImpressions().then(refresh)}
+        >
+          Reset all impressions
+        </button>
+      </div>
+      {Object.values(reports).map((report) => {
+        const tour = manager.get(report.tourId);
+        const trigger = tour?.rules?.trigger;
+        return (
+          <div key={report.tourId} className="atd-section-block">
+            <div className="atd-row">
+              <strong className="atd-mono">{report.tourId}</strong>
+              <span className="atd-pill" data-tone={report.eligible ? 'ok' : 'bad'}>
+                {report.eligible ? 'eligible' : 'blocked'}
+              </span>
+              {trigger && (
+                <span className="atd-pill" data-tone="accent">
+                  trigger: {Object.keys(trigger).join(', ')}
+                </span>
+              )}
+            </div>
+            <ul className="atd-steps" aria-label={`Rules for ${report.tourId}`}>
+              {report.checks.map((c) => (
+                <li key={c.rule} className="atd-row">
+                  <span className="atd-pill" data-tone={c.ok ? 'ok' : 'bad'}>
+                    {c.ok ? '✓' : '✗'} {c.rule}
+                  </span>
+                  <span className="atd-muted">{c.detail}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="atd-row">
+              <button
+                type="button"
+                className="atd-btn"
+                onClick={() => void manager.startIfEligible(report.tourId).then(refresh)}
+              >
+                Start if eligible
+              </button>
+              <button
+                type="button"
+                className="atd-btn"
+                onClick={() => void manager.resetImpressions(report.tourId).then(refresh)}
+              >
+                Reset impressions
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </>
   );
 }
 

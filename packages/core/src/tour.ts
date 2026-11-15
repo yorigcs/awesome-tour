@@ -71,6 +71,7 @@ export function createTour<
     progress: { current: 0, total: steps.length },
     data: (options.data ?? {}) as TData,
     error: null,
+    canNext: true,
   });
 
   const emitter = createEmitter<TourEvents<TId, TData>>((error) => {
@@ -207,6 +208,19 @@ export function createTour<
     }
   }
 
+  /** Runs the current step's `beforeLeave` guard. False keeps the user on the step. */
+  async function mayLeave(to: TId | null, direction: TourDirection, signal: AbortSignal) {
+    const { stepId, status } = getState();
+    const step = getStep(stepId);
+    if (status !== 'active' || !step?.beforeLeave || stepId === to) return true;
+    try {
+      return (await step.beforeLeave(context(step, signal), { to, direction })) !== false;
+    } catch (error) {
+      reportError(error);
+      return false;
+    }
+  }
+
   function routeMatches(route: string) {
     if (!router) return true;
     return (router.match ?? defaultMatch)(route, router.getPath());
@@ -260,6 +274,8 @@ export function createTour<
 
       const step = getStep(to);
       if (!step) throw new Error(`[awesome-tour] Unknown step "${to}" in tour "${options.id}"`);
+
+      if (!(await mayLeave(to, direction, signal)) || signal.aborted) return false;
 
       leaveCurrent();
       store.setState({ phase: 'transitioning', direction });
@@ -334,6 +350,7 @@ export function createTour<
         direction,
         progress: computeProgress(step.id),
         error: null,
+        canNext: evaluateCanNext(step, signal),
       });
       if (pendingStart) {
         pendingStart = false;
@@ -364,14 +381,54 @@ export function createTour<
     }
   }
 
+  function evaluateCanNext(step: TStep, signal: AbortSignal): boolean {
+    if (!step.canNext) return true;
+    try {
+      return step.canNext(context(step, signal)) !== false;
+    } catch (error) {
+      reportError(error);
+      return false;
+    }
+  }
+
+  /** Re-runs `check` on DOM mutations, state changes and every 200ms until `signal` aborts. */
+  function watch(check: () => void, signal: AbortSignal) {
+    const interval = setInterval(check, 200);
+    const unsubscribe = store.subscribe(check);
+    let mo: MutationObserver | undefined;
+    if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
+      mo = new MutationObserver(check);
+      mo.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        characterData: true,
+      });
+    }
+    signal.addEventListener('abort', () => {
+      clearInterval(interval);
+      unsubscribe();
+      mo?.disconnect();
+    });
+    queueMicrotask(check);
+  }
+
   function setupAdvance(step: TStep) {
     const rules = toArray(
       step.advanceOn as AdvanceOn<TData, TId> | readonly AdvanceOn<TData, TId>[],
     );
-    if (rules.length === 0) return;
+    if (rules.length === 0 && !step.canNext) return;
     const controller = new AbortController();
     stepController = controller;
     const { signal } = controller;
+
+    if (step.canNext) {
+      watch(() => {
+        if (signal.aborted || getState().stepId !== step.id) return;
+        const canNext = evaluateCanNext(step, signal);
+        if (canNext !== getState().canNext) store.setState({ canNext });
+      }, signal);
+    }
 
     for (const rule of rules) {
       let fired = false;
@@ -399,31 +456,18 @@ export function createTour<
       }
 
       if (rule.when) {
-        const check = () => {
+        watch(() => {
           try {
             if (rule.when!(context(step, signal))) advance();
           } catch (error) {
             reportError(error);
           }
-        };
-        const interval = setInterval(check, 200);
-        const unsubscribe = store.subscribe(check);
-        let mo: MutationObserver | undefined;
-        if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
-          mo = new MutationObserver(check);
-          mo.observe(document.body, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            characterData: true,
-          });
-        }
-        signal.addEventListener('abort', () => {
-          clearInterval(interval);
-          unsubscribe();
-          mo?.disconnect();
-        });
-        queueMicrotask(check);
+        }, signal);
+      }
+
+      if (rule.delay != null) {
+        const timer = setTimeout(advance, rule.delay);
+        signal.addEventListener('abort', () => clearTimeout(timer));
       }
 
       if (rule.signal) {
@@ -516,13 +560,14 @@ export function createTour<
     const state = getState();
     if (state.status !== 'active') return;
     const step = getStep(state.stepId);
-    if (!step) return;
+    if (!step || !state.canNext) return;
     const signal = new AbortController().signal;
     try {
       const nextId = await resolveForward(step, signal);
       if (getState().stepId !== step.id || getState().status !== 'active') return;
-      if (nextId == null) finish('completed');
-      else await transition(nextId, 'forward');
+      if (nextId == null) {
+        if (await mayLeave(null, 'forward', signal)) finish('completed');
+      } else await transition(nextId, 'forward');
     } catch (error) {
       reportError(error);
     }
@@ -597,6 +642,7 @@ export function createTour<
     id: options.id,
     version: options.version ?? 1,
     modal: options.modal ?? true,
+    rules: options.rules,
     anchors,
     getState,
     subscribe: store.subscribe,
@@ -628,6 +674,12 @@ export function createTour<
     },
     pause: () => {
       if (getState().status === 'active') finish('paused');
+    },
+    snooze(ms) {
+      const { status, stepId } = getState();
+      if (status !== 'active' && status !== 'paused' && status !== 'starting') return;
+      finish('closed');
+      emitter.emit('snooze', { stepId, until: Date.now() + ms });
     },
     resume,
     restart: () => start({ force: true, stepId: undefined }),

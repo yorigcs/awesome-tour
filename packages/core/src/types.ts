@@ -65,6 +65,8 @@ export interface AdvanceOn<TData = any, TId extends string = string> {
   when?: (ctx: StepContext<TData, TId>) => boolean;
   /** Advance when the app calls `tour.signal(name)`. */
   signal?: string;
+  /** Advance automatically after this many milliseconds on the step. */
+  delay?: number;
   /** Step to go to instead of the regular next step. */
   to?: TId;
 }
@@ -97,6 +99,19 @@ export interface StepDefinition<TData = any, TId extends string = string> {
   beforeEnter?: (ctx: StepContext<TData, TId>) => MaybePromise<void>;
   /** Runs after the step is left. */
   afterLeave?: (ctx: StepContext<TData, TId>) => MaybePromise<void>;
+  /**
+   * Guard: runs before leaving the step (to another step, or to finish with `to: null`).
+   * Return `false` to stay. Not called by `close()`, `skip()` or `pause()`.
+   */
+  beforeLeave?(
+    ctx: StepContext<TData, TId>,
+    info: { to: TId | null; direction: TourDirection },
+  ): MaybePromise<boolean | void>;
+  /**
+   * Whether the user may move forward yet. Re-checked on DOM changes and every 200ms while the
+   * step is shown; exposed as `state.canNext` (`Tour.Next` gets disabled) and enforced by `next()`.
+   */
+  canNext?: (ctx: StepContext<TData, TId>) => boolean;
   /** Free-form metadata (analytics labels, etc). */
   meta?: Record<string, unknown>;
 }
@@ -142,6 +157,8 @@ export interface TourState<TId extends string = string, TData = any> {
   progress: TourProgress;
   data: TData;
   error: unknown;
+  /** False while the current step's `canNext` predicate fails. */
+  canNext: boolean;
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -166,6 +183,8 @@ export interface TourEvents<TId extends string = string, TData = any> {
   resume: { stepId: TId | null };
   dataChange: { data: TData };
   error: { error: unknown; stepId: TId | null };
+  /** `tour.snooze(ms)`: the tour was closed and asks not to be shown again before `until`. */
+  snooze: { stepId: TId | null; until: number };
 }
 
 export interface StartResult<TId extends string = string, TData = any> {
@@ -230,6 +249,56 @@ export interface TourOptions<TStep extends StepDefinition<TData, string>, TData 
   onTargetMissing?: TargetMissingPolicy;
   /** Default scroll behavior for all steps. */
   scroll?: boolean | ScrollIntoViewOptions;
+  /**
+   * Who sees the tour, when, and how often. Evaluated by the tour manager (`TourProvider`), which
+   * also auto-starts tours with a `trigger`. Explicit `start()` calls are never blocked.
+   */
+  rules?: TourRules<TData>;
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * Display rules
+ * -----------------------------------------------------------------------------------------------*/
+
+export type DateInput = Date | string | number;
+
+export interface TourRules<TData = any> {
+  /** Targeting: return false for users who shouldn't see the tour (role, plan, flags…). */
+  audience?(ctx: { data: TData }): MaybePromise<boolean>;
+  /** Only show between these dates. */
+  schedule?: { startsAt?: DateInput; endsAt?: DateInput };
+  frequency?: {
+    /** Never show again once completed or skipped. Default: true. */
+    once?: boolean;
+    /** Show at most this many times. */
+    maxShows?: number;
+    /** Wait this long after a show before showing again (ms). */
+    cooldownMs?: number;
+  };
+  /** Start automatically (when eligible) once any of these happen. */
+  trigger?: {
+    /** Path pattern (`/projects/:id`, `/docs/*`) — when the router reaches it. */
+    route?: string;
+    /** `manager.signal(name)` was called. */
+    signal?: string;
+    /** A DOM event on (or inside) `target`, e.g. `{ type: 'click', target: '#help' }`. */
+    event?: { type: string; target?: TargetInput };
+    /** This many ms after the tour is registered (page load). */
+    delay?: number;
+    /** When this target is on the page. */
+    targetVisible?: TargetInput;
+  };
+  /** Higher wins when several triggered tours compete. Default: 0. */
+  priority?: number;
+}
+
+export type EligibilityRule = 'audience' | 'schedule' | 'once' | 'maxShows' | 'cooldown' | 'snooze';
+
+export interface EligibilityReport {
+  tourId: string;
+  eligible: boolean;
+  /** One entry per rule that applies to the tour, in evaluation order. */
+  checks: { rule: EligibilityRule; ok: boolean; detail: string }[];
 }
 
 export type Listener = () => void;
@@ -238,6 +307,8 @@ export interface Tour<TStep extends StepDefinition<TData, string> = StepDefiniti
   readonly id: string;
   readonly version: number;
   readonly modal: boolean;
+  /** Display rules from `createTour({ rules })`. */
+  readonly rules: TourRules<TData> | undefined;
   readonly anchors: AnchorRegistry;
 
   getState(): TourState<TStep['id'], TData>;
@@ -268,6 +339,8 @@ export interface Tour<TStep extends StepDefinition<TData, string> = StepDefiniti
   pause(): void;
   resume(): Promise<void>;
   restart(): Promise<void>;
+  /** Close the tour and ask not to show it again for `ms` (recorded by the tour manager). */
+  snooze(ms: number): void;
 
   setData(update: Partial<TData> | ((data: TData) => TData)): void;
   /** Fire a named signal (used by `advanceOn.signal`). */
