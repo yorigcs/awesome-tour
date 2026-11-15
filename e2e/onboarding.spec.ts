@@ -72,6 +72,11 @@ test('full onboarding: anchors, interactive steps, branching, routes, lazy targe
   await next(page).click();
   await expect(dialog(page)).toHaveAccessibleName("You're all set");
   await next(page).click();
+  // Completing the tour signals the NPS survey (an ambient slideout): the tour itself is gone.
+  const survey = page.getByRole('dialog', { name: /How likely are you to recommend/ });
+  await expect(survey).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+  await survey.getByRole('button', { name: 'Dismiss' }).click();
   await expect(dialog(page)).toHaveCount(0);
 });
 

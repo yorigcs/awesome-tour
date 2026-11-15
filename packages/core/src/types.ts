@@ -240,6 +240,11 @@ export interface TourOptions<TStep extends StepDefinition<TData, string>, TData 
   data?: TData;
   /** Modal tours block the page (overlay + focus trap + inert). Default: true. */
   modal?: boolean;
+  /**
+   * How the tour shares the screen. `blocking` (default): one at a time — others queue behind it.
+   * `ambient`: banners, toasts and hints that can show alongside anything, and never hold the queue.
+   */
+  layer?: 'blocking' | 'ambient';
   plugins?: readonly TourPlugin<any, TData>[];
   router?: RouterAdapter;
   anchors?: AnchorRegistry;
@@ -307,6 +312,7 @@ export interface Tour<TStep extends StepDefinition<TData, string> = StepDefiniti
   readonly id: string;
   readonly version: number;
   readonly modal: boolean;
+  readonly layer: 'blocking' | 'ambient';
   /** Display rules from `createTour({ rules })`. */
   readonly rules: TourRules<TData> | undefined;
   readonly anchors: AnchorRegistry;

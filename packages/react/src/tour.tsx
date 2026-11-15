@@ -713,7 +713,7 @@ const TourSpotlightImpl = React.forwardRef<HTMLDivElement, Omit<TourSpotlightPro
  * Content
  * -----------------------------------------------------------------------------------------------*/
 
-interface ContentContextValue {
+export interface ContentContextValue {
   placedSide: Side | 'none';
   placedAlign: Align;
   setArrow: (node: HTMLElement | null) => void;
@@ -724,7 +724,8 @@ interface ContentContextValue {
   setDescriptionId: (id: string | undefined) => void;
 }
 
-const ContentContext = React.createContext<ContentContextValue | null>(null);
+/** @internal Shared with the surfaces entry (announcements, surveys). */
+export const ContentContext = React.createContext<ContentContextValue | null>(null);
 
 export function useTourContentContext(): ContentContextValue {
   const ctx = React.useContext(ContentContext);

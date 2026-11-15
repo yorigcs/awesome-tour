@@ -19,6 +19,16 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./surfaces": {
+      "import": {
+        "types": "./dist/surfaces.d.ts",
+        "default": "./dist/surfaces.js"
+      },
+      "require": {
+        "types": "./dist/surfaces.d.cts",
+        "default": "./dist/surfaces.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [

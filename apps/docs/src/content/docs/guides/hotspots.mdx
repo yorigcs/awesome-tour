@@ -54,7 +54,27 @@ import { Hotspot } from '@awesome-tour/react';
   appears once the target exists and follows it.
 - The beacon sits on the target's top-end corner by default; change it with `side`, `align` and
   the offsets.
-- `open` / `defaultOpen` / `onOpenChange` make it controlled — e.g. to remember dismissed hints.
+- `open` / `defaultOpen` / `onOpenChange` make it controlled.
 - A hotspot is a great entry point to a full tour: put a `Tour.Trigger` inside `Hotspot.Content`.
+
+## Remembering hints
+
+Give a hotspot an `id` and a [persistence adapter](../../reference/persistence/) and it remembers
+it was opened; the beacon gets `data-seen` (stop the pulse with `[data-seen]::after { animation:
+none }`). With `once`, it stops showing after it has been opened and closed:
+
+```tsx
+const hints = localStorageAdapter<HotspotRecord>({ prefix: 'hints:' });
+
+<Hotspot.Root id="pdf-export" target="#export" persistence={hints} once>…</Hotspot.Root>
+```
+
+| Prop              | Default   | Description                                                    |
+| ----------------- | --------- | -------------------------------------------------------------- |
+| `id`              | —         | Key under which `persistence` remembers the hint.              |
+| `persistence`     | —         | A `PersistenceAdapter<HotspotRecord>`.                         |
+| `once`            | `false`   | Hide for good once opened and closed.                          |
+| `trigger`         | `'click'` | `'hover'` opens on pointer hover and keyboard focus.           |
+| `hideDuringTours` | `true`    | Hide the beacon while a modal tour from `TourProvider` is on screen. |
 
 Full API in the [Hotspot reference](../../components/hotspot/).

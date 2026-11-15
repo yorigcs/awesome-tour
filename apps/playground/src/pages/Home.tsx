@@ -1,5 +1,6 @@
 import { useStoreSelector, useTourState } from '@awesome-tour/react';
 import { Activity, CreditCard, ShieldCheck, TrendingUp, Users } from 'lucide-react';
+import { AnnouncementBanner } from '@/components/awesome-tour/announcement';
 import { HotspotHint } from '@/components/awesome-tour/hotspot';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -11,7 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { CssTour } from '../tour/CssTour';
-import { eventLog, type OnboardingData } from '../tours';
+import { eventLog, type OnboardingData, reportsBanner } from '../tours';
 import { PageHeader } from '.';
 
 const STATS = [
@@ -52,6 +53,11 @@ export function Home() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Dashboard" description="Welcome back — here's what happened this week." />
+      <AnnouncementBanner
+        announcement={reportsBanner}
+        actionLabel="Set up"
+        snooze={60 * 60 * 1000}
+      />
       <section id="stats" className="grid gap-4 sm:grid-cols-3">
         {STATS.map(({ label, value, delta, icon: Icon }, i) => (
           <Card key={label} id={`stat-${i + 1}`} className="gap-2">

@@ -26,6 +26,11 @@ export interface TourMessages {
   itemStatus: { pending: string; done: string; skipped: string };
   /** `Checklist.Dismiss` accessible name. */
   dismissChecklist: string;
+  /** `Announcement.Dismiss` / `Survey.Dismiss` accessible name. */
+  dismiss: string;
+  /** Accessible names of the ends of a survey scale. */
+  scaleLow: string;
+  scaleHigh: string;
 }
 
 /** What `messages` props accept: any subset, including part of `itemStatus`. */
@@ -44,6 +49,9 @@ export const defaultMessages: TourMessages = {
   checklistValue: (completed, total) => `${completed} of ${total} completed`,
   itemStatus: { pending: 'Not completed', done: 'Completed', skipped: 'Skipped' },
   dismissChecklist: 'Dismiss checklist',
+  dismiss: 'Dismiss',
+  scaleLow: 'Not at all likely',
+  scaleHigh: 'Extremely likely',
 };
 
 const MessagesContext = React.createContext<TourMessages>(defaultMessages);

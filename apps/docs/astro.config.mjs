@@ -21,6 +21,9 @@ export default defineConfig({
       // Document the sources directly, like the playground does.
       alias: {
         '@awesome-tour/core': src('core'),
+        '@awesome-tour/react/surfaces': fileURLToPath(
+          new URL('../../packages/react/src/surfaces.ts', import.meta.url),
+        ),
         '@awesome-tour/react': src('react'),
         '@awesome-tour/motion': src('motion'),
         '@awesome-tour/devtools': src('devtools'),

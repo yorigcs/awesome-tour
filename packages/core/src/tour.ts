@@ -642,6 +642,7 @@ export function createTour<
     id: options.id,
     version: options.version ?? 1,
     modal: options.modal ?? true,
+    layer: options.layer ?? 'blocking',
     rules: options.rules,
     anchors,
     getState,

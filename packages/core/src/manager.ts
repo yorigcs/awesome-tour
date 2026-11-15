@@ -94,9 +94,10 @@ export function createTourManager(options: TourManagerOptions = {}): TourManager
     }
   };
 
+  /** The blocking tour on screen. Ambient tours (banners, toasts) never hold the queue. */
   const computeActive = () => {
     for (const { tour } of tours.values())
-      if (ON_SCREEN.has(tour.getState().status)) return tour.id;
+      if (tour.layer !== 'ambient' && ON_SCREEN.has(tour.getState().status)) return tour.id;
     return null;
   };
 
@@ -131,7 +132,9 @@ export function createTourManager(options: TourManagerOptions = {}): TourManager
         () => {
           // Triggered tours never interrupt or queue behind one on screen: the trigger fires
           // again next time (next route change, signal…).
-          if (computeActive() !== null || queue.some((q) => q.id === tour.id)) return;
+          if (ON_SCREEN.has(tour.getState().status)) return;
+          if (tour.layer !== 'ambient' && computeActive() !== null) return;
+          if (queue.some((q) => q.id === tour.id)) return;
           void manager.startIfEligible(tour.id);
         },
         () => router,
@@ -157,7 +160,7 @@ export function createTourManager(options: TourManagerOptions = {}): TourManager
     async start(id, startOptions = {}) {
       const entry = tours.get(id);
       if (!entry) throw new Error(`[awesome-tour] No tour registered with id "${id}"`);
-      const activeId = computeActive();
+      const activeId = entry.tour.layer === 'ambient' ? null : computeActive();
       if (activeId && activeId !== id) {
         if (startOptions.interrupt) {
           tours.get(activeId)?.tour.close();

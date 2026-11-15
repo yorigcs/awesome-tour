@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Slot } from './slot';
 
-const NODES = ['div', 'button', 'span', 'h2', 'p', 'ol', 'li', 'svg'] as const;
+const NODES = ['div', 'button', 'span', 'h2', 'p', 'ol', 'li', 'svg', 'textarea'] as const;
 type Node = (typeof NODES)[number];
 
 export type PrimitivePropsWithRef<E extends React.ElementType> = React.ComponentPropsWithRef<E> & {

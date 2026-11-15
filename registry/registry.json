@@ -18,12 +18,18 @@
         }
       ],
       "cssVars": {
-        "light": { "tour-overlay-color": "oklch(0.145 0.014 285 / 0.55)" },
-        "dark": { "tour-overlay-color": "oklch(0 0 0 / 0.65)" }
+        "light": {
+          "tour-overlay-color": "oklch(0.145 0.014 285 / 0.55)"
+        },
+        "dark": {
+          "tour-overlay-color": "oklch(0 0 0 / 0.65)"
+        }
       },
       "css": {
         "@layer base": {
-          "[data-tour-content-wrapper]": { "z-index": "51" }
+          "[data-tour-content-wrapper]": {
+            "z-index": "51"
+          }
         }
       }
     },
@@ -69,6 +75,51 @@
           "path": "src/components/awesome-tour/hotspot.tsx",
           "type": "registry:component",
           "target": "components/awesome-tour/hotspot.tsx"
+        }
+      ]
+    },
+    {
+      "name": "announcement",
+      "type": "registry:component",
+      "title": "Announcement",
+      "description": "Banner, toast and modal announcements with display rules, snooze and auto-dismiss.",
+      "dependencies": ["@awesome-tour/react", "lucide-react"],
+      "registryDependencies": ["button"],
+      "files": [
+        {
+          "path": "src/components/awesome-tour/announcement.tsx",
+          "type": "registry:component",
+          "target": "components/awesome-tour/announcement.tsx"
+        }
+      ]
+    },
+    {
+      "name": "survey",
+      "type": "registry:component",
+      "title": "Survey",
+      "description": "An NPS / CSAT / CES survey card with conditional follow-up questions.",
+      "dependencies": ["@awesome-tour/react", "lucide-react"],
+      "registryDependencies": ["button"],
+      "files": [
+        {
+          "path": "src/components/awesome-tour/survey.tsx",
+          "type": "registry:component",
+          "target": "components/awesome-tour/survey.tsx"
+        }
+      ]
+    },
+    {
+      "name": "launcher",
+      "type": "registry:component",
+      "title": "Help launcher",
+      "description": "A floating help button that opens a resource center to replay tours and find links.",
+      "dependencies": ["@awesome-tour/react", "lucide-react"],
+      "registryDependencies": ["button"],
+      "files": [
+        {
+          "path": "src/components/awesome-tour/launcher.tsx",
+          "type": "registry:component",
+          "target": "components/awesome-tour/launcher.tsx"
         }
       ]
     }

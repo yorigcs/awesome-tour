@@ -15,6 +15,9 @@ export default defineConfig({
       // The shadcn registry: the playground uses exactly what `npx shadcn add` installs.
       '@': fileURLToPath(new URL('../../registry/src', import.meta.url)),
       '@awesome-tour/core': src('core'),
+      '@awesome-tour/react/surfaces': fileURLToPath(
+        new URL('../../packages/react/src/surfaces.ts', import.meta.url),
+      ),
       '@awesome-tour/react': src('react'),
       '@awesome-tour/motion': src('motion'),
       '@awesome-tour/three': src('three'),

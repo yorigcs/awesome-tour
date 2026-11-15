@@ -1,6 +1,7 @@
 import { useTour, useTourAnchor, useTourState } from '@awesome-tour/react';
 import { Moon, Plus, RotateCcw, Search, Sparkles, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { HelpLauncher } from '@/components/awesome-tour/launcher';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { gettingStarted, type OnboardingData } from '../tours';
@@ -65,6 +66,19 @@ export function Topbar() {
         <RotateCcw />
         Restart
       </Button>
+      <HelpLauncher
+        side="bottom"
+        className="relative right-auto bottom-auto size-9 shadow-none"
+        tours={[
+          { tour: 'onboarding', title: 'Product tour', description: 'The essentials in a minute.' },
+          {
+            tour: 'css-tour',
+            title: 'CSS-only tour',
+            description: 'A declarative, non-modal tour.',
+          },
+        ]}
+        links={[{ title: 'Documentation', href: 'https://yorigcs.github.io/awesome-tour/' }]}
+      />
       <Button
         variant="ghost"
         size="icon"

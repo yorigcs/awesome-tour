@@ -54,6 +54,7 @@ export {
   HotspotClose,
   HotspotContent,
   type HotspotContentProps,
+  type HotspotRecord,
   HotspotRoot,
   type HotspotRootProps,
   useResolvedTarget,

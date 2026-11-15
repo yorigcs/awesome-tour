@@ -1,0 +1,47 @@
+---
+title: Help launcher
+description: A resource center button that lets people replay tours, see what's new and find help — whenever they want.
+sidebar:
+  order: 12
+---
+
+import Preview from '../../../components/Preview.astro';
+import { LauncherDemo } from '../../../components/demos/LauncherDemo';
+import LauncherDemoSource from '../../../components/demos/LauncherDemo.tsx?raw';
+
+Tours that only run once are easy to miss. A launcher gives users a place to come back to: a
+button that opens a panel listing tours to replay (with their status), and any links you want.
+
+<Preview code={LauncherDemoSource} title="LauncherDemo.tsx">
+  <LauncherDemo client:visible />
+</Preview>
+
+```tsx
+import { Launcher } from '@awesome-tour/react/surfaces';
+
+<Launcher.Root>
+  <Launcher.Trigger>
+    Help <Launcher.Badge tours={['onboarding', 'billing']} />
+  </Launcher.Trigger>
+  <Launcher.Portal>
+    <Launcher.Content>
+      <Launcher.Item tour="onboarding">Product tour</Launcher.Item>
+      <Launcher.Item tour="billing">Billing basics</Launcher.Item>
+      <Launcher.Item asChild>
+        <a href="/docs">Documentation</a>
+      </Launcher.Item>
+    </Launcher.Content>
+  </Launcher.Portal>
+</Launcher.Root>
+```
+
+| Part      | Does                                                                                         |
+| --------- | -------------------------------------------------------------------------------------------- |
+| `Root`    | Open state (`open` / `defaultOpen` / `onOpenChange`).                                        |
+| `Trigger` | Toggles the panel (`aria-expanded`, `data-state`).                                           |
+| `Content` | The panel, positioned next to the trigger (`side`, `align`…). Escape and outside clicks close it. |
+| `Item`    | With `tour` (an instance or a provider id): restarts it — interrupting what's on screen — and gets `data-status="new|in-progress|done"`. |
+| `Badge`   | How many of `tours` are unfinished; renders nothing at zero.                                 |
+
+`useLauncherStatus(tour)` returns the same status for your own UI. The styled `HelpLauncher` is
+`npx shadcn@latest add @awesome-tour/launcher`.
