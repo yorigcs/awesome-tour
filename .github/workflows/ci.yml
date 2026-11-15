@@ -16,5 +16,7 @@ jobs:
       - run: pnpm build
       - run: pnpm test
       - run: pnpm size
+      # Installs every registry item with the shadcn CLI into a fresh Vite app, then tsc + build.
+      - run: pnpm --filter @awesome-tour/registry smoke
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm e2e

@@ -5,7 +5,8 @@
 //   4. `shadcn add` every item over HTTP, then type-check and build the app.
 // Needs network access (npm + ui.shadcn.com for the base components). Usage:
 //   pnpm --filter @awesome-tour/registry smoke [--keep]
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
@@ -16,6 +17,18 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repo = resolve(root, '..');
 const keep = process.argv.includes('--keep');
 const run = (cmd, args, cwd) => execFileSync(cmd, args, { cwd, stdio: 'inherit' });
+// While the registry server below is up, commands must not block this process's event loop
+// (the server lives here): run them asynchronously.
+const runAsync = (cmd, args, cwd) =>
+  new Promise((resolvePromise, reject) => {
+    const child = spawn(cmd, args, { cwd, stdio: 'inherit' });
+    child.on('error', reject);
+    child.on('exit', (code) =>
+      code === 0
+        ? resolvePromise()
+        : reject(new Error(`${cmd} ${args.join(' ')} exited with ${code}`)),
+    );
+  });
 
 const work = mkdtempSync(join(tmpdir(), 'awesome-tour-smoke-'));
 const app = join(work, 'app');
@@ -37,19 +50,58 @@ run(
   ],
   repo,
 );
-const overrides = {};
+/** Packed packages, served below as a tiny npm registry for the `@awesome-tour` scope. */
+const packed = new Map();
 for (const pkg of ['core', 'react', 'motion']) {
   const out = execFileSync('pnpm', ['pack', '--pack-destination', tarballs], {
     cwd: join(repo, 'packages', pkg),
     encoding: 'utf8',
   });
-  const tgz = out.trim().split('\n').pop().trim();
-  overrides[`@awesome-tour/${pkg}`] = `file:${resolve(tarballs, tgz.split('/').pop())}`;
+  const file = resolve(tarballs, out.trim().split('\n').pop().trim().split('/').pop());
+  const manifest = JSON.parse(
+    execFileSync('tar', ['-xOzf', file, 'package/package.json'], { encoding: 'utf8' }),
+  );
+  const data = readFileSync(file);
+  packed.set(manifest.name, { manifest, data, file });
 }
 
 // 2. Serve the registry locally.
 const server = createServer((req, res) => {
-  const file = join(repo, 'apps/docs/public', decodeURIComponent(req.url.split('?')[0]));
+  const path = decodeURIComponent(req.url.split('?')[0]);
+  // npm registry: GET /npm/@awesome-tour/<name> (packument) and /npm/-/<name>.tgz (tarball).
+  if (path.startsWith('/npm/')) {
+    const rest = path.slice('/npm/'.length);
+    if (rest.startsWith('-/')) {
+      const name = rest.slice(2, -'.tgz'.length).replace('+', '/');
+      const entry = packed.get(name);
+      if (!entry) return void res.writeHead(404).end();
+      return void res
+        .writeHead(200, { 'content-type': 'application/octet-stream' })
+        .end(entry.data);
+    }
+    const entry = packed.get(rest);
+    if (!entry) return void res.writeHead(404).end();
+    const { manifest, data } = entry;
+    const port = server.address().port;
+    const version = {
+      ...manifest,
+      dist: {
+        tarball: `http://127.0.0.1:${port}/npm/-/${manifest.name.replace('/', '+')}.tgz`,
+        shasum: createHash('sha1').update(data).digest('hex'),
+        integrity: `sha512-${createHash('sha512').update(data).digest('base64')}`,
+      },
+    };
+    const time = '2020-01-01T00:00:00.000Z'; // old enough for any minimum-release-age policy
+    return void res.writeHead(200, { 'content-type': 'application/json' }).end(
+      JSON.stringify({
+        name: manifest.name,
+        'dist-tags': { latest: manifest.version },
+        versions: { [manifest.version]: version },
+        time: { created: time, modified: time, [manifest.version]: time },
+      }),
+    );
+  }
+  const file = join(repo, 'apps/docs/public', path);
   try {
     res.writeHead(200, { 'content-type': 'application/json' }).end(readFileSync(file));
   } catch {
@@ -88,10 +140,13 @@ try {
       module: 'ESNext',
       moduleResolution: 'Bundler',
       jsx: 'react-jsx',
+      types: ['vite/client'],
       strict: true,
       skipLibCheck: true,
       noEmit: true,
+      // shadcn resolves its aliases through \`baseUrl\` (deprecated in TS 6, still honoured).
       baseUrl: '.',
+      ignoreDeprecations: '6.0',
       paths: { '@/*': ['./src/*'] },
     },
     include: ['src'],
@@ -134,21 +189,18 @@ export default defineConfig({
     join(app, 'src/lib/utils.ts'),
     "import { type ClassValue, clsx } from 'clsx';\nimport { twMerge } from 'tailwind-merge';\nexport function cn(...inputs: ClassValue[]) {\n  return twMerge(clsx(inputs));\n}\n",
   );
-  // Its own workspace root: tarball overrides + allowed build scripts (pnpm >= 10).
-  writeFileSync(
-    join(app, 'pnpm-workspace.yaml'),
-    `packages: []\nallowBuilds:\n  esbuild: true\noverrides:\n${Object.entries(overrides)
-      .map(([name, spec]) => `  "${name}": "${spec}"`)
-      .join('\n')}\n`,
-  );
-  run('pnpm', ['install'], app);
-  run('pnpm', ['add', 'clsx', 'tailwind-merge'], app);
+  // Resolve the (unpublished) @awesome-tour scope from the local registry, like a real install.
+  writeFileSync(join(app, '.npmrc'), `@awesome-tour:registry=${url.replace(/\/r$/, '/npm/')}\n`);
+  // Its own workspace root, with the build scripts the app needs allowed (pnpm >= 10).
+  writeFileSync(join(app, 'pnpm-workspace.yaml'), 'packages: []\nallowBuilds:\n  esbuild: true\n');
+  await runAsync('pnpm', ['install'], app);
+  await runAsync('pnpm', ['add', 'clsx', 'tailwind-merge'], app);
 
   // 4. Install every item through the namespace, like a user would.
   const items = JSON.parse(readFileSync(join(root, 'registry.json'), 'utf8')).items.map(
     (i) => `@awesome-tour/${i.name}`,
   );
-  run('pnpm', ['dlx', 'shadcn@latest', 'add', ...items, '--yes', '--overwrite'], app);
+  await runAsync('pnpm', ['dlx', 'shadcn@latest', 'add', ...items, '--yes', '--overwrite'], app);
 
   // Use every exported component so type errors in any item surface.
   writeFileSync(
@@ -160,9 +212,17 @@ import { ChecklistPanel } from '@/components/awesome-tour/checklist';
 import { HotspotHint } from '@/components/awesome-tour/hotspot';
 import { TourPopover } from '@/components/awesome-tour/tour';
 import { TourMotionPopover } from '@/components/awesome-tour/tour-motion';
+import { AnnouncementBanner, AnnouncementModal, AnnouncementToast } from '@/components/awesome-tour/announcement';
+import { SurveyCard } from '@/components/awesome-tour/survey';
+import { HelpLauncher } from '@/components/awesome-tour/launcher';
+import { createAnnouncement, createSurvey } from '@awesome-tour/react/surfaces';
 
 const tour = createTour({ id: 'smoke', steps: [{ id: 'a', title: 'Hello' }] });
 const checklist = createChecklist({ id: 'smoke', items: [{ id: 'a', meta: { title: 'A' } }] });
+const banner = createAnnouncement({ id: 'b', title: 'News' });
+const toast = createAnnouncement({ id: 't', variant: 'toast', title: 'Saved', autoDismiss: 3000 });
+const modal = createAnnouncement({ id: 'm', variant: 'modal', title: 'Big news' });
+const survey = createSurvey({ id: 's', questions: [{ id: 'q', type: 'nps', prompt: 'Recommend us?' }] });
 
 createRoot(document.getElementById('root')!).render(
   <Tour.Root tour={tour}>
@@ -171,6 +231,11 @@ createRoot(document.getElementById('root')!).render(
     <ChecklistPanel checklist={checklist} />
     <TourPopover dots />
     <TourMotionPopover backdrop="spotlight" />
+    <AnnouncementBanner announcement={banner} actionLabel="Open" snooze={1000} />
+    <AnnouncementToast announcement={toast} />
+    <AnnouncementModal announcement={modal} actionLabel="Got it" />
+    <SurveyCard survey={survey} />
+    <HelpLauncher tours={[{ tour, title: 'Tour' }]} links={[{ title: 'Docs', href: '/docs' }]} />
   </Tour.Root>,
 );
 `,
