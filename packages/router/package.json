@@ -1,6 +1,6 @@
 {
   "name": "@awesome-tour/router",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Router adapters for awesome-tour multi-page tours: React Router, Next.js App Router, TanStack Router.",
   "license": "MIT",
   "author": "Yor\u00ed",

@@ -1,6 +1,6 @@
 {
   "name": "@awesome-tour/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Headless, framework-agnostic engine for product tours and onboarding.",
   "license": "MIT",
   "author": "Yor\u00ed",
