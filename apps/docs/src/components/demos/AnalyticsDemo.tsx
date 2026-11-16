@@ -6,7 +6,9 @@ import {
   type TourAnalyticsEvent,
   useStoreSelector,
 } from '@awesome-tour/react';
-import { Frame, MockApp, TourCard } from './ui';
+import { TourPopover } from '@/components/awesome-tour/tour';
+import { Badge } from '@/components/ui/badge';
+import { DemoFrame, MockApp, StartButton } from './ui';
 
 const log = createStore<{ events: TourAnalyticsEvent[] }>({ events: [] });
 
@@ -39,36 +41,42 @@ const tour = createTour({
   ],
 });
 
-export function AnalyticsDemo() {
+function EventLog() {
   const events = useStoreSelector(log, (s) => s.events);
   return (
+    <ol
+      aria-label="Analytics events"
+      className="flex max-h-48 flex-col gap-1 overflow-y-auto font-mono"
+    >
+      {events.length === 0 && <li>Start the tour to see events.</li>}
+      {events.map((e) => (
+        <li
+          key={`${e.timestamp}-${e.type}-${e.stepId}`}
+          className="flex flex-wrap items-center gap-2"
+        >
+          <Badge variant="secondary" className="font-mono">
+            {e.type}
+          </Badge>
+          <span className="text-foreground">{e.stepId ?? '—'}</span>
+          {e.previousStepDurationMs != null && (
+            <span>
+              prev {e.previousStepId} · {Math.round(e.previousStepDurationMs)}ms
+            </span>
+          )}
+          {e.durationMs != null && <span>total {Math.round(e.durationMs)}ms</span>}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+export function AnalyticsDemo() {
+  return (
     <Tour.Root tour={tour}>
-      <Frame
-        title="Analytics"
-        actions={<Tour.Trigger className="at-button at-button--primary">Start tour</Tour.Trigger>}
-        footer={
-          <ol className="at-log" aria-label="Analytics events">
-            {events.length === 0 && (
-              <li className="at-log__empty">Start the tour to see events.</li>
-            )}
-            {events.map((e) => (
-              <li key={`${e.timestamp}-${e.type}-${e.stepId}`}>
-                <span>{e.type}</span>
-                <span>{e.stepId ?? '—'}</span>
-                {e.previousStepDurationMs != null && (
-                  <span>
-                    prev {e.previousStepId} · {Math.round(e.previousStepDurationMs)}ms
-                  </span>
-                )}
-                {e.durationMs != null && <span>total {Math.round(e.durationMs)}ms</span>}
-              </li>
-            ))}
-          </ol>
-        }
-      >
+      <DemoFrame title="Analytics" actions={<StartButton />} footer={<EventLog />}>
         <MockApp id="analytics" />
-      </Frame>
-      <TourCard />
+      </DemoFrame>
+      <TourPopover />
     </Tour.Root>
   );
 }

@@ -1,0 +1,80 @@
+---
+title: Overview
+description: Copy-paste, Tailwind-styled tour components built on the awesome-tour primitives, distributed as a shadcn/ui registry.
+sidebar:
+  order: 0
+---
+
+import { Aside, Steps, Tabs, TabItem, LinkCard, CardGrid } from '~/components/mdx';
+
+The primitives ship no CSS. When you'd rather start from something good-looking, the
+**awesome-tour registry** gives you styled components in the [shadcn/ui](https://ui.shadcn.com)
+style — Tailwind v4, CSS variables, `cva` variants. The code is **copied into your project**, so you
+own it: change any class, any markup, any default.
+
+Every demo in these docs is built with these exact files.
+
+## Setup
+
+<Steps>
+
+1. Set up [shadcn/ui](https://ui.shadcn.com/docs/installation) (Tailwind v4) if you haven't.
+
+2. Register the `@awesome-tour` namespace in `components.json`:
+
+   ```json title="components.json" ins={3-5}
+   {
+     "$schema": "https://ui.shadcn.com/schema.json",
+     "registries": {
+       "@awesome-tour": "https://yorigcs.github.io/awesome-tour/r/{name}.json"
+     }
+   }
+   ```
+
+3. Add components:
+
+   <Tabs syncKey="pkg">
+     <TabItem label="pnpm">
+       ```sh
+       pnpm dlx shadcn@latest add @awesome-tour/tour
+       ```
+     </TabItem>
+     <TabItem label="npm">
+       ```sh
+       npx shadcn@latest add @awesome-tour/tour
+       ```
+     </TabItem>
+   </Tabs>
+
+   The CLI installs `@awesome-tour/react`, the shadcn components it builds on (`button`) and
+   writes `components/awesome-tour/tour.tsx`.
+
+</Steps>
+
+<Aside>
+  No namespace? Use the URL directly:
+  `npx shadcn@latest add https://yorigcs.github.io/awesome-tour/r/tour.json`
+</Aside>
+
+## Components
+
+<CardGrid>
+  <LinkCard title="Tour" href="./tour/" description="Overlay, spotlight and a composable card — or the all-in-one TourPopover." />
+  <LinkCard title="Tour (motion)" href="./tour-motion/" description="The same card with springs: a cutout that glides between targets." />
+  <LinkCard title="Checklist" href="./checklist/" description="An onboarding checklist card with progress and completion states." />
+  <LinkCard title="Hotspot" href="./hotspot/" description="A pulsing beacon that opens a hint." />
+  <LinkCard title="Announcement" href="./announcement/" description="Banner, toast and modal announcements." />
+  <LinkCard title="Survey" href="./survey/" description="NPS / CSAT / CES with follow-up questions." />
+  <LinkCard title="Help launcher" href="./launcher/" description="A resource center to replay tours." />
+</CardGrid>
+
+## Theming
+
+The components use the standard shadcn tokens (`--popover`, `--primary`, `--muted`, …), so they pick
+up your theme automatically. The `tour` item also adds:
+
+| Token                  | Meaning                         |
+| ---------------------- | ------------------------------- |
+| `--tour-overlay-color` | Fill of the overlay around the cutout (light and dark values). |
+
+and a base rule putting the positioned card (`[data-tour-content-wrapper]`) above your app chrome.

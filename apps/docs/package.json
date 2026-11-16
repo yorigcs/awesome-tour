@@ -3,25 +3,33 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "astro dev --port 4321",
-    "build": "astro build",
+    "dev": "pnpm --filter @awesome-tour/registry build && mkdir -p public/schema && cp ../../packages/core/schema/tour.schema.json public/schema/ && astro dev --port 4321",
+    "build": "pnpm --filter @awesome-tour/registry build && mkdir -p public/schema && cp ../../packages/core/schema/tour.schema.json public/schema/ && astro build && pagefind --site dist",
     "preview": "astro preview --port 4322",
     "typecheck": "astro check"
   },
   "dependencies": {
+    "@astrojs/mdx": "^8.1.6",
     "@astrojs/react": "^7.1.9",
-    "@astrojs/starlight": "^0.43.1",
     "@awesome-tour/core": "workspace:*",
     "@awesome-tour/devtools": "workspace:*",
     "@awesome-tour/motion": "workspace:*",
     "@awesome-tour/react": "workspace:*",
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@tailwindcss/vite": "^4.3.5",
     "astro": "^7.4.12",
+    "astro-expressive-code": "^0.44.3",
+    "lucide-react": "^1.73.0",
     "motion": "^14.14.0",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "tailwindcss": "^4.3.5",
+    "tw-animate-css": "^1.4.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
+    "pagefind": "^1.6.0",
     "typescript": "6.0.3"
   }
 }

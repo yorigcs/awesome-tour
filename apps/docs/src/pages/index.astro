@@ -1,0 +1,422 @@
+---
+import { Code } from 'astro-expressive-code/components';
+import { ArrowRight, Check, Plus, X } from 'lucide-react';
+import { LandingTour } from '~/components/demos/LandingTour';
+import { HeroAssembly } from '~/components/landing/HeroAssembly';
+import InstallCommand from '~/components/landing/InstallCommand.astro';
+import { Workbench } from '~/components/landing/Workbench';
+import Base from '~/layouts/Base.astro';
+import { getNav } from '~/lib/nav';
+
+const base = import.meta.env.BASE_URL;
+const links = new Map((await getNav()).flatMap((g) => g.links).map((l) => [l.slug, l]));
+const page = (slug: string) => links.get(slug)!;
+
+const parts = [
+  {
+    letter: 'A',
+    name: '@awesome-tour/core',
+    qty: 'incl.',
+    role: 'The headless engine: steps, branching, routes, persistence, analytics. No dependencies; comes with B.',
+    kb: 10,
+  },
+  {
+    letter: 'B',
+    name: '@awesome-tour/react',
+    qty: '1×',
+    role: 'Compound components and hooks, plus checklists and hotspots.',
+    kb: 18,
+  },
+  {
+    letter: 'C',
+    name: '@awesome-tour/motion',
+    qty: '0–1×',
+    role: 'A spring spotlight that glides between targets; animated content.',
+    kb: 4,
+  },
+  {
+    letter: 'D',
+    name: '@awesome-tour/router',
+    qty: '0–1×',
+    role: 'React Router, Next.js and TanStack Router adapters for multi-page tours.',
+    kb: 1,
+  },
+  {
+    letter: 'E',
+    name: '@awesome-tour/three',
+    qty: '0–1×',
+    role: 'Point steps at objects inside react-three-fiber scenes.',
+    kb: 3,
+  },
+  {
+    letter: 'F',
+    name: '@awesome-tour/devtools',
+    qty: '0–1×',
+    role: 'Inspect and drive every tour while you develop.',
+    kb: 7,
+  },
+];
+const maxKb = Math.max(...parts.map((p) => p.kb));
+
+const defineCode = `import { anchor, createTour } from '@awesome-tour/react';
+
+export const onboarding = createTour({
+  id: 'onboarding',
+  steps: [
+    { id: 'welcome', title: 'Welcome to Acme' },
+    { id: 'search', target: '#search', title: 'Find anything' },
+    { id: 'create', target: anchor('create'), title: 'Create a project',
+      advanceOn: { event: 'click' } },
+  ],
+});`;
+
+const composeCode = `<Tour.Root tour={onboarding}>
+  <Tour.Trigger>Start tour</Tour.Trigger>
+  <Tour.Portal>
+    <Tour.Overlay />
+    <Tour.Content className="card">
+      <Tour.Arrow />
+      <Tour.Progress />
+      <Tour.Title />
+      <Tour.Description />
+      <Tour.Prev>Back</Tour.Prev>
+      <Tour.Next>Next</Tour.Next>
+    </Tour.Content>
+  </Tour.Portal>
+</Tour.Root>`;
+
+const checks = [
+  {
+    ok: 'Focus moves into each step and returns to where it was when the tour closes.',
+    no: 'A dimmed page that still takes Tab focus behind the overlay.',
+  },
+  {
+    ok: 'Everything outside the step is inert while a modal step is open; the target stays usable.',
+    no: 'Clicks leaking through to the page, or a highlighted button that can’t be clicked.',
+  },
+  {
+    ok: 'Each step is a labelled dialog, and step changes are announced to screen readers.',
+    no: 'A tooltip that changes silently.',
+  },
+  {
+    ok: 'Arrow keys and Escape work out of the box; reduced-motion users get instant transitions.',
+    no: 'Springs and slides forced on everyone.',
+  },
+];
+
+const fits = [
+  { slug: 'guides/multi-page', text: 'Tours that cross routes, with adapters for your router.' },
+  {
+    slug: 'guides/interactive-steps',
+    text: 'Steps that wait for a click, an input, or your own signal.',
+  },
+  {
+    slug: 'guides/three',
+    text: 'Highlight a mesh inside a 3D scene, with a camera shot per step.',
+  },
+  {
+    slug: 'guides/persistence',
+    text: 'Resume after a reload, sync across tabs, never show twice.',
+  },
+  { slug: 'guides/checklist', text: 'An onboarding checklist whose items complete themselves.' },
+  { slug: 'guides/multiple-tours', text: 'Several tours on one page, queued by priority.' },
+];
+---
+
+<Base
+  title="awesome-tour — assemble your own product tour"
+  description="Unstyled, accessible React primitives for product tours and onboarding. MIT."
+  section="home"
+>
+  <main id="main">
+    <!-- Hero -->
+    <section class="mx-auto grid max-w-[90rem] grid-cols-[minmax(0,1fr)] items-center gap-12 px-4 pt-12 pb-16 md:px-6 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:gap-16 lg:pt-20 lg:pb-24">
+      <div class="flex flex-col items-start">
+        <h1 class="font-display text-[clamp(3.1rem,7.4vw,5.9rem)] leading-[0.9] text-balance">
+          Assemble your own tour.
+        </h1>
+        <p class="mt-7 max-w-[34rem] text-lg leading-relaxed text-ink-2 md:text-xl">
+          Unstyled, accessible React primitives for product tours and onboarding. Fit the parts into
+          your design system — or copy styled ones from the shadcn registry.
+        </p>
+        <div class="mt-9 flex w-full max-w-[34rem] flex-col gap-3">
+          <InstallCommand command="pnpm add @awesome-tour/react" tour="install" />
+          <div class="flex flex-wrap gap-3">
+            <button
+              type="button"
+              data-start-landing-tour
+              class="inline-flex h-12 items-center gap-2 rounded-sm border-2 border-ink bg-marker px-5 text-base font-bold text-marker-ink transition-transform hover:-translate-y-0.5 active:translate-y-0"
+            >
+              Take the tour
+              <ArrowRight className="size-[1.1rem]" aria-hidden="true" />
+            </button>
+            <a
+              href={`${base}quick-start/`}
+              class="inline-flex h-12 items-center gap-2 rounded-sm border-2 border-ink px-5 text-base font-semibold transition-colors hover:bg-paper-2"
+            >
+              Quick start
+            </a>
+          </div>
+        </div>
+        <ul class="mt-10 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-ink-2">
+          <li>MIT licensed</li>
+          <li aria-hidden="true">·</li>
+          <li>React 18 &amp; 19</li>
+          <li aria-hidden="true">·</li>
+          <li>SSR-safe</li>
+          <li aria-hidden="true">·</li>
+          <li>Targets in 3D scenes</li>
+        </ul>
+      </div>
+      <HeroAssembly client:load />
+    </section>
+
+    <!-- What's in the box -->
+    <section class="border-t-2 border-ink" aria-labelledby="box">
+      <div class="mx-auto max-w-[90rem] px-4 py-16 md:px-6 md:py-24">
+        <div class="grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-16">
+          <div>
+            <h2 id="box" class="font-display text-[clamp(2.25rem,4.4vw,3.5rem)] leading-[0.95]">
+              What’s in the box
+            </h2>
+            <p class="mt-5 max-w-[30rem] text-lg leading-relaxed text-ink-2">
+              Start with one package. Add the others only when a tour needs them — each one has a
+              size budget (minified + brotli), checked on every pull request.
+            </p>
+            <a
+              href={`${base}registry/`}
+              class="mt-8 flex max-w-[30rem] items-start gap-4 rounded-sm border-2 border-dashed border-ink p-4 transition-colors hover:bg-paper-2"
+            >
+              <span class="part-disc bg-marker text-marker-ink"><Plus className="size-4" strokeWidth={3} aria-hidden="true" /></span>
+              <span>
+                <span class="block font-bold">Styled parts, sold separately</span>
+                <span class="mt-1 block text-ink-2">
+                  The shadcn registry copies Tailwind-styled tour, checklist and hotspot components
+                  into your codebase. Every demo on this site uses them.
+                </span>
+              </span>
+            </a>
+          </div>
+          <ol data-tour="parts" class="border-t-2 border-ink">
+            {
+              parts.map((p) => (
+                <li class="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-4 gap-y-2 border-b border-rule py-4 sm:grid-cols-[auto_minmax(0,1fr)_9rem]">
+                  <span class="part-disc mt-0.5">{p.letter}</span>
+                  <div class="min-w-0">
+                    <p class="flex flex-wrap items-baseline gap-x-2.5 font-mono text-[0.9375rem] font-semibold break-words">
+                      {p.name}
+                      <span class="rounded-sm border-2 border-ink px-1 text-[0.6875rem] leading-tight" title="How many you need">
+                        {p.qty}
+                      </span>
+                    </p>
+                    <p class="mt-1 text-[0.9375rem] leading-snug text-ink-2">{p.role}</p>
+                  </div>
+                  <div class="col-start-2 flex items-center gap-3 sm:col-start-3 sm:flex-col sm:items-end sm:gap-1.5">
+                    <span class="font-numeral text-xl leading-none">
+                      ≤{p.kb}
+                      <span class="text-sm font-bold">kB</span>
+                    </span>
+                    <span class="h-1.5 w-24 rounded-full bg-paper-2 sm:w-full" aria-hidden="true">
+                      <span class="block h-full rounded-full bg-ink" style={`width:${(p.kb / maxKb) * 100}%`} />
+                    </span>
+                  </div>
+                </li>
+              ))
+            }
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- Assembly -->
+    <section class="border-t-2 border-ink bg-paper-2" aria-labelledby="assembly">
+      <div class="mx-auto max-w-[90rem] px-4 py-16 md:px-6 md:py-24">
+        <h2 id="assembly" class="font-display text-[clamp(2.25rem,4.4vw,3.5rem)] leading-[0.95]">
+          Assembly in four steps
+        </h2>
+        <ol class="mt-12 flex flex-col">
+          <li class="grid grid-cols-[minmax(0,1fr)] gap-6 border-t-2 border-ink py-10 md:grid-cols-[7rem_minmax(0,0.8fr)_minmax(0,1.2fr)] md:gap-10">
+            <span class="font-numeral relative text-[5.5rem] leading-[0.8] md:after:absolute md:after:top-[0.4em] md:after:left-[calc(100%+0.5rem)] md:after:w-7 md:after:border-t-2 md:after:border-dashed md:after:border-ink md:after:content-['']" aria-hidden="true">1</span>
+            <div>
+              <h3 class="text-2xl font-bold">Install one package</h3>
+              <p class="mt-3 leading-relaxed text-ink-2">The React layer re-exports the engine. Nothing else is required.</p>
+            </div>
+            <Code code="pnpm add @awesome-tour/react" lang="sh" frame="terminal" />
+          </li>
+          <li class="grid grid-cols-[minmax(0,1fr)] gap-6 border-t-2 border-ink py-10 md:grid-cols-[7rem_minmax(0,0.8fr)_minmax(0,1.2fr)] md:gap-10">
+            <span class="font-numeral relative text-[5.5rem] leading-[0.8] md:after:absolute md:after:top-[0.4em] md:after:left-[calc(100%+0.5rem)] md:after:w-7 md:after:border-t-2 md:after:border-dashed md:after:border-ink md:after:content-['']" aria-hidden="true">2</span>
+            <div>
+              <h3 class="text-2xl font-bold">Describe the steps</h3>
+              <p class="mt-3 leading-relaxed text-ink-2">
+                A tour is data: targets as selectors, refs or anchors; steps that wait for a click;
+                branches as plain functions.
+              </p>
+            </div>
+            <Code code={defineCode} lang="ts" title="tours.ts" />
+          </li>
+          <li class="grid grid-cols-[minmax(0,1fr)] gap-6 border-t-2 border-ink py-10 md:grid-cols-[7rem_minmax(0,0.8fr)_minmax(0,1.2fr)] md:gap-10">
+            <span class="font-numeral relative text-[5.5rem] leading-[0.8] md:after:absolute md:after:top-[0.4em] md:after:left-[calc(100%+0.5rem)] md:after:w-7 md:after:border-t-2 md:after:border-dashed md:after:border-ink md:after:content-['']" aria-hidden="true">3</span>
+            <div>
+              <h3 class="text-2xl font-bold">Fit the parts</h3>
+              <p class="mt-3 leading-relaxed text-ink-2">
+                Every part is an unstyled element with <code class="rounded-[3px] bg-paper px-1 font-mono text-[0.86em]">asChild</code>,
+                data attributes and CSS variables. Use only the parts you want.
+              </p>
+            </div>
+            <Code code={composeCode} lang="tsx" title="Onboarding.tsx" />
+          </li>
+          <li class="grid grid-cols-[minmax(0,1fr)] gap-6 border-y-2 border-ink py-10 md:grid-cols-[7rem_minmax(0,0.8fr)_minmax(0,1.2fr)] md:gap-10">
+            <span class="font-numeral relative text-[5.5rem] leading-[0.8] md:after:absolute md:after:top-[0.4em] md:after:left-[calc(100%+0.5rem)] md:after:w-7 md:after:border-t-2 md:after:border-dashed md:after:border-ink md:after:content-['']" aria-hidden="true">4</span>
+            <div>
+              <h3 class="text-2xl font-bold">Or skip to styled</h3>
+              <p class="mt-3 leading-relaxed text-ink-2">
+                One command copies a finished, Tailwind-styled tour into your components — yours to edit.
+              </p>
+            </div>
+            <Code code="npx shadcn@latest add @awesome-tour/tour" lang="sh" frame="terminal" />
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Workbench -->
+    <section class="border-t-2 border-ink" aria-labelledby="workbench">
+      <div class="mx-auto max-w-[90rem] px-4 py-16 md:px-6 md:py-24">
+        <div class="mb-10 flex flex-wrap items-end justify-between gap-6">
+          <h2 id="workbench" class="font-display text-[clamp(2.25rem,4.4vw,3.5rem)] leading-[0.95]">
+            The workbench
+          </h2>
+          <p class="max-w-[30rem] text-lg leading-relaxed text-ink-2">
+            A live step runs while the bench is on screen. Swap a part and watch it change — the code
+            underneath follows along, ready to copy.
+          </p>
+        </div>
+        <Workbench client:visible />
+      </div>
+    </section>
+
+    <!-- Checks -->
+    <section class="border-t-2 border-ink" aria-labelledby="checks">
+      <div class="mx-auto max-w-[90rem] px-4 py-16 md:px-6 md:py-24">
+        <div class="grid grid-cols-[minmax(0,1fr)] items-center gap-10 md:grid-cols-[minmax(0,1fr)_auto]">
+          <div>
+            <h2 id="checks" class="max-w-[16ch] font-display text-[clamp(2.25rem,4.4vw,3.5rem)] leading-[0.95]">
+              Accessible before you touch it
+            </h2>
+            <p class="mt-5 max-w-[40rem] text-lg leading-relaxed text-ink-2">
+              The primitives handle the parts people get wrong. Every demo on this site is checked
+              with axe, in light and dark themes, on every change.
+            </p>
+          </div>
+          <figure class="flex items-center gap-4" aria-label="Detail: focus moves into the step and is visible on its controls">
+            <div class="relative grid size-44 shrink-0 place-items-center overflow-hidden rounded-full border-2 border-ink bg-paper-2 md:size-52" aria-hidden="true">
+              <span class="absolute inset-0 bg-[radial-gradient(circle,transparent_55%,rgb(0_0_0/0.06))]"></span>
+              <span class="inline-flex scale-[1.9] items-center gap-1 rounded-sm border-2 border-ink bg-marker px-2.5 py-1 text-sm font-bold text-marker-ink outline-2 outline-offset-[3px] outline-ink">
+                Next
+                <ArrowRight className="size-3.5" />
+              </span>
+            </div>
+            <figcaption class="max-w-[11rem] text-sm leading-snug text-ink-2">
+              <span class="part-disc mb-2 size-6 text-[0.6875rem]">E</span>
+              <span class="block">Part E, enlarged: focus lands on the step’s controls with a visible ring, and goes back when the tour closes.</span>
+            </figcaption>
+          </figure>
+        </div>
+        <ul class="mt-12 grid gap-4 lg:grid-cols-2">
+          {
+            checks.map((c) => (
+              <li class="grid grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] border-2 border-ink">
+                <p class="flex items-start gap-3 p-4">
+                  <span class="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-ink text-paper">
+                    <Check className="size-4" strokeWidth={3} aria-hidden="true" />
+                  </span>
+                  <span>
+                    <span class="sr-only">Does: </span>
+                    {c.ok}
+                  </span>
+                </p>
+                <p class="flex items-start gap-3 border-l-2 border-ink bg-paper-2 p-4 text-ink-2">
+                  <span class="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-dont text-paper">
+                    <X className="size-4" strokeWidth={3} aria-hidden="true" />
+                  </span>
+                  <span>
+                    <span class="sr-only">Avoids: </span>
+                    <span class="line-through decoration-dont/60 decoration-2">{c.no}</span>
+                  </span>
+                </p>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </section>
+
+    <!-- Fits real apps -->
+    <section class="border-t-2 border-ink bg-ink text-paper" aria-labelledby="fits">
+      <div class="mx-auto grid max-w-[90rem] grid-cols-[minmax(0,1fr)] gap-12 px-4 py-16 md:px-6 md:py-24 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+        <div>
+          <h2 id="fits" class="font-display text-[clamp(2.25rem,4.4vw,3.5rem)] leading-[0.95]">
+            Fits the app you already have
+          </h2>
+          <p class="mt-5 max-w-[30rem] text-lg leading-relaxed text-paper/75">
+            The cases that break other tour libraries each have a guide and a live demo.
+          </p>
+        </div>
+        <ul class="border-t-2 border-paper">
+          {
+            fits.map((f) => (
+              <li class="border-b border-paper/25">
+                <a
+                  href={page(f.slug).href}
+                  class="group grid grid-cols-[3.5rem_minmax(0,1fr)_auto] items-baseline gap-4 py-4 transition-colors hover:text-marker"
+                >
+                  <span class="font-mono text-xs text-paper/60">{page(f.slug).folio}</span>
+                  <span>
+                    <span class="block text-lg font-bold">{page(f.slug).label}</span>
+                    <span class="mt-0.5 block text-paper/70">{f.text}</span>
+                  </span>
+                  <ArrowRight className="size-5 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </section>
+
+    <!-- Close -->
+    <section class="border-t-2 border-ink" aria-labelledby="close">
+      <div class="mx-auto flex max-w-[90rem] flex-col items-start gap-8 px-4 py-20 md:px-6 md:py-28">
+        <h2 id="close" class="max-w-[14ch] font-display text-[clamp(2.5rem,6vw,4.75rem)] leading-[0.92]">
+          Everything you need is in the box.
+        </h2>
+        <div class="flex flex-wrap items-center gap-3">
+          <a
+            href={`${base}quick-start/`}
+            class="inline-flex h-12 items-center gap-2 rounded-sm border-2 border-ink bg-marker px-5 font-bold text-marker-ink transition-transform hover:-translate-y-0.5"
+          >
+            Start the quick start
+            <ArrowRight className="size-[1.1rem]" aria-hidden="true" />
+          </a>
+          <a
+            href={`${base}registry/`}
+            class="inline-flex h-12 items-center rounded-sm border-2 border-ink px-5 font-semibold transition-colors hover:bg-paper-2"
+          >
+            Browse styled parts
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t-2 border-ink">
+    <div class="mx-auto flex max-w-[90rem] flex-wrap items-center gap-x-6 gap-y-2 px-4 py-6 text-sm text-ink-2 md:px-6">
+      <span class="font-semibold text-ink">awesome-tour</span>
+      <span>MIT license</span>
+      <span>v0.1.0 · not yet on npm</span>
+      <a class="underline decoration-marker decoration-2 underline-offset-4 hover:text-ink" href="https://github.com/yorigcs/awesome-tour">Source on GitHub</a>
+    </div>
+  </footer>
+
+  <LandingTour client:load />
+</Base>

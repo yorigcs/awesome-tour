@@ -3,6 +3,16 @@
   "version": "0.1.0",
   "description": "react-three-fiber adapter for awesome-tour: highlight 3D objects in tours.",
   "license": "MIT",
+  "author": "Yor\u00ed",
+  "homepage": "https://yorigcs.github.io/awesome-tour/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yorigcs/awesome-tour.git",
+    "directory": "packages/three"
+  },
+  "bugs": {
+    "url": "https://github.com/yorigcs/awesome-tour/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.cjs",
@@ -55,5 +65,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

@@ -1,0 +1,83 @@
+---
+title: Surveys
+description: NPS, CSAT and CES surveys with conditional follow-ups — accessible rating scales, display rules and your own backend.
+sidebar:
+  order: 11
+---
+
+import Preview from '../../../components/Preview.astro';
+import { Aside } from '~/components/mdx';
+import { SurveyDemo } from '../../../components/demos/SurveyDemo';
+import SurveyDemoSource from '../../../components/demos/SurveyDemo.tsx?raw';
+
+A survey is a tour with one step per question. So it inherits progress, Back/Next, display rules
+(ask once, after a cooldown, only on the pro plan…), triggers and analytics.
+
+<Preview code={SurveyDemoSource} title="SurveyDemo.tsx">
+  <SurveyDemo client:visible />
+</Preview>
+
+## Create
+
+```ts
+import { createSurvey } from '@awesome-tour/react/surfaces';
+
+export const nps = createSurvey({
+  id: 'nps-q4',
+  questions: [
+    { id: 'score', type: 'nps', prompt: 'How likely are you to recommend us?' },
+    {
+      id: 'reason',
+      type: 'text',
+      prompt: 'What would make it a 10?',
+      optional: true,
+      when: (answers) => Number(answers.score) < 9, // follow-up for passives and detractors
+    },
+  ],
+  rules: { trigger: { signal: 'onboarding-complete' }, frequency: { cooldownMs: 90 * 86_400_000 } },
+  onSubmit: (answers) => fetch('/api/nps', { method: 'POST', body: JSON.stringify(answers) }),
+});
+```
+
+| Type   | Scale | Ends labelled by default                |
+| ------ | ----- | --------------------------------------- |
+| `nps`  | 0–10  | "Not at all likely" / "Extremely likely" |
+| `csat` | 1–5 (`max` to change) | `lowLabel` / `highLabel` |
+| `ces`  | 1–7   | `lowLabel` / `highLabel`                |
+| `text` | free text (`placeholder`) | —                         |
+
+`Next` stays disabled until the question is answered (unless it's `optional`); on the last
+question it submits: the survey completes and `onSubmit(answers)` runs. Answers also live in
+`survey.getState().data.answers`, so the [analytics plugin](../analytics/) with `includeData`
+sends them along. `npsCategory(score)` returns `promoter`, `passive` or `detractor`.
+
+## Render
+
+```tsx
+import { Survey } from '@awesome-tour/react/surfaces';
+
+<Survey.Root survey={nps}>
+  <Survey.Portal>
+    <Survey.Content className="survey">
+      <Survey.Prompt />
+      <Survey.When type={['nps', 'csat', 'ces']}>
+        <Survey.Scale />
+      </Survey.When>
+      <Survey.When type="text">
+        <Survey.Comment />
+      </Survey.When>
+      <Survey.Back>Back</Survey.Back>
+      <Survey.Next>Next</Survey.Next>
+      <Survey.Dismiss />
+    </Survey.Content>
+  </Survey.Portal>
+</Survey.Root>
+```
+
+`Survey.Scale` is a `radiogroup`: every option is a `role="radio"` button with `data-state` and
+`data-value`; arrow keys move and pick, and the ends are labelled for screen readers.
+`autoAdvance` moves on as soon as a value is picked.
+
+<Aside type="tip">
+  `npx shadcn@latest add @awesome-tour/survey` gives you `SurveyCard`, the styled corner card above.
+</Aside>

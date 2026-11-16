@@ -1,0 +1,106 @@
+---
+title: Display rules
+description: Who sees a tour, when, and how often — targeting, scheduling, frequency caps, snooze and automatic triggers, with an explanation when a tour doesn't show.
+sidebar:
+  order: 8
+---
+
+import Preview from '../../../components/Preview.astro';
+import { Aside } from '~/components/mdx';
+import { RulesDemo } from '../../../components/demos/RulesDemo';
+import RulesDemoSource from '../../../components/demos/RulesDemo.tsx?raw';
+
+A tour with `rules` decides by itself whether it should appear. The
+[tour manager](../multiple-tours/) (the one inside `TourProvider`) evaluates them, starts tours
+when their trigger fires, and remembers impressions — how often each tour was shown, how it ended,
+when it was snoozed.
+
+<Preview code={RulesDemoSource} title="RulesDemo.tsx">
+  <RulesDemo client:visible />
+</Preview>
+
+Try it: on the **free** plan, "Open billing" does nothing — the audience rule blocks it. Switch to
+**pro** and open billing again. Snooze it, and watch the `snooze` rule count down.
+
+## Rules
+
+```ts
+const tour = createTour({
+  id: 'billing-tips',
+  steps,
+  rules: {
+    audience: ({ data }) => data.plan === 'pro',                 // targeting
+    schedule: { startsAt: '2026-12-01', endsAt: '2027-01-15' },   // a dated campaign
+    frequency: { once: true, maxShows: 3, cooldownMs: 86_400_000 },
+    trigger: { route: '/billing/*' },                             // start by itself
+    priority: 10,
+  },
+});
+```
+
+| Rule        | Passes when                                                                         |
+| ----------- | ----------------------------------------------------------------------------------- |
+| `audience`  | `audience({ data })` returns true (may be async — fetch a feature flag here).        |
+| `schedule`  | Now is between `startsAt` and `endsAt` (`Date`, ISO string or timestamp).            |
+| `once`      | The tour was never completed, skipped or dismissed. On by default; `once: false` to turn off. |
+| `maxShows`  | It was shown fewer than `maxShows` times.                                            |
+| `cooldown`  | At least `cooldownMs` passed since it was last shown.                                |
+| `snooze`    | Any `tour.snooze(ms)` has expired.                                                   |
+
+<Aside>
+  Rules gate **automatic** starts — triggers and `manager.startIfEligible(id)`. An explicit
+  `start()` (a "Take the tour" button, `Tour.Trigger`) always works: the user asked for it.
+</Aside>
+
+## Triggers
+
+`trigger` starts the tour by itself, when it's eligible and **no other tour is on screen** (a
+triggered tour never interrupts or queues behind another one — it gets its chance next time).
+
+| Trigger         | Fires when                                                                 |
+| --------------- | -------------------------------------------------------------------------- |
+| `route`         | The router reaches a matching path (`/projects/:id`, `/docs/*`).           |
+| `signal`        | Your app calls `manager.signal(name)` — after a feature is used, a plan changes… |
+| `event`         | A DOM event happens on (or inside) a target: `{ type: 'click', target: '#help' }`. |
+| `delay`         | This many ms after the tour is registered.                                 |
+| `targetVisible` | A target appears on the page.                                              |
+
+## Snooze
+
+`tour.snooze(ms)` closes the tour and keeps it from auto-starting until the time is up — the
+"Remind me tomorrow" button:
+
+```tsx
+function RemindLater() {
+  const { tour } = useTour();
+  return <button onClick={() => tour.snooze(24 * 60 * 60 * 1000)}>Remind me tomorrow</button>;
+}
+```
+
+## Remembering impressions
+
+By default impressions live in memory (lost on reload). Give the provider any
+[persistence adapter](../../reference/persistence/) to keep them — in the browser or on your server:
+
+```tsx
+import { localStorageAdapter, TourProvider } from '@awesome-tour/react';
+
+const impressions = localStorageAdapter({ prefix: 'tour-impressions:' });
+
+<TourProvider tours={tours} router={router} impressions={impressions}>…</TourProvider>;
+```
+
+## Why didn't my tour show?
+
+`manager.explain(id)` returns every rule's verdict with a reason:
+
+```ts
+const report = await manager.explain('billing-tips');
+// { eligible: false, checks: [
+//   { rule: 'audience', ok: false, detail: 'audience() returned false' },
+//   { rule: 'once', ok: true, detail: 'not finished yet' },
+// ] }
+```
+
+The [devtools](../devtools/) **Rules** tab shows the same report for every tour, live, with
+buttons to start a tour if eligible and reset impressions.

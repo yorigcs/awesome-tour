@@ -1,0 +1,54 @@
+---
+/** Wraps a Markdown ordered list and sets it as numbered assembly steps. */
+---
+
+<div class="steps my-8">
+  <slot />
+</div>
+
+<style is:global>
+  div.steps > ol {
+    counter-reset: step;
+    list-style: none;
+    padding: 0;
+  }
+  div.steps > ol > li {
+    counter-increment: step;
+    position: relative;
+    padding-left: 3.75rem;
+    padding-bottom: 2rem;
+  }
+  div.steps > ol > li + li {
+    margin-top: 0;
+  }
+  div.steps > ol > li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: -0.2rem;
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 9999px;
+    background: var(--ink);
+    color: var(--paper);
+    font-variation-settings: "wdth" 125;
+    font-weight: 900;
+    font-size: 1.125rem;
+  }
+  div.steps > ol > li::after {
+    content: "";
+    position: absolute;
+    left: calc(1.25rem - 1px);
+    top: 2.6rem;
+    bottom: 0.4rem;
+    border-left: 2px dashed var(--rule);
+  }
+  div.steps > ol > li:last-child::after {
+    display: none;
+  }
+  div.steps > ol > li > :first-child {
+    margin-top: 0;
+  }
+</style>

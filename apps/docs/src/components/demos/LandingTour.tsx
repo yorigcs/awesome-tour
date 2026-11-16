@@ -1,93 +1,97 @@
-import { MotionContent, MotionOverlay } from '@awesome-tour/motion';
 import { createTour, Tour } from '@awesome-tour/react';
 import { useEffect } from 'react';
-import { CardBody } from './ui';
+import { TourMotionPopover } from '@/components/awesome-tour/tour-motion';
 
-/** A tour of this very page. Started by any link to `#tour` (the hero's "Take the tour" button). */
-const tour = createTour({
+/** Set once the tour has started on its own, so returning visitors are never interrupted. */
+export const LANDING_SEEN_KEY = 'awesome-tour-landing-seen';
+
+/**
+ * A tour of this very page. Starts by itself once the hero diagram has assembled (first visit only),
+ * and again from the "Take the tour" button. Non-modal: the page stays readable and usable.
+ */
+export const landingTour = createTour({
   id: 'docs-landing',
-  onTargetMissing: 'skip', // header items are hidden on small screens
+  modal: false,
+  onTargetMissing: 'skip', // some header items are hidden on small screens
   targetTimeout: 300,
   steps: [
     {
       id: 'welcome',
+      target: '[data-tour="parts-strip"]',
+      side: 'top',
       title: 'This page is the demo',
       description:
-        'awesome-tour is running on the docs site itself — composed from unstyled primitives and animated with @awesome-tour/motion.',
+        'A real tour, built from the six parts listed here. It is non-modal: keep reading, or step through.',
     },
     {
       id: 'install',
-      target: '.landing-install',
+      target: '[data-tour="install"]',
       title: 'One package',
       description: '@awesome-tour/react re-exports the headless core. Adapters are opt-in.',
     },
     {
-      id: 'features',
-      target: '.landing-features',
+      id: 'parts',
+      target: '[data-tour="parts"]',
       side: 'top',
-      title: 'Batteries included',
-      description:
-        'Interactive steps, branching, multi-page tours, persistence, analytics, checklists…',
+      title: 'Take only what you need',
+      description: 'Each package has a size budget checked in CI.',
     },
     {
-      id: 'search',
-      target: 'site-search > button',
-      side: 'bottom',
-      title: 'Search the docs',
-      description: 'Every guide has live demos like this one.',
+      id: 'workbench',
+      target: '[data-tour="workbench"]',
+      side: 'top',
+      title: 'Then rebuild it yourself',
+      description: 'The workbench swaps parts while a tour runs and writes the code for you.',
     },
     {
       id: 'theme',
-      target: 'starlight-theme-select',
+      target: '[data-theme-toggle]',
       side: 'bottom',
       interactive: true,
       title: 'Try the theme switch',
-      description:
-        'The highlighted target stays interactive. The tour UI follows your CSS — it has none of its own.',
+      description: 'The highlighted target stays clickable — the tour follows your CSS variables.',
     },
     {
-      id: 'github',
-      target: '.social-icons',
+      id: 'search',
+      target: '[data-search-open]',
       side: 'bottom',
-      title: 'Open source',
-      description: 'MIT licensed. Issues and PRs welcome.',
-    },
-    {
-      id: 'start',
-      target: '.hero .actions',
-      title: 'Ready?',
-      description: 'Start with the quick start, or explore the guides.',
+      title: 'Find any part',
+      description: 'Every guide has live demos like this one, with its source a click away.',
     },
   ],
 });
 
 export function LandingTour() {
   useEffect(() => {
+    const onAssembled = () => {
+      let seen = false;
+      try {
+        seen = localStorage.getItem(LANDING_SEEN_KEY) !== null;
+        localStorage.setItem(LANDING_SEEN_KEY, '1');
+      } catch {}
+      // Only if the visitor is still at the top: never yank someone who already scrolled away.
+      if (!seen && scrollY < 200) void landingTour.start();
+    };
+    window.addEventListener('awesome-tour:assembled', onAssembled);
+    return () => window.removeEventListener('awesome-tour:assembled', onAssembled);
+  }, []);
+
+  useEffect(() => {
     const onClick = (e: MouseEvent) => {
-      const link = (e.target as Element | null)?.closest?.('a[href$="#tour"]');
-      if (!link) return;
+      const trigger = (e.target as Element | null)?.closest?.(
+        'a[href$="#tour"], [data-start-landing-tour]',
+      );
+      if (!trigger) return;
       e.preventDefault();
-      void tour.start({ force: true });
+      void landingTour.start({ force: true });
     };
     document.addEventListener('click', onClick);
     return () => document.removeEventListener('click', onClick);
   }, []);
 
   return (
-    <Tour.Root tour={tour}>
-      <Tour.Portal>
-        <MotionOverlay padding={8} radius={12} />
-        <MotionContent
-          className="at-card"
-          preset="slide"
-          sideOffset={14}
-          collisionPadding={16}
-          animateStepChange
-        >
-          <Tour.Arrow className="at-arrow" width={14} height={7} />
-          <CardBody />
-        </MotionContent>
-      </Tour.Portal>
+    <Tour.Root tour={landingTour}>
+      <TourMotionPopover dots backdrop="spotlight" />
     </Tour.Root>
   );
 }

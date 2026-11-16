@@ -2,12 +2,15 @@ import {
   createVirtualTarget,
   defaultAnchors,
   isAnchorTarget,
+  type PersistenceAdapter,
   resolveTarget,
   type TargetInput,
   type TourTargetNode,
 } from '@awesome-tour/core';
 import * as React from 'react';
 import { useTourProvider } from './context';
+import { useStoreSelector } from './hooks';
+import { MessagesScope, type TourMessagesInput, useTourMessages } from './messages';
 import { Portal } from './tour';
 import { composeEventHandlers, useComposedRefs } from './utils/compose';
 import { useCallbackRef, useIsomorphicLayoutEffect } from './utils/hooks';
@@ -57,9 +60,26 @@ export function useResolvedTarget(target: TargetInput | null | undefined): TourT
 
 /* -----------------------------------------------------------------------------------------------*/
 
+const NO_MANAGER_STATE = { activeId: null };
+const NO_MANAGER = { getState: () => NO_MANAGER_STATE, subscribe: () => () => {} };
+
+/** What a hotspot remembers between visits. */
+export interface HotspotRecord {
+  seen: boolean;
+  seenAt: number;
+}
+
 interface HotspotContextValue {
   open: boolean;
   setOpen: (open: boolean) => void;
+  /** Opened at least once (persisted with `persistence`). */
+  seen: boolean;
+  /** Not rendered: `once` and seen, or a modal tour is on screen. */
+  hidden: boolean;
+  trigger: 'click' | 'hover';
+  /** Hover: schedule a close (cancelled when the pointer comes back). */
+  hoverLeave: () => void;
+  hoverEnter: () => void;
   targets: TourTargetNode[];
   beacon: HTMLElement | null;
   setBeacon: (el: HTMLElement | null) => void;
@@ -79,6 +99,18 @@ export interface HotspotRootProps {
   open?: boolean;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Stable id: the key under which `persistence` remembers the hint was seen. */
+  id?: string;
+  /** Remember that the user opened the hint (localStorage, your API…). Requires `id`. */
+  persistence?: PersistenceAdapter<HotspotRecord>;
+  /** Stop showing the hint once it has been opened and closed. Default: false. */
+  once?: boolean;
+  /** `click` (default) or `hover` (also opens on keyboard focus). */
+  trigger?: 'click' | 'hover';
+  /** Hide the beacon while a modal tour is on screen. Default: true. */
+  hideDuringTours?: boolean;
+  /** Translations for the hint's accessible names. */
+  messages?: TourMessagesInput;
   children?: React.ReactNode;
 }
 
@@ -91,27 +123,92 @@ function HotspotRoot({
   open: openProp,
   defaultOpen = false,
   onOpenChange,
+  id: hotspotId,
+  persistence,
+  once = false,
+  trigger = 'click',
+  hideDuringTours = true,
+  messages,
   children,
 }: HotspotRootProps) {
   const [uncontrolled, setUncontrolled] = React.useState(defaultOpen);
   const open = openProp ?? uncontrolled;
   const handleChange = useCallbackRef(onOpenChange);
+  const [seen, setSeen] = React.useState(false);
+  const [closedAfterSeen, setClosedAfterSeen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!persistence || !hotspotId) return;
+    let cancelled = false;
+    void Promise.resolve(persistence.get(hotspotId)).then((record) => {
+      if (cancelled || !record?.seen) return;
+      setSeen(true);
+      setClosedAfterSeen(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [persistence, hotspotId]);
+
   const setOpen = React.useCallback(
     (next: boolean) => {
       if (openProp === undefined) setUncontrolled(next);
       handleChange(next);
+      if (next && !seen) {
+        setSeen(true);
+        if (persistence && hotspotId)
+          void persistence.set(hotspotId, { seen: true, seenAt: Date.now() });
+      }
+      if (!next && seen) setClosedAfterSeen(true);
     },
-    [openProp, handleChange],
+    [openProp, handleChange, seen, persistence, hotspotId],
   );
+
+  // Hover: open on enter, close shortly after leaving both the beacon and the content.
+  const leaveTimer = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+  const hoverEnter = React.useCallback(() => {
+    clearTimeout(leaveTimer.current);
+    if (!open) setOpen(true);
+  }, [open, setOpen]);
+  const hoverLeave = React.useCallback(() => {
+    clearTimeout(leaveTimer.current);
+    leaveTimer.current = setTimeout(() => setOpen(false), 150);
+  }, [setOpen]);
+  React.useEffect(() => () => clearTimeout(leaveTimer.current), []);
+
+  // A modal tour on screen takes over: hide hints until it's done.
+  const provider = useTourProvider();
+  const tourOnScreen = useStoreSelector(
+    provider?.manager ?? NO_MANAGER,
+    (st: { activeId: string | null }) => {
+      const active = st.activeId ? provider?.manager.get(st.activeId) : undefined;
+      return !!active?.modal;
+    },
+  );
+  const hidden = (once && closedAfterSeen && !open) || (hideDuringTours && tourOnScreen);
   const targets = useResolvedTarget(target);
   const [beacon, setBeacon] = React.useState<HTMLElement | null>(null);
   const id = React.useId().replace(/:/g, '');
   return (
-    <HotspotContext.Provider
-      value={{ open, setOpen, targets, beacon, setBeacon, contentId: `hotspot${id}` }}
-    >
-      {children}
-    </HotspotContext.Provider>
+    <MessagesScope messages={messages}>
+      <HotspotContext.Provider
+        value={{
+          open: open && !hidden,
+          setOpen,
+          seen,
+          hidden,
+          trigger,
+          hoverEnter,
+          hoverLeave,
+          targets,
+          beacon,
+          setBeacon,
+          contentId: `hotspot${id}`,
+        }}
+      >
+        {children}
+      </HotspotContext.Provider>
+    </MessagesScope>
   );
 }
 
@@ -133,12 +230,17 @@ const HotspotBeacon = React.forwardRef<HTMLButtonElement, HotspotBeaconProps>(
       hideWhenDetached = true,
       animationFrame,
       onClick,
+      onPointerEnter,
+      onPointerLeave,
+      onFocus,
+      onBlur,
       style,
       ...props
     },
     ref,
   ) {
     const ctx = useHotspot('<Hotspot.Beacon>');
+    const { showHint } = useTourMessages();
     const reference = React.useMemo(() => createVirtualTarget(ctx.targets), [ctx.targets]);
     const positioner = usePositioner(reference, {
       side,
@@ -156,15 +258,17 @@ const HotspotBeacon = React.forwardRef<HTMLButtonElement, HotspotBeaconProps>(
       positioner.setFloating as React.Ref<HTMLButtonElement>,
       ctx.setBeacon as React.Ref<HTMLButtonElement>,
     );
-    if (!reference) return null;
+    if (!reference || ctx.hidden) return null;
+    const hover = ctx.trigger === 'hover';
     return (
       <Primitive.button
         type="button"
         aria-expanded={ctx.open}
         aria-controls={ctx.open ? ctx.contentId : undefined}
         aria-haspopup="dialog"
-        aria-label={props.children ? undefined : 'Show hint'}
+        aria-label={props.children ? undefined : showHint}
         data-state={ctx.open ? 'open' : 'closed'}
+        data-seen={ctx.seen ? '' : undefined}
         data-tour-beacon=""
         {...props}
         ref={composed}
@@ -174,6 +278,10 @@ const HotspotBeacon = React.forwardRef<HTMLButtonElement, HotspotBeaconProps>(
           ...style,
         }}
         onClick={composeEventHandlers(onClick, () => ctx.setOpen(!ctx.open))}
+        onPointerEnter={composeEventHandlers(onPointerEnter, () => hover && ctx.hoverEnter())}
+        onPointerLeave={composeEventHandlers(onPointerLeave, () => hover && ctx.hoverLeave())}
+        onFocus={composeEventHandlers(onFocus, () => hover && ctx.hoverEnter())}
+        onBlur={composeEventHandlers(onBlur, () => hover && ctx.hoverLeave())}
       />
     );
   },
@@ -209,6 +317,8 @@ const HotspotContentImpl = React.forwardRef<
     hideWhenDetached,
     animationFrame,
     style,
+    onPointerEnter,
+    onPointerLeave,
     ...props
   },
   ref,
@@ -264,6 +374,12 @@ const HotspotContentImpl = React.forwardRef<
       data-side={positioner.placedSide}
       data-align={positioner.placedAlign}
       {...props}
+      onPointerEnter={composeEventHandlers(onPointerEnter, () => {
+        if (ctx.trigger === 'hover') ctx.hoverEnter();
+      })}
+      onPointerLeave={composeEventHandlers(onPointerLeave, () => {
+        if (ctx.trigger === 'hover') ctx.hoverLeave();
+      })}
       ref={composed}
       style={
         {
@@ -280,10 +396,11 @@ const HotspotContentImpl = React.forwardRef<
 const HotspotClose = React.forwardRef<HTMLButtonElement, PrimitiveProps<'button'>>(
   function HotspotClose({ onClick, ...props }, ref) {
     const ctx = useHotspot('<Hotspot.Close>');
+    const { closeHint } = useTourMessages();
     return (
       <Primitive.button
         type="button"
-        aria-label={props.children ? undefined : 'Close hint'}
+        aria-label={props.children ? undefined : closeHint}
         {...props}
         ref={ref}
         onClick={composeEventHandlers(onClick, () => {

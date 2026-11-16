@@ -1,0 +1,13 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "../../../registry/src/styles/theme.css";
+
+@source "../../../registry/src";
+
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}

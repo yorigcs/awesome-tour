@@ -1,0 +1,79 @@
+---
+title: Announcements
+description: Banners, toasts, slideouts and modals for what's new — with the same display rules, triggers, snooze and analytics as tours.
+sidebar:
+  order: 10
+---
+
+import Preview from '../../../components/Preview.astro';
+import { Aside } from '~/components/mdx';
+import { AnnouncementDemo } from '../../../components/demos/AnnouncementDemo';
+import AnnouncementDemoSource from '../../../components/demos/AnnouncementDemo.tsx?raw';
+
+An announcement is a one-step tour with a presentation. Because it *is* a tour, it gets
+[display rules](../display-rules/) (audience, schedule, once, snooze…), triggers, impressions,
+persistence and analytics without anything new to learn.
+
+<Preview code={AnnouncementDemoSource} title="AnnouncementDemo.tsx">
+  <AnnouncementDemo client:visible />
+</Preview>
+
+## Create
+
+```tsx
+import { createAnnouncement } from '@awesome-tour/react/surfaces';
+
+export const whatsNew = createAnnouncement({
+  id: 'dashboards-2',
+  variant: 'modal',
+  title: 'Meet dashboards 2.0',
+  description: 'Drag widgets anywhere and share a live link.',
+  rules: { trigger: { route: '/dashboard' }, schedule: { endsAt: '2027-02-01' } },
+});
+```
+
+Register it on `TourProvider` with your tours: `<TourProvider tours={[onboarding, whatsNew]}>`.
+
+| Variant    | Role            | Focus           | Shares the screen                       |
+| ---------- | --------------- | --------------- | --------------------------------------- |
+| `banner`   | `region`        | never moved     | **ambient** — alongside anything        |
+| `toast`    | `status` (polite) | never moved   | **ambient**                             |
+| `slideout` | `dialog`        | moved in, Esc closes | **ambient**                        |
+| `modal`    | `dialog` (modal) | trapped, page `inert` | **blocking** — queues with tours  |
+
+`autoDismiss: ms` closes it by itself (toasts). It counts as completed.
+
+## Render
+
+The parts are unstyled and **not positioned** — put the content where it belongs with CSS (a top
+strip, a corner, a centered dialog):
+
+```tsx
+import { Announcement } from '@awesome-tour/react/surfaces';
+
+<Announcement.Root announcement={whatsNew}>
+  <Announcement.Portal>
+    <Announcement.Content className="toast">
+      <Announcement.Title />
+      <Announcement.Description />
+      <Announcement.Snooze duration={86_400_000}>Later</Announcement.Snooze>
+      <Announcement.Action>Show me</Announcement.Action>
+      <Announcement.Dismiss />
+    </Announcement.Content>
+  </Announcement.Portal>
+</Announcement.Root>
+```
+
+| Part              | Does                                                                          |
+| ----------------- | ----------------------------------------------------------------------------- |
+| `Root`            | Connects the announcement (and registers it on the provider).                 |
+| `Content`         | The element: role, focus and Escape follow the variant. `data-variant`, `data-state`. |
+| `Title` / `Description` / `Body` | Title, description, and the step's `content`.                 |
+| `Action`          | The call to action. `outcome`: `complete` (default), `close` or `none`. `asChild` for links. |
+| `Snooze`          | "Remind me later" — `duration` in ms (default: a day).                       |
+| `Dismiss`         | Closes it (counts as dismissed for `once`).                                   |
+
+<Aside type="tip">
+  Styled versions — `AnnouncementBanner`, `AnnouncementToast`, `AnnouncementModal` — are one command
+  away: `npx shadcn@latest add @awesome-tour/announcement`. See the [registry page](../../registry/announcement/).
+</Aside>

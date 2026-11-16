@@ -5,14 +5,19 @@ sidebar:
   order: 10
 ---
 
-import { Aside } from '@astrojs/starlight/components';
+import Preview from '../../../components/Preview.astro';
+import { Aside } from '~/components/mdx';
 import { StylingDemo } from '../../../components/demos/StylingDemo';
+import StylingDemoSource from '../../../components/demos/StylingDemo.tsx?raw';
 import { NonModalDemo } from '../../../components/demos/NonModalDemo';
+import NonModalDemoSource from '../../../components/demos/NonModalDemo.tsx?raw';
 
 awesome-tour ships **no CSS**. Every part renders a plain element you style with classes, Tailwind,
 CSS-in-JS or anything else. The demo below is one tour with four different stylesheets.
 
-<StylingDemo client:visible />
+<Preview code={StylingDemoSource} title="StylingDemo.tsx">
+  <StylingDemo client:visible />
+</Preview>
 
 ## Data attributes
 
@@ -73,7 +78,9 @@ Style states without JavaScript:
   glow, or a huge `box-shadow` that dims the page. Combine it with `modal={false}` for tours that
   leave the page usable:
 
-<NonModalDemo client:visible />
+<Preview code={NonModalDemoSource} title="NonModalDemo.tsx">
+  <NonModalDemo client:visible />
+</Preview>
 
 ```css
 .spotlight {
@@ -114,6 +121,30 @@ Give the overlay and content a `z-index` above your app's chrome:
 ```css
 [data-tour-overlay] { z-index: 1000; }
 [data-tour-content-wrapper] { z-index: 1001; } /* the positioned wrapper around Tour.Content */
+```
+
+Or skip the z-index war entirely: `<Tour.Portal strategy="top-layer">` renders the tour in the
+browser's top layer, above everything — including modal `<dialog>`s.
+
+## Cutouts
+
+`Tour.Overlay` draws one rounded cutout around all of a step's targets. `cutout="each"` cuts one
+hole per target so the page between them stays dimmed, and `shape="circle"` draws circles:
+
+```tsx
+<Tour.Overlay cutout="each" shape="circle" padding={8} />
+```
+
+## Morphing between steps
+
+`viewTransition` on `Tour.Root` wraps every step change in the View Transitions API: the card
+morphs from one target to the next. Style it like any view transition:
+
+```css
+::view-transition-group(tour-content) {
+  animation-duration: 280ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
 ```
 
 <Aside type="tip">

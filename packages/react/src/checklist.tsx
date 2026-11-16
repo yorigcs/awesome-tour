@@ -7,6 +7,7 @@ import type {
 import * as React from 'react';
 import { useTourProvider } from './context';
 import { useStoreSelector } from './hooks';
+import { MessagesScope, type TourMessagesInput, useTourMessages } from './messages';
 import { composeEventHandlers } from './utils/compose';
 import { visuallyHidden } from './utils/hooks';
 import { Primitive, type PrimitiveProps } from './utils/primitive';
@@ -45,6 +46,8 @@ export interface ChecklistRootProps extends PrimitiveProps<'div'> {
   checklist: ChecklistInstance;
   /** Re-check `when` predicates when the window regains focus. Default: true. */
   refreshOnFocus?: boolean;
+  /** Translations for the checklist's accessible names and status text. */
+  messages?: TourMessagesInput;
 }
 
 /**
@@ -52,7 +55,7 @@ export interface ChecklistRootProps extends PrimitiveProps<'div'> {
  * the parts below. Renders a `div` with `data-state="in-progress|complete|dismissed"`.
  */
 const ChecklistRoot = React.forwardRef<HTMLDivElement, ChecklistRootProps>(function ChecklistRoot(
-  { checklist, refreshOnFocus = true, ...props },
+  { checklist, refreshOnFocus = true, messages, ...props },
   ref,
 ) {
   const provider = useTourProvider();
@@ -68,16 +71,18 @@ const ChecklistRoot = React.forwardRef<HTMLDivElement, ChecklistRootProps>(funct
   }, [checklist, refreshOnFocus]);
 
   return (
-    <ChecklistContext.Provider value={{ checklist, state }}>
-      <Primitive.div
-        data-state={status(state)}
-        data-completed={state.completed}
-        data-total={state.total}
-        {...props}
-        ref={ref}
-        style={{ '--checklist-progress': state.progress, ...props.style } as React.CSSProperties}
-      />
-    </ChecklistContext.Provider>
+    <MessagesScope messages={messages}>
+      <ChecklistContext.Provider value={{ checklist, state }}>
+        <Primitive.div
+          data-state={status(state)}
+          data-completed={state.completed}
+          data-total={state.total}
+          {...props}
+          ref={ref}
+          style={{ '--checklist-progress': state.progress, ...props.style } as React.CSSProperties}
+        />
+      </ChecklistContext.Provider>
+    </MessagesScope>
   );
 });
 
@@ -90,14 +95,15 @@ export interface ChecklistProgressProps extends Omit<PrimitiveProps<'div'>, 'chi
 const ChecklistProgress = React.forwardRef<HTMLDivElement, ChecklistProgressProps>(
   function ChecklistProgress({ children, ...props }, ref) {
     const { state } = useChecklistContext('<Checklist.Progress>');
+    const messages = useTourMessages();
     return (
       <Primitive.div
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={state.total}
         aria-valuenow={state.completed}
-        aria-valuetext={`${state.completed} of ${state.total} completed`}
-        aria-label="Checklist progress"
+        aria-valuetext={messages.checklistValue(state.completed, state.total)}
+        aria-label={messages.checklistProgress}
         data-state={status(state)}
         {...props}
         ref={ref}
@@ -200,13 +206,12 @@ export interface ChecklistItemIndicatorProps extends PrimitiveProps<'span'> {
 const ChecklistItemIndicator = React.forwardRef<HTMLSpanElement, ChecklistItemIndicatorProps>(
   function ChecklistItemIndicator({ labels, forceMount, children, ...props }, ref) {
     const ctx = React.useContext(ItemContext);
+    const { itemStatus } = useTourMessages();
     if (!ctx)
       throw new Error(
         '[awesome-tour] <Checklist.ItemIndicator> must be used within <Checklist.Item>',
       );
-    const text = { pending: 'Not completed', done: 'Completed', skipped: 'Skipped', ...labels }[
-      ctx.status
-    ];
+    const text = { ...itemStatus, ...labels }[ctx.status];
     return (
       <Primitive.span data-state={ctx.status} {...props} ref={ref}>
         {(forceMount || ctx.status !== 'pending') && <span aria-hidden="true">{children}</span>}
@@ -238,10 +243,11 @@ const ChecklistItemSkip = React.forwardRef<HTMLButtonElement, PrimitiveProps<'bu
 const ChecklistDismiss = React.forwardRef<HTMLButtonElement, PrimitiveProps<'button'>>(
   function ChecklistDismiss({ onClick, ...props }, ref) {
     const { checklist } = useChecklistContext('<Checklist.Dismiss>');
+    const { dismissChecklist } = useTourMessages();
     return (
       <Primitive.button
         type="button"
-        aria-label={props.children ? undefined : 'Dismiss checklist'}
+        aria-label={props.children ? undefined : dismissChecklist}
         {...props}
         ref={ref}
         onClick={composeEventHandlers(onClick, () => checklist.dismiss())}

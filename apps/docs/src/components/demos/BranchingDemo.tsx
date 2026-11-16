@@ -1,5 +1,8 @@
 import { createTour, Tour, useTour } from '@awesome-tour/react';
-import { Frame, TourCard } from './ui';
+import { Code2, Palette } from 'lucide-react';
+import { TourPopover } from '@/components/awesome-tour/tour';
+import { Button } from '@/components/ui/button';
+import { AppSurface, DemoFrame, StartButton, Tile } from './ui';
 
 interface Data {
   role: 'developer' | 'designer' | null;
@@ -12,13 +15,15 @@ function RolePicker() {
     void next();
   };
   return (
-    <div className="at-card__choices">
-      <button type="button" className="at-button" onClick={() => pick('developer')}>
+    <div className="mt-1 grid grid-cols-2 gap-2">
+      <Button variant="outline" onClick={() => pick('developer')}>
+        <Code2 />
         Developer
-      </button>
-      <button type="button" className="at-button" onClick={() => pick('designer')}>
+      </Button>
+      <Button variant="outline" onClick={() => pick('designer')}>
+        <Palette />
         Designer
-      </button>
+      </Button>
     </div>
   );
 }
@@ -61,23 +66,20 @@ const tour = createTour({
 export function BranchingDemo() {
   return (
     <Tour.Root tour={tour}>
-      <Frame
-        title="Branching"
-        actions={<Tour.Trigger className="at-button at-button--primary">Start tour</Tour.Trigger>}
-      >
-        <div className="at-grid">
-          <div id="branch-api" className="at-tile">
-            <small>developer</small>API keys
-          </div>
-          <div id="branch-tokens" className="at-tile">
-            <small>designer</small>Design tokens
-          </div>
-          <div id="branch-admin" className="at-tile">
-            <small>developer only</small>Webhooks
-          </div>
-        </div>
-      </Frame>
-      <TourCard />
+      <DemoFrame title="Branching" actions={<StartButton />}>
+        <AppSurface className="grid gap-3 sm:grid-cols-3">
+          <Tile id="branch-api" label="developer">
+            API keys
+          </Tile>
+          <Tile id="branch-tokens" label="designer">
+            Design tokens
+          </Tile>
+          <Tile id="branch-admin" label="developer only">
+            Webhooks
+          </Tile>
+        </AppSurface>
+      </DemoFrame>
+      <TourPopover />
     </Tour.Root>
   );
 }

@@ -1,11 +1,19 @@
 {
   "$schema": "https://unpkg.com/@changesets/config/schema.json",
-  "changelog": "@changesets/cli/changelog",
+  "changelog": [
+    "@changesets/changelog-github",
+    {
+      "repo": "yorigcs/awesome-tour"
+    }
+  ],
   "commit": false,
   "fixed": [],
   "linked": [["@awesome-tour/*"]],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["playground"]
+  "privatePackages": {
+    "version": false,
+    "tag": false
+  }
 }

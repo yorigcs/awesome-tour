@@ -227,4 +227,7 @@ pnpm test        # unit tests (Vitest + Testing Library + axe)
 pnpm e2e         # Playwright against the built playground
 pnpm typecheck && pnpm lint && pnpm build && pnpm size
 pnpm changeset   # describe a change for the next release
+pnpm check:packages  # publint + Are The Types Wrong on the built packages
 ```
+
+Releases are automated with Changesets and npm trusted publishing — see [RELEASING.md](./RELEASING.md).

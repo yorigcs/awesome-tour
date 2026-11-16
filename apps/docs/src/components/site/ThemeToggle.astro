@@ -1,0 +1,33 @@
+---
+import { Moon, Sun } from 'lucide-react';
+---
+
+<button
+  type="button"
+  data-theme-toggle
+  class="grid size-9 place-items-center rounded-sm text-ink-2 transition-colors hover:bg-paper-2 hover:text-ink"
+  aria-label="Switch to dark theme"
+>
+  <Sun className="hidden size-[1.15rem] dark:block" aria-hidden="true" />
+  <Moon className="size-[1.15rem] dark:hidden" aria-hidden="true" />
+</button>
+
+<script>
+  const root = document.documentElement;
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-theme-toggle]')) {
+    const sync = () =>
+      button.setAttribute(
+        'aria-label',
+        root.classList.contains('dark') ? 'Switch to light theme' : 'Switch to dark theme',
+      );
+    sync();
+    button.addEventListener('click', () => {
+      const dark = !root.classList.contains('dark');
+      root.classList.toggle('dark', dark);
+      try {
+        localStorage.setItem('awesome-tour-theme', dark ? 'dark' : 'light');
+      } catch {}
+      sync();
+    });
+  }
+</script>

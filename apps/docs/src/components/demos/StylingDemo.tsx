@@ -1,6 +1,12 @@
 import { createTour, Tour } from '@awesome-tour/react';
 import { useState } from 'react';
-import { CardBody, Frame, MockApp } from './ui';
+import {
+  TourCard,
+  TourCardContents,
+  TourOverlay,
+  TourSpotlight,
+} from '@/components/awesome-tour/tour';
+import { DemoFrame, MockApp, StartButton, worldButton } from './ui';
 
 const tour = createTour({
   id: 'docs-styling',
@@ -27,48 +33,56 @@ const tour = createTour({
   ],
 });
 
+/** Each theme is just a different set of Tailwind classes on the same parts. */
 const themes = {
-  default: { content: '', overlay: true },
-  brutal: { content: 'at-card--brutal', overlay: true },
-  glass: { content: 'at-card--glass', overlay: true },
-  spotlight: { content: '', overlay: false },
+  default: { card: '', overlay: true },
+  glass: {
+    card: 'border-white/20 bg-popover/60 shadow-2xl backdrop-blur-xl [&_[data-tour-arrow]]:hidden',
+    overlay: true,
+  },
+  brutal: {
+    card: 'rounded-none border-2 border-foreground shadow-[6px_6px_0_0_var(--color-foreground)] [&_[data-slot=tour-card-frame]]:rounded-none [&_[data-tour-arrow]]:hidden',
+    overlay: true,
+  },
+  spotlight: { card: '', overlay: false },
 } as const;
 
+type Theme = keyof typeof themes;
+
 export function StylingDemo() {
-  const [theme, setTheme] = useState<keyof typeof themes>('brutal');
+  const [theme, setTheme] = useState<Theme>('glass');
   const t = themes[theme];
   return (
     <Tour.Root tour={tour}>
-      <Frame
+      <DemoFrame
         title="Styling"
         actions={
           <>
-            <select
-              className="at-select"
-              aria-label="Theme"
-              value={theme}
-              onChange={(e) => setTheme(e.target.value as keyof typeof themes)}
-            >
-              {Object.keys(themes).map((k) => (
-                <option key={k}>{k}</option>
+            <fieldset className="flex items-center gap-0 rounded-sm border-2 border-ink">
+              <legend className="sr-only">Theme</legend>
+              {(Object.keys(themes) as Theme[]).map((k) => (
+                <button
+                  type="button"
+                  key={k}
+                  aria-pressed={theme === k}
+                  onClick={() => setTheme(k)}
+                  className={`${worldButton.secondary} h-8 rounded-none border-0 capitalize`}
+                >
+                  {k}
+                </button>
               ))}
-            </select>
-            <Tour.Trigger className="at-button at-button--primary">Start tour</Tour.Trigger>
+            </fieldset>
+            <StartButton />
           </>
         }
       >
         <MockApp id="styling" />
-      </Frame>
+      </DemoFrame>
       <Tour.Portal>
-        {t.overlay ? (
-          <Tour.Overlay padding={6} radius={10} />
-        ) : (
-          <Tour.Spotlight className="at-spotlight" padding={6} />
-        )}
-        <Tour.Content className={`at-card ${t.content}`} sideOffset={12} collisionPadding={12}>
-          <Tour.Arrow className="at-arrow" width={14} height={7} />
-          <CardBody />
-        </Tour.Content>
+        {t.overlay ? <TourOverlay /> : <TourSpotlight />}
+        <TourCard className={t.card}>
+          <TourCardContents />
+        </TourCard>
       </Tour.Portal>
     </Tour.Root>
   );

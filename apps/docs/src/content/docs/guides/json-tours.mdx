@@ -1,0 +1,70 @@
+---
+title: Tours as data
+description: Keep tours in JSON — in a CMS, a feature-flag service or your API — validate them against a schema and build them at runtime.
+sidebar:
+  order: 19
+---
+
+import Preview from '../../../components/Preview.astro';
+import { Aside } from '~/components/mdx';
+import { JsonDemo } from '../../../components/demos/JsonDemo';
+import JsonDemoSource from '../../../components/demos/JsonDemo.tsx?raw';
+
+Tours written in code ship with deploys. When product managers or a CMS own the copy — or you want
+to change a tour without a release — keep it as data. `fromJSON` turns a document into options for
+`createTour`.
+
+<Preview code={JsonDemoSource} title="JsonDemo.tsx">
+  <JsonDemo client:visible />
+</Preview>
+
+```ts
+import { createTour } from '@awesome-tour/react';
+import { fromJSON } from '@awesome-tour/core/json';
+
+const doc = await fetch('/api/tours/onboarding').then((r) => r.json());
+
+export const onboarding = createTour(
+  fromJSON(doc, {
+    actions: { isAdmin: (ctx) => ctx.data.role === 'admin' }, // referenced by name in the JSON
+    plugins: [persist(localStorageAdapter())],                  // anything createTour accepts
+  }),
+);
+```
+
+## The document
+
+```json
+{
+  "$schema": "https://yorigcs.github.io/awesome-tour/schema/tour.schema.json",
+  "id": "onboarding",
+  "version": 2,
+  "rules": { "trigger": { "route": "/projects" }, "frequency": { "maxShows": 2 } },
+  "steps": [
+    { "id": "welcome", "title": "Welcome to Acme" },
+    { "id": "nav", "target": { "anchor": "nav" }, "side": "right", "title": "Navigation" },
+    { "id": "admin", "target": "#admin", "when": "isAdmin", "title": "Admin panel" },
+    { "id": "create", "target": "#new", "advanceOn": { "event": "click" }, "title": "Create a project" }
+  ]
+}
+```
+
+Everything a step can do is available, with two translations:
+
+- **Targets** are selectors, `{ "anchor": "name" }`, or arrays of them.
+- **Functions** — `when`, `canNext`, `beforeEnter`, `afterLeave`, `advanceOn.when`, a computed
+  `next` (`{ "action": "pick" }`) and `rules.audience` — are action names resolved from `actions`.
+
+## Validation
+
+`fromJSON` validates first and throws one error listing every problem — unknown action names,
+duplicate ids, `next`/`advanceOn.to` pointing at missing steps. Validate without throwing (e.g. in
+a CMS preview) with `validateTourJSON(doc, actions)`, which returns the list.
+
+The JSON Schema ships with the package — point your editor or CMS at it for autocomplete:
+`@awesome-tour/core/schema.json`.
+
+<Aside type="caution">
+  A tour document controls what your users see. Load it from a source you trust, the same way you
+  would load any remote configuration.
+</Aside>

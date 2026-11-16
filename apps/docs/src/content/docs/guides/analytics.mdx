@@ -5,7 +5,9 @@ sidebar:
   order: 6
 ---
 
+import Preview from '../../../components/Preview.astro';
 import { AnalyticsDemo } from '../../../components/demos/AnalyticsDemo';
+import AnalyticsDemoSource from '../../../components/demos/AnalyticsDemo.tsx?raw';
 
 The `analytics` plugin turns tour activity into flat events you can send to any tool.
 
@@ -19,7 +21,9 @@ createTour({
 });
 ```
 
-<AnalyticsDemo client:visible />
+<Preview code={AnalyticsDemoSource} title="AnalyticsDemo.tsx">
+  <AnalyticsDemo client:visible />
+</Preview>
 
 ## Events
 
@@ -50,5 +54,20 @@ Use step `meta` for labels your analytics team cares about:
 { id: 'invite', target: '#invite', meta: { funnel: 'activation', label: 'invite-cta' } }
 ```
 
-Recipes for Segment, PostHog, GA4 and Amplitude are in the
-[analytics reference](../../reference/analytics/).
+## Ready-made adapters
+
+`@awesome-tour/core/adapters` turns the plugin's events into calls to the usual tools. The
+clients are typed structurally, so no SDK is bundled:
+
+```ts
+import { analytics } from '@awesome-tour/react';
+import { ga4Tracker, mixpanelTracker, posthogTracker, segmentTracker } from '@awesome-tour/core/adapters';
+
+createTour({ id: 'onboarding', steps, plugins: [analytics(posthogTracker(posthog))] });
+// analytics(segmentTracker(window.analytics))
+// analytics(mixpanelTracker(mixpanel, { name: (e) => `Tour: ${e.type}` }))
+// analytics(ga4Tracker(gtag)) — params are flattened to primitives
+```
+
+Each takes `{ name?, properties? }` to rename events or reshape their properties. More recipes
+in the [analytics reference](../../reference/analytics/).

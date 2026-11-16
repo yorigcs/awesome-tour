@@ -2,12 +2,28 @@
   {
     "name": "@awesome-tour/core",
     "path": "packages/core/dist/index.js",
-    "limit": "9 kB"
+    "limit": "10 kB"
+  },
+  {
+    "name": "@awesome-tour/core/json",
+    "path": "packages/core/dist/json.js",
+    "limit": "2 kB"
+  },
+  {
+    "name": "@awesome-tour/core/adapters",
+    "path": "packages/core/dist/adapters.js",
+    "limit": "1 kB"
   },
   {
     "name": "@awesome-tour/react",
     "path": "packages/react/dist/index.js",
-    "limit": "18 kB",
+    "limit": "19 kB",
+    "ignore": ["react", "react-dom", "@awesome-tour/core"]
+  },
+  {
+    "name": "@awesome-tour/react + surfaces",
+    "path": ["packages/react/dist/index.js", "packages/react/dist/surfaces.js"],
+    "limit": "23 kB",
     "ignore": ["react", "react-dom", "@awesome-tour/core"]
   },
   {
@@ -31,7 +47,19 @@
   {
     "name": "@awesome-tour/devtools",
     "path": "packages/devtools/dist/index.js",
-    "limit": "6 kB",
+    "limit": "7 kB",
     "ignore": ["react", "react-dom", "@awesome-tour/react"]
+  },
+  {
+    "name": "@awesome-tour/router (next)",
+    "path": "packages/router/dist/next.js",
+    "limit": "1 kB",
+    "ignore": ["react", "next", "@tanstack/react-router", "@awesome-tour/react"]
+  },
+  {
+    "name": "@awesome-tour/router (tanstack-router)",
+    "path": "packages/router/dist/tanstack-router.js",
+    "limit": "1 kB",
+    "ignore": ["react", "next", "@tanstack/react-router", "@awesome-tour/react"]
   }
 ]

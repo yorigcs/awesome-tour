@@ -5,7 +5,7 @@ sidebar:
   order: 5
 ---
 
-import { Aside } from '@astrojs/starlight/components';
+import { Aside } from '~/components/mdx';
 
 ```ts
 import { createTour, localStorageAdapter, persist } from '@awesome-tour/core';
@@ -29,11 +29,12 @@ A [plugin](../plugins/) that writes `{ status, stepId, version }` to the adapter
 | `once`        | `boolean`                    | `true`         | Don't start tours saved as `completed` or `skipped`. `start({ force: true })` / `restart()` still work.             |
 | `persistData` | `boolean`                    | `false`        | Also save `tour.data` (on every change) and restore it on start.                                                    |
 | `sync`        | `boolean`                    | `true`         | When the adapter supports `subscribe`: if the tour is completed or skipped elsewhere (another tab), finish it here too. |
+| `migrate`     | `Record<number, (saved) => PersistedTourState \| null>` | — | Upgrade progress saved by an older `version` instead of dropping it. `migrate[v]` turns a `v` state into a `v + 1` one; steps chain up to the current version. |
 
 ### What happens on `start()`
 
 1. The saved value is read (`adapter.get(key)`). Nothing saved → normal start.
-2. Saved `version` differs from `tour.version` → the entry is removed and the tour starts fresh.
+2. Saved `version` differs from `tour.version` → it's upgraded through `migrate` (and saved back); without a path to the current version, the entry is removed and the tour starts fresh.
 3. `force: true` → normal start (saved progress ignored).
 4. `once` and the saved status is `completed` / `skipped` → the start is blocked (status stays as it was).
 5. Otherwise the tour resumes at the saved `stepId` (if `resume`) with the saved `data` (if `persistData`).
@@ -78,33 +79,51 @@ Stores JSON in `localStorage` under `prefix + key`, and implements `subscribe` w
 | -------- | -------- | ------------------ |
 | `prefix` | `string` | `'awesome-tour:'`  |
 
+```ts
+persist(adapter, {
+  migrate: {
+    // v1 → v2: the "upload" step was renamed "import".
+    1: (saved) => ({ ...saved, stepId: saved.stepId === 'upload' ? 'import' : saved.stepId }),
+  },
+});
+```
+
+### sessionStorageAdapter(options?)
+
+Like `localStorageAdapter`, but progress lives as long as the browser tab (no cross-tab sync).
+
 ### memoryStorage()
 
 In-memory `Map`. Progress is lost on reload — handy in tests and for "per session" tours.
 
-### Server-backed adapter
+### httpAdapter(options)
+
+Progress that follows the user across devices, through your API: `GET`, `PUT` and `DELETE` on
+`${url}/${key}` (a `GET` answering 404 means "nothing saved").
 
 ```ts
-import type { PersistenceAdapter } from '@awesome-tour/core';
+import { httpAdapter, persist } from '@awesome-tour/react';
 
-const serverAdapter: PersistenceAdapter = {
-  get: (key) => fetch(`/api/tours/${key}`).then((r) => (r.ok ? r.json() : null)),
-  set: async (key, value) => {
-    await fetch(`/api/tours/${key}`, {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(value),
-    });
-  },
-  remove: async (key) => {
-    await fetch(`/api/tours/${key}`, { method: 'DELETE' });
-  },
-};
+const server = httpAdapter({
+  url: '/api/tour-progress',
+  headers: async () => ({ authorization: `Bearer ${await getToken()}` }),
+});
 
-createTour({ id: 'onboarding', steps, plugins: [persist(serverAdapter, { key: (id) => `${userId}:${id}` })] });
+createTour({ id: 'onboarding', steps, plugins: [persist(server, { key: (id) => `${userId}:${id}` })] });
 ```
 
-`set` is called without awaiting (fire and forget); `get` is awaited in `beforeStart`, so the tour shows up once the request resolves.
+| Option     | Type                                         | Default        | Description                                    |
+| ---------- | -------------------------------------------- | -------------- | ---------------------------------------------- |
+| `url`      | `string`                                     | —              | Base URL; the key is appended.                 |
+| `headers`  | `HeadersInit \| () => HeadersInit \| Promise` | —              | Sent with every request.                       |
+| `fetch`    | `typeof fetch`                               | global `fetch` | Custom fetch (tests, SSR, interceptors).       |
+| `debounce` | `number`                                     | `300`          | Coalesce rapid writes per key (ms).            |
+
+Reads hit the network once per key, then a cache. Writes are optimistic (cached immediately) and
+debounced. Network failures behave like "nothing saved", so a flaky API never breaks the app.
+
+Anything else — Supabase, Firebase, your own store — is a `PersistenceAdapter`: `get`, `set`,
+`remove` (sync or async) and an optional `subscribe`.
 
 ## readTourProgress(adapter, tourId, options?)
 

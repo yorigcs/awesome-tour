@@ -72,6 +72,11 @@ test('full onboarding: anchors, interactive steps, branching, routes, lazy targe
   await next(page).click();
   await expect(dialog(page)).toHaveAccessibleName("You're all set");
   await next(page).click();
+  // Completing the tour signals the NPS survey (an ambient slideout): the tour itself is gone.
+  const survey = page.getByRole('dialog', { name: /How likely are you to recommend/ });
+  await expect(survey).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+  await survey.getByRole('button', { name: 'Dismiss' }).click();
   await expect(dialog(page)).toHaveCount(0);
 });
 
@@ -129,11 +134,47 @@ test('declarative CSS tour and hotspot', async ({ page }) => {
   await expect(dialog(page)).not.toHaveAttribute('aria-modal', 'true');
   await dialog(page).getByRole('button', { name: 'Go to step 2' }).click();
   await expect(dialog(page)).toHaveAccessibleName('Reports');
-  await dialog(page).getByRole('button', { name: 'Next' }).click();
+  await next(page).click();
   await expect(dialog(page)).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Show hint' }).click();
   await expect(page.getByRole('dialog', { name: 'New: reports' })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog', { name: 'New: reports' })).toHaveCount(0);
+});
+
+test('Home and End jump to the first and last step', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Start onboarding' }).click();
+  await expect(dialog(page)).toHaveAccessibleName('Welcome to Acme');
+  await page.keyboard.press('End');
+  await expect(dialog(page)).toHaveAccessibleName("You're all set");
+  await page.keyboard.press('Home');
+  await expect(dialog(page)).toHaveAccessibleName('Welcome to Acme');
+});
+
+// WCAG 2.2 SC 2.4.11 Focus Not Obscured: at 200% zoom (≈ 640×400 CSS px on a 1280×800 screen)
+// the step card must never cover the element it points at.
+test('the card never covers its target at 200% zoom', async ({ page }) => {
+  await page.setViewportSize({ width: 640, height: 400 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Start onboarding' }).click();
+  await expect(dialog(page)).toHaveAccessibleName('Welcome to Acme');
+  const overlaps = async (selector: string) => {
+    const t = await page.locator(selector).first().boundingBox();
+    const d = await dialog(page).boundingBox();
+    if (!t || !d) return true;
+    return !(
+      d.x >= t.x + t.width ||
+      t.x >= d.x + d.width ||
+      d.y >= t.y + t.height ||
+      t.y >= d.y + d.height
+    );
+  };
+  await page.keyboard.press('ArrowRight');
+  await expect(dialog(page)).toHaveAccessibleName('Navigation');
+  expect(await overlaps('nav.sidebar')).toBe(false);
+  await page.keyboard.press('ArrowRight');
+  await expect(dialog(page)).toHaveAccessibleName('Try the search');
+  expect(await overlaps('#search')).toBe(false);
 });

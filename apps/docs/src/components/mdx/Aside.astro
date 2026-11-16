@@ -1,0 +1,42 @@
+---
+import { Info, Lightbulb, TriangleAlert, X } from 'lucide-react';
+
+interface Props {
+  type?: 'note' | 'tip' | 'caution' | 'danger';
+  title?: string;
+}
+const { type = 'note', title } = Astro.props;
+const meta = {
+  note: { label: 'Note', Icon: Info },
+  tip: { label: 'Tip', Icon: Lightbulb },
+  caution: { label: 'Caution', Icon: TriangleAlert },
+  danger: { label: "Don't", Icon: X },
+}[type];
+---
+
+<aside
+  aria-label={title ?? meta.label}
+  data-aside={type}
+  class:list={[
+    'not-prose my-7 grid grid-cols-[auto_1fr] gap-x-3.5 rounded-sm border-2 px-4 py-3.5 text-[0.9875rem] leading-relaxed',
+    type === 'tip' ? 'border-ink bg-marker/25' : '',
+    type === 'note' ? 'border-ink' : '',
+    type === 'caution' || type === 'danger' ? 'border-dont' : '',
+  ]}
+>
+  <span
+    class:list={[
+      'mt-0.5 grid size-7 place-items-center rounded-full',
+      type === 'tip' ? 'bg-marker text-marker-ink' : '',
+      type === 'note' ? 'bg-ink text-paper' : '',
+      type === 'caution' || type === 'danger' ? 'bg-dont text-paper' : '',
+    ]}
+    aria-hidden="true"
+  >
+    <meta.Icon className="size-4" strokeWidth={2.5} />
+  </span>
+  <div class="min-w-0 [&_a]:font-semibold [&_a]:underline [&_a]:decoration-marker [&_a]:decoration-[0.2em] [&_code]:rounded-[3px] [&_code]:bg-paper-2 [&_code]:px-1 [&_code]:text-[0.86em] [&>*+*]:mt-2">
+    <p class="font-bold">{title ?? meta.label}</p>
+    <slot />
+  </div>
+</aside>

@@ -7,7 +7,12 @@
       "!**/.astro",
       "!**/node_modules",
       "!**/playwright-report",
-      "!**/test-results"
+      "!**/test-results",
+      "!apps/docs/public/r",
+      "!**/.impeccable",
+      "!**/.playwright-mcp",
+      "!.changeset/*.md",
+      "!**/CHANGELOG.md"
     ]
   },
   "formatter": {
@@ -50,6 +55,22 @@
           }
         }
       }
+    },
+    {
+      "includes": ["**/*.astro"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedImports": "off",
+            "noUnusedVariables": "off"
+          }
+        }
+      }
     }
-  ]
+  ],
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  }
 }

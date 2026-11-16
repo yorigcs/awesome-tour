@@ -5,7 +5,9 @@ sidebar:
   order: 14
 ---
 
+import Preview from '../../../components/Preview.astro';
 import { DevtoolsDemo } from '../../../components/demos/DevtoolsDemo';
+import DevtoolsDemoSource from '../../../components/demos/DevtoolsDemo.tsx?raw';
 
 ```bash
 pnpm add -D @awesome-tour/devtools
@@ -20,7 +22,9 @@ import { TourDevtools } from '@awesome-tour/devtools';
 </TourProvider>;
 ```
 
-<DevtoolsDemo client:visible />
+<Preview code={DevtoolsDemoSource} title="DevtoolsDemo.tsx">
+  <DevtoolsDemo client:visible />
+</Preview>
 
 ## What you get
 
@@ -37,6 +41,24 @@ import { TourDevtools } from '@awesome-tour/devtools';
 Toggle the panel with <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> (`shortcut` prop, `false` to
 disable). It renders inside a shadow root, so your CSS and its CSS never mix (`isolate={false}` to
 opt out), and it remembers whether it was open.
+
+### Rules
+
+The **Rules** tab answers "why didn't my tour show?": for every tour on the provider it lists each
+[display rule](../display-rules/) — audience, schedule, once, max shows, cooldown, snooze — with
+whether it passes and why, plus buttons to start a tour if eligible and to reset impressions.
+
+### Element picker
+
+**Pick element**, then click anything on the page: devtools suggests the most stable way to target
+it — an existing `anchor()`, a `data-tour` / `data-testid`, a meaningful `id` or accessible name,
+and only then a structural path — and gives you a step snippet to copy. Picking never triggers the
+element (links don't navigate, buttons don't fire). <kbd>Esc</kbd> cancels.
+
+### Export
+
+**Export JSON** downloads a snapshot of every tour's state, the manager's queue and the event log —
+attach it to a bug report.
 
 ## Usable during modal tours
 

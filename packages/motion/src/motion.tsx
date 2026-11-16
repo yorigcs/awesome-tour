@@ -1,5 +1,6 @@
 import { inflateRect, type RectLike } from '@awesome-tour/core';
 import {
+  type CutoutShape,
   getSpotlightPath,
   type Padding,
   type Side,
@@ -154,6 +155,8 @@ export function useSpotlightSprings(
 export interface MotionOverlayProps extends Omit<HTMLMotionProps<'div'>, 'children'> {
   padding?: Padding;
   radius?: number;
+  /** `rect` (default) or `circle`: the cutout morphs either way. */
+  shape?: CutoutShape;
   spring?: SpringOptions;
 }
 
@@ -170,7 +173,10 @@ export const MotionOverlay = React.forwardRef<HTMLDivElement, MotionOverlayProps
 );
 
 const MotionOverlayImpl = React.forwardRef<HTMLDivElement, MotionOverlayProps>(
-  function MotionOverlayImpl({ padding = 4, radius = 4, spring, style, onClick, ...props }, ref) {
+  function MotionOverlayImpl(
+    { padding = 4, radius = 4, shape = 'rect', spring, style, onClick, ...props },
+    ref,
+  ) {
     const ctx = useTourContext('<MotionOverlay>');
     const rect = useTargetRect();
     const springs = useSpotlightSprings(rect, { padding, ...(spring ? { spring } : {}) });
@@ -189,6 +195,7 @@ const MotionOverlayImpl = React.forwardRef<HTMLDivElement, MotionOverlayProps>(
             }
           : null,
         radius,
+        shape,
       ),
     );
     const layerRef = useTourLayer();

@@ -1,0 +1,37 @@
+---
+title: Announcement
+description: Banner, toast and modal announcements, styled.
+sidebar:
+  order: 5
+---
+
+import { Tabs, TabItem, Code } from '~/components/mdx';
+import Preview from '../../../components/Preview.astro';
+import { AnnouncementDemo } from '../../../components/demos/AnnouncementDemo';
+import AnnouncementDemoSource from '../../../components/demos/AnnouncementDemo.tsx?raw';
+import componentSource from '../../../../../../registry/src/components/awesome-tour/announcement.tsx?raw';
+
+<Preview code={AnnouncementDemoSource} title="AnnouncementDemo.tsx">
+  <AnnouncementDemo client:visible />
+</Preview>
+
+## Installation
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+    ```sh
+    pnpm dlx shadcn@latest add @awesome-tour/announcement
+    ```
+  </TabItem>
+  <TabItem label="npm">
+    ```sh
+    npx shadcn@latest add @awesome-tour/announcement
+    ```
+  </TabItem>
+</Tabs>
+
+Built on the [Announcement primitives](../../guides/announcements/) from `@awesome-tour/react/surfaces`.
+
+## Source
+
+<Code code={componentSource} lang="tsx" title="components/awesome-tour/announcement.tsx" />

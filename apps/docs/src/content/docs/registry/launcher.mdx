@@ -1,0 +1,37 @@
+---
+title: Help launcher
+description: A help button that opens a resource center to replay tours.
+sidebar:
+  order: 7
+---
+
+import { Tabs, TabItem, Code } from '~/components/mdx';
+import Preview from '../../../components/Preview.astro';
+import { LauncherDemo } from '../../../components/demos/LauncherDemo';
+import LauncherDemoSource from '../../../components/demos/LauncherDemo.tsx?raw';
+import componentSource from '../../../../../../registry/src/components/awesome-tour/launcher.tsx?raw';
+
+<Preview code={LauncherDemoSource} title="LauncherDemo.tsx">
+  <LauncherDemo client:visible />
+</Preview>
+
+## Installation
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+    ```sh
+    pnpm dlx shadcn@latest add @awesome-tour/launcher
+    ```
+  </TabItem>
+  <TabItem label="npm">
+    ```sh
+    npx shadcn@latest add @awesome-tour/launcher
+    ```
+  </TabItem>
+</Tabs>
+
+Built on the [Help launcher primitives](../../guides/launcher/) from `@awesome-tour/react/surfaces`.
+
+## Source
+
+<Code code={componentSource} lang="tsx" title="components/awesome-tour/launcher.tsx" />

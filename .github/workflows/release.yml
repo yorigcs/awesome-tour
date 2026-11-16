@@ -1,0 +1,57 @@
+name: Release
+
+# Runs after CI succeeds on main. With pending changesets it opens/updates the
+# "chore: release packages" PR; merging that PR publishes to npm (trusted publishing, with
+# provenance), tags, creates GitHub releases, then deploys the docs + shadcn registry.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Version or publish
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: write # version commits, tags, GitHub releases
+      pull-requests: write # the release PR
+      id-token: write # npm trusted publishing (OIDC) + provenance
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - uses: changesets/action@v2
+        id: changesets
+        with:
+          version: pnpm version-packages
+          publish: pnpm release
+          title: "chore: release packages"
+          commit: "chore: release packages"
+          createGithubReleases: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  docs:
+    name: Deploy docs
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    uses: ./.github/workflows/docs.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

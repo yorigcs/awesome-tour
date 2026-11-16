@@ -1,0 +1,407 @@
+/*
+ * awesome-tour docs — "assembly manual" world.
+ * Paper, heavy black line art, one marker yellow for the part you act on, red only for don'ts.
+ * The library ships no CSS: everything here is this site's own styling.
+ */
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/archivo/wdth.css";
+@import "@fontsource-variable/jetbrains-mono";
+
+@source "../../../../registry/src";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* World */
+  --paper: #ffffff;
+  --paper-2: #f2f2ef;
+  --ink: #111111;
+  --ink-2: #4a4a47;
+  --rule: #d6d6d1;
+  --marker: #ffd23f;
+  --marker-ink: #111111;
+  --dont: #c8261d;
+  --line: 2px;
+
+  /* shadcn tokens: the registry's tour UI wears the world */
+  --radius: 0.375rem;
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--paper);
+  --card-foreground: var(--ink);
+  --popover: var(--paper);
+  --popover-foreground: var(--ink);
+  --primary: var(--marker);
+  --primary-foreground: var(--marker-ink);
+  --secondary: var(--paper-2);
+  --secondary-foreground: var(--ink);
+  --muted: var(--paper-2);
+  --muted-foreground: var(--ink-2);
+  --accent: var(--paper-2);
+  --accent-foreground: var(--ink);
+  --destructive: var(--dont);
+  --border: var(--ink);
+  --input: var(--ink);
+  --ring: var(--ink);
+  --sidebar: var(--paper-2);
+  --sidebar-foreground: var(--ink);
+  --sidebar-accent: var(--marker);
+  --sidebar-accent-foreground: var(--marker-ink);
+  --sidebar-border: var(--rule);
+  --tour-overlay-color: rgb(17 17 17 / 0.62);
+  color-scheme: light;
+}
+
+.dark {
+  --paper: #131312;
+  --paper-2: #1d1d1b;
+  --ink: #f1f1ec;
+  --ink-2: #b9b9b1;
+  --rule: #3a3a37;
+  --marker: #ffd23f;
+  --marker-ink: #111111;
+  --dont: #ff6b5f;
+  --tour-overlay-color: rgb(0 0 0 / 0.72);
+  color-scheme: dark;
+}
+
+/*
+ * "Your app" inside demos: a neutral product UI the tour is laid over, so the manual's line art
+ * reads as the tour layer and not as the app.
+ */
+[data-app] {
+  --background: #ffffff;
+  --foreground: #18181b;
+  --card: #ffffff;
+  --card-foreground: #18181b;
+  --primary: #18181b;
+  --primary-foreground: #fafafa;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #63636b;
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #a1a1aa;
+  --sidebar: #fafafa;
+  --sidebar-foreground: #18181b;
+  --sidebar-accent: #f0f0f2;
+  --sidebar-accent-foreground: #18181b;
+  --radius: 0.5rem;
+}
+.dark [data-app] {
+  --background: #18181b;
+  --foreground: #fafafa;
+  --card: #1f1f23;
+  --card-foreground: #fafafa;
+  --primary: #fafafa;
+  --primary-foreground: #18181b;
+  --secondary: #27272a;
+  --secondary-foreground: #fafafa;
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+  --accent: #27272a;
+  --accent-foreground: #fafafa;
+  --border: #33333a;
+  --input: #3f3f46;
+  --ring: #71717a;
+  --sidebar: #1b1b1e;
+  --sidebar-foreground: #fafafa;
+  --sidebar-accent: #2a2a2e;
+  --sidebar-accent-foreground: #fafafa;
+}
+
+@theme inline {
+  --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-rule: var(--rule);
+  --color-marker: var(--marker);
+  --color-marker-ink: var(--marker-ink);
+  --color-dont: var(--dont);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+  html {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-variation-settings: "wdth" 100;
+    -webkit-font-smoothing: antialiased;
+    scroll-padding-top: 5rem;
+    caret-color: var(--ink);
+    scrollbar-color: var(--ink-2) transparent;
+    scrollbar-width: thin;
+  }
+  ::selection {
+    background: var(--marker);
+    color: var(--marker-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+  code,
+  kbd,
+  pre,
+  .expressive-code :where(code, pre) {
+    font-family: var(--font-mono);
+    font-variant-ligatures: none;
+  }
+}
+
+/* Typography voices */
+@utility font-display {
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 116;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+@utility font-numeral {
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 125;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* A part callout: black disc, white letter (inverted on dark). */
+@utility part-disc {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  background: var(--ink);
+  color: var(--paper);
+  font-variation-settings: "wdth" 125;
+  font-weight: 800;
+  font-size: 0.8125rem;
+  line-height: 1;
+}
+
+/* Registry tour UI in this world: line art is 2px. */
+[data-slot="tour-card"],
+[data-slot="hotspot-card"],
+[data-slot="checklist"] {
+  border-width: var(--line);
+  box-shadow: 0 18px 40px -18px rgb(0 0 0 / 0.35);
+}
+[data-slot="tour-card-arrow"] {
+  filter: drop-shadow(0 2px 0 var(--ink));
+}
+[data-tour-overlay],
+[data-tour-spotlight] {
+  z-index: 50;
+}
+[data-tour-content-wrapper] {
+  z-index: 51;
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * Reading column. Calm: a reading measure, real contrast; the world lives in headings, code,
+ * tables and callouts, not behind the text.
+ * ----------------------------------------------------------------------------------------------*/
+.prose {
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--ink);
+  max-width: 56rem;
+}
+/* Running text keeps a reading measure; tables, code and demos use the column's full width. */
+.prose > :where(p, ul, ol, h2, h3, h4, blockquote) {
+  max-width: 62ch;
+}
+.prose > * + * {
+  margin-top: 1.15em;
+}
+.prose h2:not(:where(.not-prose, .not-prose *)) {
+  margin-top: 3.25rem;
+  margin-bottom: -0.25rem;
+  padding-top: 1.25rem;
+  border-top: var(--line) solid var(--ink);
+  font-variation-settings: "wdth" 112;
+  font-weight: 800;
+  font-size: 1.75rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.prose h3:not(:where(.not-prose, .not-prose *)) {
+  margin-top: 2.25rem;
+  margin-bottom: -0.35rem;
+  font-variation-settings: "wdth" 108;
+  font-weight: 750;
+  font-size: 1.25rem;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+.prose h4:not(:where(.not-prose, .not-prose *)) {
+  margin-top: 1.75rem;
+  font-weight: 700;
+  font-size: 1.0625rem;
+}
+.prose :where(h2, h3, h4) a {
+  color: inherit;
+  text-decoration: none;
+}
+.prose a:not(:where(.not-prose, .not-prose *)) {
+  color: var(--ink);
+  font-weight: 550;
+  text-decoration-line: underline;
+  text-decoration-color: var(--marker);
+  text-decoration-thickness: 0.22em;
+  text-underline-offset: 0.12em;
+  text-decoration-skip-ink: none;
+  transition: background-color 150ms ease-out;
+}
+.prose a:not(:where(.not-prose, .not-prose *)):hover {
+  background: var(--marker);
+  color: var(--marker-ink);
+}
+.prose strong {
+  font-weight: 700;
+}
+.prose :where(ul, ol):not(:where(.not-prose, .not-prose *)) {
+  padding-left: 1.4rem;
+}
+.prose ul:not(:where(.not-prose, .not-prose *)) {
+  list-style: square;
+}
+.prose ol:not(:where(.not-prose, .not-prose *)) {
+  list-style: decimal;
+}
+.prose li:not(:where(.not-prose, .not-prose *)) + li {
+  margin-top: 0.35em;
+}
+.prose li:not(:where(.not-prose, .not-prose *))::marker {
+  color: var(--ink-2);
+  font-weight: 700;
+}
+.prose :not(pre) > code:not(:where(.not-prose, .not-prose *)) {
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  background: var(--paper-2);
+  font-size: 0.86em;
+  overflow-wrap: anywhere;
+}
+.prose hr {
+  border: 0;
+  border-top: var(--line) dashed var(--rule);
+  margin-block: 2.5rem;
+}
+.prose blockquote {
+  padding-left: 1rem;
+  border-left: 1px solid var(--ink);
+  color: var(--ink-2);
+}
+
+/* Tables: a parts list */
+.prose table:not(:where(.not-prose, .not-prose *)) {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.prose table:not(:where(.not-prose, .not-prose *)) thead th {
+  border-bottom: var(--line) solid var(--ink);
+  border-top: var(--line) solid var(--ink);
+  padding: 0.55rem 0.9rem 0.55rem 0;
+  text-align: left;
+  font-variation-settings: "wdth" 112;
+  font-weight: 750;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+.prose table:not(:where(.not-prose, .not-prose *)) tbody td {
+  border-bottom: 1px solid var(--rule);
+  padding: 0.6rem 0.9rem 0.6rem 0;
+  vertical-align: top;
+}
+.prose table:not(:where(.not-prose, .not-prose *)) tbody tr:last-child td {
+  border-bottom: var(--line) solid var(--ink);
+}
+.prose td code {
+  white-space: nowrap;
+}
+
+/* Code frames (expressive-code) */
+.prose .expressive-code {
+  margin-top: 1.4em;
+}
+.expressive-code .frame {
+  --button-spacing: 0.4rem;
+}
+
+/* Code reads literally: no `=>` → ⇒ ligatures. Unlayered to beat expressive-code's own rules. */
+.expressive-code :is(pre, code, .ec-line),
+.prose :where(code) {
+  font-variant-ligatures: none;
+  font-feature-settings:
+    "liga" 0,
+    "calt" 0;
+}
+
+/* The registry's tour card, fitted to this site's world. */
+[data-slot="tour-card-title"] {
+  font-variation-settings: "wdth" 112;
+  font-weight: 800;
+  font-size: 1.125rem;
+  letter-spacing: -0.015em;
+}
+[data-slot="tour-card-next"],
+[data-slot="tour-card-next"]:hover {
+  border: var(--line) solid var(--ink);
+  font-weight: 700;
+}
+[data-slot="tour-card-progress"] > [aria-hidden] {
+  background: var(--paper-2);
+}
+[data-slot="tour-card-progress"] > [aria-hidden] > span {
+  background: var(--ink);
+}
+[data-slot="tour-dots"] > button[data-state="active"],
+[data-slot="tour-dots"] > button[data-state="complete"] {
+  background: var(--ink);
+}

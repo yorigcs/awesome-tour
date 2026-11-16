@@ -1,6 +1,7 @@
 import { anchor, createAnchorRegistry, createTour, Tour, useTourAnchor } from '@awesome-tour/react';
 import { useRef, useState } from 'react';
-import { Frame, TourCard } from './ui';
+import { TourPopover } from '@/components/awesome-tour/tour';
+import { AppSurface, DemoFrame, StartButton, Tile } from './ui';
 
 // A registry scoped to this demo, so its anchor names can't clash with other demos on the page.
 const anchors = createAnchorRegistry();
@@ -53,31 +54,25 @@ export function TargetsDemo() {
 
   return (
     <Tour.Root tour={tour}>
-      <Frame
-        title="Target types"
-        actions={<Tour.Trigger className="at-button at-button--primary">Start tour</Tour.Trigger>}
-      >
-        <div className="at-grid">
-          <div id="targets-selector" className="at-tile">
-            <small>#targets-selector</small>Selector
-          </div>
-          <div ref={refTarget} className="at-tile">
-            <small>ref</small>Ref
-          </div>
-          <div ref={anchorRef} className="at-tile">
-            <small>anchor('billing')</small>Anchor
-          </div>
-        </div>
-        <div className="at-grid" style={{ marginTop: 10 }}>
+      <DemoFrame title="Target types" actions={<StartButton />}>
+        <AppSurface className="grid gap-3 sm:grid-cols-3">
+          <Tile id="targets-selector" label="#targets-selector">
+            Selector
+          </Tile>
+          <Tile ref={refTarget} label="ref">
+            Ref
+          </Tile>
+          <Tile ref={anchorRef} label="anchor('billing')">
+            Anchor
+          </Tile>
           {['a', 'b', 'c'].map((k) => (
-            <div key={k} id={`targets-${k}`} className="at-tile">
-              <small>#targets-{k}</small>
+            <Tile key={k} id={`targets-${k}`} label={`#targets-${k}`}>
               {k.toUpperCase()}
-            </div>
+            </Tile>
           ))}
-        </div>
-      </Frame>
-      <TourCard />
+        </AppSurface>
+      </DemoFrame>
+      <TourPopover />
     </Tour.Root>
   );
 }

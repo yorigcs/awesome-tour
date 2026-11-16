@@ -1,0 +1,62 @@
+---
+import GithubIcon from './GithubIcon.astro';
+import Logo from './Logo.astro';
+import Search from './Search.astro';
+import ThemeToggle from './ThemeToggle.astro';
+
+interface Props {
+  section: 'home' | 'docs';
+}
+const { section } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const path = Astro.url.pathname;
+const links = [
+  {
+    href: `${base}introduction/`,
+    label: 'Docs',
+    active: section === 'docs' && !path.includes('/registry/') && !path.includes('/reference/'),
+  },
+  { href: `${base}registry/`, label: 'Registry', active: path.includes('/registry/') },
+  { href: `${base}reference/create-tour/`, label: 'API', active: path.includes('/reference/') },
+];
+---
+
+<header
+  class="sticky top-0 z-40 border-b-2 border-ink bg-paper/95 backdrop-blur-sm supports-[backdrop-filter]:bg-paper/85"
+>
+  <div class="mx-auto flex h-16 max-w-[90rem] items-center gap-3 px-4 md:gap-6 md:px-6">
+    <a href={base} class="shrink-0 rounded-sm" aria-label="awesome-tour home">
+      <Logo />
+    </a>
+    <nav aria-label="Primary" class="hidden items-center gap-1 md:flex">
+      {
+        links.map((l) => (
+          <a
+            href={l.href}
+            aria-current={l.active ? 'page' : undefined}
+            class="rounded-sm px-2.5 py-1.5 text-[0.9375rem] font-semibold text-ink-2 transition-colors hover:text-ink aria-[current=page]:bg-marker aria-[current=page]:text-marker-ink"
+          >
+            {l.label}
+          </a>
+        ))
+      }
+    </nav>
+    <div class="ml-auto flex items-center gap-2">
+      <Search />
+      <span
+        class="hidden items-center gap-1.5 rounded-sm border-2 border-ink px-2 py-0.5 font-mono text-xs font-semibold lg:inline-flex"
+        title="Not yet published to npm"
+      >
+        v0.1.0 <span class="text-ink-2">· unreleased</span>
+      </span>
+      <ThemeToggle />
+      <a
+        href="https://github.com/yorigcs/awesome-tour"
+        class="grid size-9 place-items-center rounded-sm text-ink-2 transition-colors hover:bg-paper-2 hover:text-ink"
+        aria-label="awesome-tour on GitHub"
+      >
+        <GithubIcon class="size-[1.15rem]" />
+      </a>
+    </div>
+  </div>
+</header>

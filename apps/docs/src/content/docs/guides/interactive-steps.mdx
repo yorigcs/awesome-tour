@@ -5,12 +5,16 @@ sidebar:
   order: 2
 ---
 
+import Preview from '../../../components/Preview.astro';
 import { InteractiveDemo } from '../../../components/demos/InteractiveDemo';
+import InteractiveDemoSource from '../../../components/demos/InteractiveDemo.tsx?raw';
 
 The best onboarding teaches by doing. `advanceOn` makes a step wait for the user instead of a
 "Next" button.
 
-<InteractiveDemo client:visible />
+<Preview code={InteractiveDemoSource} title="InteractiveDemo.tsx">
+  <InteractiveDemo client:visible />
+</Preview>
 
 ```ts
 createTour({

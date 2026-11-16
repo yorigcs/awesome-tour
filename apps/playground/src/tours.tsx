@@ -5,11 +5,13 @@ import {
   createChecklist,
   createStore,
   createTour,
+  type ImpressionRecord,
   localStorageAdapter,
   persist,
   type ReactStepDefinition,
   type TourAnalyticsEvent,
 } from '@awesome-tour/react';
+import { createAnnouncement, createSurvey } from '@awesome-tour/react/surfaces';
 import { router } from './router';
 
 /** Last analytics events, shown in the playground (would go to Segment/PostHog in an app). */
@@ -125,4 +127,68 @@ export const gettingStarted = createChecklist({
     { id: 'search', signal: 'searched', meta: { title: 'Search for something' } },
     { id: 'project', signal: 'project-created', meta: { title: 'Create a project' } },
   ],
+});
+
+/**
+ * A one-step announcement with display rules: it starts by itself on /projects (when no other
+ * tour is on screen), at most once, and "Remind me later" snoozes it. See devtools → Rules.
+ */
+export const whatsNew = createTour({
+  id: 'whats-new',
+  modal: false,
+  steps: [
+    {
+      id: 'table',
+      target: '#project-list',
+      side: 'bottom',
+      title: 'New: project table',
+      description: 'Owners and status at a glance. Sorting and filters are next.',
+    },
+  ],
+  rules: {
+    trigger: { route: '/projects' },
+    frequency: { once: true, maxShows: 3 },
+  },
+});
+
+export const impressions = localStorageAdapter<ImpressionRecord>({
+  prefix: 'awesome-impressions:',
+});
+
+/** An ambient banner: shows on Home until dismissed or acted on. */
+export const reportsBanner = createAnnouncement({
+  id: 'reports-banner',
+  title: 'Weekly reports are here',
+  description: 'Every Monday, a summary of your projects lands in your inbox.',
+  rules: { trigger: { route: '/' } },
+});
+
+/** Asked once the product tour is completed (`manager.signal('onboarding-complete')`). */
+export const npsSurvey = createSurvey({
+  id: 'nps',
+  questions: [
+    { id: 'score', type: 'nps', prompt: 'How likely are you to recommend Acme to a colleague?' },
+    {
+      id: 'reason',
+      type: 'text',
+      prompt: 'What would make it a 10?',
+      placeholder: 'Optional',
+      optional: true,
+      when: (answers) => Number(answers.score) < 9,
+    },
+  ],
+  rules: { trigger: { signal: 'onboarding-complete' } },
+  onSubmit: (answers) => {
+    eventLog.setState((s) => ({
+      events: [
+        {
+          type: 'survey_submitted',
+          tourId: 'nps',
+          stepId: String(answers.score),
+          timestamp: Date.now(),
+        } as never,
+        ...s.events,
+      ].slice(0, 6),
+    }));
+  },
 });

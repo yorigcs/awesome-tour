@@ -1,41 +1,50 @@
-import { Hotspot } from '@awesome-tour/react';
-import { Frame } from './ui';
+import { FileDown, UserPlus } from 'lucide-react';
+import { HotspotHint } from '@/components/awesome-tour/hotspot';
+import { Button } from '@/components/ui/button';
+import { AppSurface, DemoFrame } from './ui';
 
 export function HotspotDemo() {
   return (
-    <Frame title="Hotspots" footer="Non-blocking: the page stays fully usable. Click a beacon.">
-      <div className="at-grid">
-        <div id="hotspot-reports" className="at-tile" style={{ position: 'relative' }}>
-          <small>Reports</small>Export as PDF
-          <Hotspot.Root target="#hotspot-reports">
-            <Hotspot.Beacon className="at-beacon" aria-label="What's new in reports" />
-            <Hotspot.Portal>
-              <Hotspot.Content className="at-card at-hotspot" side="bottom" sideOffset={10}>
-                <span>
-                  <strong>New:</strong> export any report as PDF.
-                </span>
-                <Hotspot.Close className="at-icon-button" aria-label="Close hint">
-                  ✕
-                </Hotspot.Close>
-              </Hotspot.Content>
-            </Hotspot.Portal>
-          </Hotspot.Root>
+    <DemoFrame title="Hotspots" footer="Non-blocking: the page stays fully usable. Click a beacon.">
+      <AppSurface className="grid gap-3 sm:grid-cols-2">
+        <div id="hotspot-reports" className="flex flex-col gap-3 rounded-lg border bg-card p-4">
+          <div>
+            <p className="font-medium">Reports</p>
+            <p className="text-muted-foreground">Weekly summaries for your team.</p>
+          </div>
+          <Button variant="outline" size="sm" className="self-start">
+            <FileDown />
+            Export
+          </Button>
+          <HotspotHint
+            target="#hotspot-reports"
+            title="New: PDF export"
+            beaconLabel="What's new in reports"
+            side="bottom"
+          >
+            Export any report as a PDF, ready to share.
+          </HotspotHint>
         </div>
-        <div id="hotspot-team" className="at-tile" style={{ position: 'relative' }}>
-          <small>Team</small>Invite people
-          <Hotspot.Root target="#hotspot-team">
-            <Hotspot.Beacon className="at-beacon" aria-label="Tip about invites" />
-            <Hotspot.Portal>
-              <Hotspot.Content className="at-card at-hotspot" side="bottom" sideOffset={10}>
-                <span>Invites expire after 7 days.</span>
-                <Hotspot.Close className="at-icon-button" aria-label="Close hint">
-                  ✕
-                </Hotspot.Close>
-              </Hotspot.Content>
-            </Hotspot.Portal>
-          </Hotspot.Root>
+        <div id="hotspot-team" className="flex flex-col gap-3 rounded-lg border bg-card p-4">
+          <div>
+            <p className="font-medium">Team</p>
+            <p className="text-muted-foreground">8 members · 2 pending invites</p>
+          </div>
+          <Button variant="outline" size="sm" className="self-start">
+            <UserPlus />
+            Invite people
+          </Button>
+          <HotspotHint
+            target="#hotspot-team"
+            title="Tip"
+            label="Tip about invites"
+            beaconLabel="Tip about invites"
+            side="bottom"
+          >
+            Invites expire after 7 days.
+          </HotspotHint>
         </div>
-      </div>
-    </Frame>
+      </AppSurface>
+    </DemoFrame>
   );
 }

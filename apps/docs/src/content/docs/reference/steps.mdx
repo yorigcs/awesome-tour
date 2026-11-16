@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-import { Aside } from '@astrojs/starlight/components';
+import { Aside } from '~/components/mdx';
 
 A tour is a list of `StepDefinition` objects passed to [`createTour`](../create-tour/) (or declared in JSX with `<Tour.Step>`, see [Tour components](../../components/tour/)).
 
@@ -36,6 +36,8 @@ A tour is a list of `StepDefinition` objects passed to [`createTour`](../create-
 | `modal`           | `boolean`                                                    | tour's `modal`           | Override modality for this step (used by the React components).                                                                                               |
 | `beforeEnter`     | `(ctx) => void \| Promise<void>`                             | —                        | Runs before the step is shown: after navigation, before target resolution. Await data loading, open a menu, etc. Throwing aborts the transition (`error`). |
 | `afterLeave`      | `(ctx) => void \| Promise<void>`                             | —                        | Runs (asynchronously) after the step is left — on navigation, close, skip, complete or pause.                                                                |
+| `beforeLeave`     | `(ctx, { to, direction }) => boolean \| void \| Promise<…>`     | —                        | Guard before leaving the step (to another step, or `to: null` to finish). Return `false` to stay. Not called by `close`, `skip` or `pause`.                  |
+| `canNext`         | `(ctx) => boolean`                                           | —                        | Whether the user may move forward yet. Re-checked live; exposed as `state.canNext` (`Tour.Next` is disabled) and enforced by `next()`.                        |
 | `meta`            | `Record<string, unknown>`                                    | —                        | Free-form metadata. Forwarded by the [analytics](../analytics/) plugin as `event.meta`.                                                                      |
 
 ### Transition order
@@ -43,12 +45,13 @@ A tour is a list of `StepDefinition` objects passed to [`createTour`](../create-
 When a step is entered the tour runs, in order:
 
 1. plugins' `beforeStep` (may cancel or redirect),
-2. the previous step's `stepLeave` event and `afterLeave` (state `phase: 'transitioning'`),
-3. navigation to `route` (if it doesn't match),
-4. `beforeEnter`,
-5. target resolution (`phase: 'resolving'` while waiting, up to `targetTimeout`),
-6. commit: the step becomes current and `stepChange` is emitted,
-7. scroll into view, then `phase: 'ready'` and `advanceOn` listeners are attached.
+2. the current step's `beforeLeave` guard (may cancel),
+3. the previous step's `stepLeave` event and `afterLeave` (state `phase: 'transitioning'`),
+4. navigation to `route` (if it doesn't match),
+5. `beforeEnter`,
+6. target resolution (`phase: 'resolving'` while waiting, up to `targetTimeout`),
+7. commit: the step becomes current and `stepChange` is emitted,
+8. scroll into view, then `phase: 'ready'` and `advanceOn` listeners are attached.
 
 If the user triggers another transition meanwhile (e.g. double-clicks "Next"), the in-flight one is aborted: `ctx.signal` fires and its result is discarded.
 
@@ -114,10 +117,12 @@ Makes a step interactive. One rule or an array of rules; the first rule that fir
 | `target` | `TargetInput`           | Where the event must happen. Default: the step's resolved targets.                                                                 |
 | `when`   | `(ctx) => boolean`      | Advance when the predicate becomes true. Re-checked on tour state changes, DOM mutations and every 200 ms.                         |
 | `signal` | `string`                | Advance when the app calls `tour.signal(name)`.                                                                                    |
+| `delay`  | `number`                | Advance automatically after this many ms on the step. `Tour.Content` gets `data-auto-advance` and `--tour-auto-advance: <ms>` for a countdown bar. |
 | `to`     | `TId`                   | Go to this step instead of the regular next step.                                                                                  |
 
 ```ts
 const steps = [
+  { id: 'intro', advanceOn: { delay: 4000 } }, // auto-advance after 4s
   { id: 'create', target: anchor('create'), advanceOn: { event: 'click' } },
   {
     id: 'search',

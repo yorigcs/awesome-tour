@@ -38,6 +38,7 @@ export const css = /* css */ `
 .atd-pill[data-tone='warn'] { color: var(--atd-warn); border-color: rgb(245 184 74 / 0.4); }
 .atd-pill[data-tone='bad'] { color: var(--atd-bad); border-color: rgb(255 107 129 / 0.4); }
 .atd-pill[data-tone='accent'] { color: var(--atd-accent); border-color: rgb(139 125 255 / 0.4); }
+.atd-section-block { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--atd-line); border-radius: 8px; }
 .atd-section { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--atd-muted); margin: 4px 0 -4px; }
 .atd-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .atd-step {

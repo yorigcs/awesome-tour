@@ -175,13 +175,55 @@ export function useTourAnchor<T extends Element = HTMLElement>(
   return React.useCallback(
     (node: T | null) => {
       cleanup.current?.();
-      cleanup.current = node ? anchors.register(id, node) : null;
+      if (!node) {
+        cleanup.current = null;
+        return;
+      }
+      const unregister = anchors.register(id, node);
+      // Mark it like <Tour.Anchor> does: for styling, and for devtools' element picker.
+      const hadAttribute = node.hasAttribute('data-tour-anchor');
+      if (!hadAttribute) node.setAttribute('data-tour-anchor', id);
+      cleanup.current = () => {
+        unregister();
+        if (!hadAttribute) node.removeAttribute('data-tour-anchor');
+      };
     },
     [anchors, id],
   );
 }
 
 /** Live viewport rect (union) of the current step's targets. `null` for centered steps. */
+/**
+ * One rect per resolved target of the current step (updates on scroll/resize/layout), for
+ * effects that treat targets separately. Pass `false` to skip observing.
+ */
+export function useTargetRects(enabled = true): RectLike[] {
+  const { state } = useTourContext('useTargetRects');
+  const [rects, setRects] = React.useState<RectLike[]>([]);
+  const targets = state.targets;
+  useIsomorphicLayoutEffect(() => {
+    if (!enabled || targets.length === 0) {
+      setRects([]);
+      return;
+    }
+    const current: (RectLike | null)[] = targets.map(() => null);
+    const cleanups = targets.map((target, i) =>
+      observeRect(
+        [target],
+        (rect) => {
+          current[i] = rect;
+          setRects(current.filter((r): r is RectLike => r !== null));
+        },
+        { animationFrame: !isElement(target) },
+      ),
+    );
+    return () => {
+      for (const cleanup of cleanups) cleanup();
+    };
+  }, [enabled, targets]);
+  return rects;
+}
+
 export function useTargetRect(): RectLike | null {
   const { state } = useTourContext('useTargetRect');
   const [rect, setRect] = React.useState<RectLike | null>(null);

@@ -5,7 +5,9 @@ sidebar:
   order: 11
 ---
 
+import Preview from '../../../components/Preview.astro';
 import { MotionDemo } from '../../../components/demos/MotionDemo';
+import MotionDemoSource from '../../../components/demos/MotionDemo.tsx?raw';
 
 Two ways to animate a tour:
 
@@ -14,7 +16,9 @@ Two ways to animate a tour:
 - **`@awesome-tour/motion`** — drop-in replacements built on [Motion](https://motion.dev): a cutout
   that morphs between targets with springs, enter/exit presets, and in-place step transitions.
 
-<MotionDemo client:visible />
+<Preview code={MotionDemoSource} title="MotionDemo.tsx">
+  <MotionDemo client:visible />
+</Preview>
 
 ```bash
 pnpm add @awesome-tour/motion motion

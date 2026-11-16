@@ -5,7 +5,7 @@ sidebar:
   order: 7
 ---
 
-import { Aside } from '@astrojs/starlight/components';
+import { Aside } from '~/components/mdx';
 
 ```ts
 import { createTourManager } from '@awesome-tour/core';
@@ -24,6 +24,7 @@ In React, [`TourProvider`](../../components/provider/) creates a manager for you
 | -------- | ---------------- | ------------------------------------------------------- |
 | `tours`  | `Tour[]`         | Tours to register immediately.                          |
 | `router` | `RouterAdapter`  | Router adapter given to every registered tour (`tour.setRouter`). |
+| `impressions` | `PersistenceAdapter<ImpressionRecord>` | Where [display rules](../../guides/display-rules/) remember shows, outcome and snooze. Default: in memory. `TourProvider` takes it as a prop. |
 
 ## TourManager
 
@@ -33,6 +34,10 @@ In React, [`TourProvider`](../../components/provider/) creates a manager for you
 | `get(id)`                 | `Tour \| undefined` | A registered tour.                                                                                                 |
 | `getTours()`              | `Tour[]`           | All registered tours.                                                                                               |
 | `start(id, options?)`     | `Promise<void>`    | Start a tour now, or queue it while another tour is on screen. Throws if `id` isn't registered.                     |
+| `explain(id)`             | `Promise<EligibilityReport>` | Evaluate the tour's [display rules](../../guides/display-rules/): `{ eligible, checks: [{ rule, ok, detail }] }`. |
+| `startIfEligible(id, options?)` | `Promise<boolean>` | Start (or queue) only if the rules allow it.                                                                |
+| `signal(name)`            | `void`             | Fire tours whose `rules.trigger.signal` is `name`.                                                                  |
+| `resetImpressions(id?)`   | `Promise<void>`    | Forget shows, outcome and snooze of one tour, or all.                                                              |
 | `setRouter(router)`       | `void`             | Set the router on the manager and every registered tour. `undefined` only resets tours the manager had routed.      |
 | `getState()`              | `TourManagerState` | Immutable snapshot.                                                                                                 |
 | `subscribe(listener)`     | `() => void`       | Called when `activeId`, `queue` or `tourIds` change.                                                                |

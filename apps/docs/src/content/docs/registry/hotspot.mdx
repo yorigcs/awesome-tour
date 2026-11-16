@@ -1,0 +1,48 @@
+---
+title: Hotspot
+description: A pulsing beacon pinned to an element that opens a hint popover.
+sidebar:
+  order: 4
+---
+
+import { Tabs, TabItem, Code } from '~/components/mdx';
+import Preview from '../../../components/Preview.astro';
+import { HotspotDemo } from '../../../components/demos/HotspotDemo';
+import HotspotDemoSource from '../../../components/demos/HotspotDemo.tsx?raw';
+import componentSource from '../../../../../../registry/src/components/awesome-tour/hotspot.tsx?raw';
+
+<Preview code={HotspotDemoSource} title="HotspotDemo.tsx">
+  <HotspotDemo client:visible />
+</Preview>
+
+## Installation
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+    ```sh
+    pnpm dlx shadcn@latest add @awesome-tour/hotspot
+    ```
+  </TabItem>
+  <TabItem label="npm">
+    ```sh
+    npx shadcn@latest add @awesome-tour/hotspot
+    ```
+  </TabItem>
+</Tabs>
+
+## Usage
+
+```tsx
+import { HotspotHint } from '@/components/awesome-tour/hotspot';
+
+<HotspotHint target="#export" title="New: PDF export" side="bottom">
+  Export any report as a PDF, ready to share.
+</HotspotHint>
+```
+
+The beacon's pulse is disabled for users who prefer reduced motion. Parts: `HotspotBeacon`,
+`HotspotCard`, `HotspotTitle`, `HotspotDescription`.
+
+## Source
+
+<Code code={componentSource} lang="tsx" title="components/awesome-tour/hotspot.tsx" />

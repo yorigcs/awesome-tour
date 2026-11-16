@@ -1,0 +1,74 @@
+---
+title: Internationalization
+description: Translate every string the primitives render, announce and label — per app, per tour, or per component.
+sidebar:
+  order: 13
+---
+
+import Preview from '../../../components/Preview.astro';
+import { Aside } from '~/components/mdx';
+import { I18nDemo } from '../../../components/demos/I18nDemo';
+import I18nDemoSource from '../../../components/demos/I18nDemo.tsx?raw';
+
+Your step titles and descriptions are yours, so they're already in your language. The primitives
+also render a few strings of their own — the screen-reader announcement on each step, accessible
+names like "Close tour" and "Show hint", checklist status text. `messages` translates all of them.
+
+<Preview code={I18nDemoSource} title="I18nDemo.tsx">
+  <I18nDemo client:visible />
+</Preview>
+
+## Where to set them
+
+Pass `messages` to any of these; the nearest one wins, merged over what it inherits:
+
+- `TourProvider` — the whole app.
+- `Tour.Root` — one tour.
+- `Hotspot.Root`, `Checklist.Root` — one hint, one checklist.
+
+```tsx
+import { TourProvider, type TourMessages } from '@awesome-tour/react';
+
+const ptBR: Partial<TourMessages> = {
+  stepOf: (current, total) => `Passo ${current} de ${total}`,
+  closeTour: 'Fechar tour',
+  tourSteps: 'Passos do tour',
+  goToStep: (index) => `Ir para o passo ${index}`,
+  showHint: 'Mostrar dica',
+  closeHint: 'Fechar dica',
+  checklistProgress: 'Progresso do checklist',
+  checklistValue: (completed, total) => `${completed} de ${total} concluídos`,
+  itemStatus: { pending: 'Pendente', done: 'Concluído', skipped: 'Pulado' },
+  dismissChecklist: 'Dispensar checklist',
+};
+
+<TourProvider messages={ptBR}>…</TourProvider>;
+```
+
+## `TourMessages`
+
+| Key                 | Default                       | Used by                                      |
+| ------------------- | ----------------------------- | -------------------------------------------- |
+| `stepOf(c, t)`      | `Step c of t`                 | Live-region announcement on each step.       |
+| `closeTour`         | `Close tour`                  | `Tour.Close` without children.               |
+| `tourSteps`         | `Tour steps`                  | `Tour.Indicators` group label.               |
+| `goToStep(n)`       | `Go to step n`                | Each `Tour.Indicators` button.               |
+| `showHint`          | `Show hint`                   | `Hotspot.Beacon` without children.           |
+| `closeHint`         | `Close hint`                  | `Hotspot.Close` without children.            |
+| `checklistProgress` | `Checklist progress`          | `Checklist.Progress` accessible name.        |
+| `checklistValue`    | `c of t completed`            | `Checklist.Progress` value text.             |
+| `itemStatus`        | `Not completed` / `Completed` / `Skipped` | `Checklist.ItemIndicator` status. |
+| `dismissChecklist`  | `Dismiss checklist`           | `Checklist.Dismiss` without children.        |
+
+Props on a single part still win: `aria-label` on `Tour.Close`, `getLabel` on `Tour.Indicators`,
+`labels` on `Checklist.ItemIndicator`, `announce` on `Tour.Root`.
+
+<Aside type="tip">
+  The [styled registry components](../../registry/) read the same messages, so translating once on
+  `TourProvider` covers them too. Read them in your own parts with `useTourMessages()`.
+</Aside>
+
+## Right-to-left
+
+Set `dir="rtl"` on `Tour.Root`: alignment flips and the arrow keys swap, so <kbd>←</kbd> goes to
+the next step.

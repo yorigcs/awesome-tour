@@ -1,0 +1,37 @@
+---
+title: Survey
+description: An NPS / CSAT / CES survey card with conditional follow-ups.
+sidebar:
+  order: 6
+---
+
+import { Tabs, TabItem, Code } from '~/components/mdx';
+import Preview from '../../../components/Preview.astro';
+import { SurveyDemo } from '../../../components/demos/SurveyDemo';
+import SurveyDemoSource from '../../../components/demos/SurveyDemo.tsx?raw';
+import componentSource from '../../../../../../registry/src/components/awesome-tour/survey.tsx?raw';
+
+<Preview code={SurveyDemoSource} title="SurveyDemo.tsx">
+  <SurveyDemo client:visible />
+</Preview>
+
+## Installation
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+    ```sh
+    pnpm dlx shadcn@latest add @awesome-tour/survey
+    ```
+  </TabItem>
+  <TabItem label="npm">
+    ```sh
+    npx shadcn@latest add @awesome-tour/survey
+    ```
+  </TabItem>
+</Tabs>
+
+Built on the [Survey primitives](../../guides/surveys/) from `@awesome-tour/react/surfaces`.
+
+## Source
+
+<Code code={componentSource} lang="tsx" title="components/awesome-tour/survey.tsx" />

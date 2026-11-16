@@ -6,3 +6,6 @@ test-results
 *.tsbuildinfo
 .DS_Store
 .astro
+apps/docs/public/r
+.playwright-mcp
+apps/docs/public/schema

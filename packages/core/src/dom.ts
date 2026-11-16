@@ -155,12 +155,32 @@ export function observeRect(
  * Scrolling
  * -----------------------------------------------------------------------------------------------*/
 
+/**
+ * The page's `scroll-padding` (e.g. room for a sticky header): a target under it is not visible.
+ * `scrollIntoView` already honours it; the visibility check has to as well.
+ */
+export function getScrollPadding(): { top: number; right: number; bottom: number; left: number } {
+  const root = document.scrollingElement ?? document.documentElement;
+  const style = getComputedStyle(root);
+  const px = (value: string) => {
+    const n = Number.parseFloat(value);
+    return Number.isFinite(n) ? n : 0;
+  };
+  return {
+    top: px(style.scrollPaddingTop),
+    right: px(style.scrollPaddingRight),
+    bottom: px(style.scrollPaddingBottom),
+    left: px(style.scrollPaddingLeft),
+  };
+}
+
 function isInViewport(rect: RectLike, margin = 0): boolean {
+  const pad = getScrollPadding();
   return (
-    rect.top >= margin &&
-    rect.left >= margin &&
-    rect.bottom <= window.innerHeight - margin &&
-    rect.right <= window.innerWidth - margin
+    rect.top >= pad.top + margin &&
+    rect.left >= pad.left + margin &&
+    rect.bottom <= window.innerHeight - pad.bottom - margin &&
+    rect.right <= window.innerWidth - pad.right - margin
   );
 }
 

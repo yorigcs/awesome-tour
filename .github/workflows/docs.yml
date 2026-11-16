@@ -1,9 +1,16 @@
 name: Docs
+
+# Deploys the docs site and the shadcn registry to GitHub Pages. Called by the release workflow
+# after a publish, so the site always documents (and the registry installs) what's on npm.
+# Run it by hand for docs-only fixes: pick the latest release tag as `ref` to stay in sync.
 on:
-  push:
-    branches: [main]
-    paths: ["apps/docs/**", "packages/**", "pnpm-lock.yaml", ".github/workflows/docs.yml"]
+  workflow_call:
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to deploy (a release tag keeps the registry in sync with npm)
+        required: false
+        default: main
 
 permissions:
   contents: read
@@ -12,20 +19,22 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: actions/configure-pages@v6
+      - uses: ./.github/actions/setup
       - run: pnpm docs:build
-      - uses: actions/upload-pages-artifact@v3
-        with: { path: apps/docs/dist }
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: apps/docs/dist
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -34,4 +43,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

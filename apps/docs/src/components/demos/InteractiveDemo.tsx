@@ -1,6 +1,10 @@
 import { createTour, Tour } from '@awesome-tour/react';
+import { Check, Plus } from 'lucide-react';
 import { useState } from 'react';
-import { Frame, TourCard } from './ui';
+import { TourPopover } from '@/components/awesome-tour/tour';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { AppSurface, DemoFrame, StartButton } from './ui';
 
 const tour = createTour({
   id: 'docs-interactive',
@@ -41,53 +45,50 @@ export function InteractiveDemo() {
   const [name, setName] = useState('');
   return (
     <Tour.Root tour={tour}>
-      <Frame
+      <DemoFrame
         title="Interactive steps"
         actions={
-          <Tour.Trigger
-            className="at-button at-button--primary"
+          <StartButton
             onClick={() => {
               setCreated(false);
               setSaved(false);
               setName('');
             }}
-          >
-            Start tour
-          </Tour.Trigger>
+          />
         }
       >
-        <div className="at-row">
-          <button
-            id="interactive-new"
-            type="button"
-            className="at-button"
-            onClick={() => setCreated(true)}
-          >
+        <AppSurface className="flex flex-wrap items-center gap-2">
+          <Button id="interactive-new" variant="outline" onClick={() => setCreated(true)}>
+            <Plus />
             New project
-          </button>
-          <input
+          </Button>
+          <Input
             id="interactive-name"
-            className="at-input"
             placeholder="Project name"
             aria-label="Project name"
+            className="w-48"
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={!created}
           />
-          <button
+          <Button
             id="interactive-save"
-            type="button"
-            className="at-button at-button--primary"
             onClick={() => {
               setSaved(true);
               tour.signal('saved');
             }}
           >
-            {saved ? 'Saved ✓' : 'Save'}
-          </button>
-        </div>
-      </Frame>
-      <TourCard />
+            {saved ? (
+              <>
+                <Check /> Saved
+              </>
+            ) : (
+              'Save'
+            )}
+          </Button>
+        </AppSurface>
+      </DemoFrame>
+      <TourPopover />
     </Tour.Root>
   );
 }
