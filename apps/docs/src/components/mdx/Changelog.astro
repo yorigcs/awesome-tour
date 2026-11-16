@@ -1,0 +1,28 @@
+---
+import { getChangelog } from '~/lib/changelog';
+
+const releases = getChangelog();
+---
+
+{
+  releases.map((release) => (
+    <>
+      <h2 id={release.slug}>{release.version}</h2>
+      {release.groups.map((group) => (
+        <>
+          <p class="font-mono text-sm text-ink-2">
+            {group.packages.map((p, i) => (
+              <>
+                {i > 0 && ' · '}
+                <a href={`https://www.npmjs.com/package/@awesome-tour/${p}/v/${release.version}`}>
+                  {p}
+                </a>
+              </>
+            ))}
+          </p>
+          <Fragment set:html={group.html} />
+        </>
+      ))}
+    </>
+  ))
+}

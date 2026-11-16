@@ -7,6 +7,7 @@ import InstallCommand from '~/components/landing/InstallCommand.astro';
 import { Workbench } from '~/components/landing/Workbench';
 import Base from '~/layouts/Base.astro';
 import { getNav } from '~/lib/nav';
+import { NPM_URL, VERSION } from '~/lib/release';
 
 const base = import.meta.env.BASE_URL;
 const links = new Map((await getNav()).flatMap((g) => g.links).map((l) => [l.slug, l]));
@@ -413,7 +414,8 @@ const fits = [
     <div class="mx-auto flex max-w-[90rem] flex-wrap items-center gap-x-6 gap-y-2 px-4 py-6 text-sm text-ink-2 md:px-6">
       <span class="font-semibold text-ink">awesome-tour</span>
       <span>MIT license</span>
-      <span>v0.1.0 · not yet on npm</span>
+      <a class="underline decoration-marker decoration-2 underline-offset-4 hover:text-ink" href={NPM_URL}>v{VERSION} on npm</a>
+      <a class="underline decoration-marker decoration-2 underline-offset-4 hover:text-ink" href={`${base}changelog/`}>Changelog</a>
       <a class="underline decoration-marker decoration-2 underline-offset-4 hover:text-ink" href="https://github.com/yorigcs/awesome-tour">Source on GitHub</a>
     </div>
   </footer>

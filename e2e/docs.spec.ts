@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
@@ -145,9 +146,17 @@ test('docs pages have working navigation and search trigger', async ({ page }) =
   await expect(page.locator('[data-search-results] a').first()).toBeVisible();
 });
 
+test('the header shows the released version and links to the changelog', async ({ page }) => {
+  const { version } = JSON.parse(readFileSync('packages/react/package.json', 'utf8'));
+  await page.goto(`${DOCS}/guides/targets/`);
+  await page.getByRole('link', { name: `v${version} changelog` }).click();
+  await expect(page).toHaveURL(/changelog\/$/);
+  await expect(page.getByRole('heading', { level: 2, name: version })).toBeVisible();
+});
+
 test('the whole site is axe-clean outside demos too', async ({ page }) => {
   await seenLanding(page);
-  for (const path of ['', 'guides/targets/', 'registry/']) {
+  for (const path of ['', 'guides/targets/', 'registry/', 'changelog/']) {
     await page.goto(`${DOCS}/${path}`);
     const results = await new AxeBuilder({ page }).exclude('[data-demo-frame]').analyze();
     expect(results.violations, path).toEqual([]);

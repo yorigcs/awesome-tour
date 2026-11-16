@@ -23,6 +23,7 @@ const GROUPS: { letter: string; label: string; dir?: string; slugs?: string[] }[
   { letter: 'C', label: 'Components', dir: 'components' },
   { letter: 'D', label: 'Registry', dir: 'registry' },
   { letter: 'E', label: 'API reference', dir: 'reference' },
+  { letter: 'F', label: 'Project', slugs: ['changelog'] },
 ];
 
 const byOrder = (a: CollectionEntry<'docs'>, b: CollectionEntry<'docs'>) =>
