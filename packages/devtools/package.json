@@ -1,6 +1,6 @@
 {
   "name": "@awesome-tour/devtools",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Devtools panel for awesome-tour: inspect tours, jump between steps, check target health and watch events.",
   "license": "MIT",
   "author": "Yor\u00ed",

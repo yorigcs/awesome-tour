@@ -1,6 +1,6 @@
 {
   "name": "@awesome-tour/codemod",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Codemods to migrate react-joyride, Shepherd and driver.js tours to awesome-tour.",
   "license": "MIT",
   "author": "Yor\u00ed",
