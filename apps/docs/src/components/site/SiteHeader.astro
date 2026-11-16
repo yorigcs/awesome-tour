@@ -1,4 +1,5 @@
 ---
+import { VERSION } from '~/lib/release';
 import GithubIcon from './GithubIcon.astro';
 import Logo from './Logo.astro';
 import Search from './Search.astro';
@@ -43,12 +44,12 @@ const links = [
     </nav>
     <div class="ml-auto flex items-center gap-2">
       <Search />
-      <span
-        class="hidden items-center gap-1.5 rounded-sm border-2 border-ink px-2 py-0.5 font-mono text-xs font-semibold lg:inline-flex"
-        title="Not yet published to npm"
+      <a
+        href={`${base}changelog/`}
+        class="hidden items-center rounded-sm border-2 border-ink px-2 py-0.5 font-mono text-xs font-semibold transition-colors hover:bg-marker hover:text-marker-ink lg:inline-flex"
       >
-        v0.1.0 <span class="text-ink-2">· unreleased</span>
-      </span>
+        v{VERSION}<span class="sr-only">&nbsp;changelog</span>
+      </a>
       <ThemeToggle />
       <a
         href="https://github.com/yorigcs/awesome-tour"
