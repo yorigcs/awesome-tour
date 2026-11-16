@@ -10,7 +10,9 @@
       "!**/test-results",
       "!apps/docs/public/r",
       "!**/.impeccable",
-      "!**/.playwright-mcp"
+      "!**/.playwright-mcp",
+      "!.changeset/*.md",
+      "!**/CHANGELOG.md"
     ]
   },
   "formatter": {
