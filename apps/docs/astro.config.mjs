@@ -33,7 +33,12 @@ export default defineConfig({
         '@awesome-tour/react': src('react'),
         '@awesome-tour/motion': src('motion'),
         '@awesome-tour/devtools': src('devtools'),
+        '@awesome-tour/three': src('three'),
         // The shadcn registry sources: demos use exactly what `npx shadcn add` installs.
+        // Loopwork, the example app every demo runs on.
+        '@loopwork': fileURLToPath(
+          new URL('../../examples/loopwork/src/index.ts', import.meta.url),
+        ),
         '@': fileURLToPath(new URL('../../registry/src', import.meta.url)),
         '~': fileURLToPath(new URL('./src', import.meta.url)),
       },

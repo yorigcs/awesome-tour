@@ -32,9 +32,11 @@ A tour is a list of `StepDefinition` objects passed to [`createTour`](../create-
 | `advanceOn`       | `AdvanceOn \| AdvanceOn[]`                                   | —                        | Interactive step: advance when the user does something. See [advanceOn](#advanceon).                                                                         |
 | `onTargetMissing` | `'center' \| 'wait' \| 'skip' \| 'error'`                    | tour's, else `'center'`  | Policy when the target can't be found in time. See [missing targets](#missing-targets).                                                                      |
 | `targetTimeout`   | `number`                                                     | tour's, else `3000`      | Milliseconds to wait for the target to appear.                                                                                                               |
-| `scroll`          | `boolean \| ScrollIntoViewOptions`                           | tour's, else `true`      | Scroll the target into view. Only scrolls when the targets aren't already fully in the viewport.                                                             |
+| `onTargetLost`    | `'reresolve' \| 'center' \| 'close'`                         | tour's, else `'reresolve'` | Policy when the target leaves the page while the step is shown. See [lost targets](#lost-targets).                                                       |
+| `scroll`          | `boolean \| ScrollIntoViewOptions & { offset }`             | tour's, else `true`      | Scroll the target into view. Only scrolls when the targets aren't already fully in the viewport. `offset` (number or per side) keeps it clear of sticky bars that set no `scroll-padding`. |
 | `modal`           | `boolean`                                                    | tour's `modal`           | Override modality for this step (used by the React components).                                                                                               |
 | `beforeEnter`     | `(ctx) => void \| Promise<void>`                             | —                        | Runs before the step is shown: after navigation, before target resolution. Await data loading, open a menu, etc. Throwing aborts the transition (`error`). |
+| `enterTimeout`    | `number`                                                     | tour `enterTimeout` (none) | Fail the transition when `beforeEnter` hasn't settled after this many ms: the previous step stays and an `error` is emitted.                                   |
 | `afterLeave`      | `(ctx) => void \| Promise<void>`                             | —                        | Runs (asynchronously) after the step is left — on navigation, close, skip, complete or pause.                                                                |
 | `beforeLeave`     | `(ctx, { to, direction }) => boolean \| void \| Promise<…>`     | —                        | Guard before leaving the step (to another step, or `to: null` to finish). Return `false` to stay. Not called by `close`, `skip` or `pause`.                  |
 | `canNext`         | `(ctx) => boolean`                                           | —                        | Whether the user may move forward yet. Re-checked live; exposed as `state.canNext` (`Tour.Next` is disabled) and enforced by `next()`.                        |
@@ -53,7 +55,9 @@ When a step is entered the tour runs, in order:
 7. commit: the step becomes current and `stepChange` is emitted,
 8. scroll into view, then `phase: 'ready'` and `advanceOn` listeners are attached.
 
-If the user triggers another transition meanwhile (e.g. double-clicks "Next"), the in-flight one is aborted: `ctx.signal` fires and its result is discarded.
+If another transition starts meanwhile (e.g. `goTo` while a target is loading), the in-flight one is aborted: `ctx.signal` fires and its result is discarded. Repeated `next()`/`prev()` calls while one is still resolving (a double-click on "Next") are ignored, so `beforeLeave` runs once.
+
+Each entered step is left exactly once: with `onTargetMissing: 'skip'` the tour hops over missing steps without re-running the previous step's leave hooks. If a transition fails after step 3 (`beforeEnter` throws or times out, or `onTargetMissing: 'error'`), the previous step is put back on screen with its `advanceOn` and `canNext` listeners, and the failure is reported through the `error` event.
 
 ## StepContext
 
@@ -103,9 +107,21 @@ Targets that aren't there yet are awaited: the tour re-checks on DOM mutations, 
 | `'skip'`   | Move on: forward to the next visible step (completing the tour if there is none), or backward when navigating back.                                               |
 | `'error'`  | Abort the transition and emit an `error` event (`state.error` is set).                                                                                             |
 
-<Aside>
-Call `tour.refresh()` after a layout change that replaced the target element: it re-resolves the current step's target in place.
-</Aside>
+### Lost targets
+
+A target can also disappear *after* its step is shown: a list re-renders, a panel closes, a route
+swaps the layout. The tour notices (one shared `MutationObserver`, plus anchor changes) and:
+
+1. looks the target up again — a re-rendered element is picked up silently;
+2. otherwise applies `onTargetLost`:
+
+| Policy        | Behavior                                                                                                    |
+| ------------- | ----------------------------------------------------------------------------------------------------------- |
+| `'reresolve'` | Default. Hide the step (`phase: 'resolving'`) and wait up to `targetTimeout` for it to come back, then center it. |
+| `'center'`    | Keep the step on screen, centered (`state.targetMissing`).                                                  |
+| `'close'`     | Close the tour.                                                                                             |
+
+A `targetLost` event (`{ stepId, recovered }`) is emitted either way. `tour.refresh()` still forces a re-resolve.
 
 ## advanceOn
 

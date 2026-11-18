@@ -24,7 +24,11 @@ for a centered step.
 | `'#search'`                                | CSS selector. Also searches inside open shadow roots.                         |
 | `element`                                  | Any `Element`.                                                                |
 | `ref`                                      | A React ref (`{ current }`), read when the step starts.                       |
-| `anchor('billing')`                        | A named anchor registered from your components. Recommended.                  |
+| `anchor('mixer')`                          | A named anchor registered from your components. Recommended.                  |
+| `byTour('mixer')`                          | Elements with `data-tour="mixer"`. See [resilient targets](#resilient-targets). |
+| `byRole('button', { name: 'Export' })`     | By ARIA role and accessible name, like Testing Library.                       |
+| `byText('Bounce')`                         | The innermost element with this text.                                         |
+| `firstOf(a, b, c)`                         | The first candidate that resolves: a fallback chain.                          |
 | `() => document.querySelector('.row')`     | A function returning any of the above, called on resolution.                  |
 | `{ getBoundingClientRect }`                | A [virtual element](#virtual-elements): canvas regions, 3D objects, text…     |
 | `['#a', '#b']`                             | Several targets: the highlight covers the union of their rects.               |
@@ -56,6 +60,32 @@ function PlanPicker() {
 If the anchored component mounts after the step starts (a lazy route, a modal opening), the tour
 waits for it — see below. Anchors live in a registry; the global one is used by default, and
 `TourProvider` or `createTour({ anchors })` can scope them with `createAnchorRegistry()`.
+
+## Resilient targets
+
+Class names and DOM structure change with every refactor; what users see changes much less. These
+helpers find elements the way people (and Testing Library) do, and each returns an ordinary target:
+
+```ts
+import { byRole, byText, byTour, firstOf } from '@awesome-tour/react';
+
+{ target: byTour('mixer') }                                   // [data-tour="mixer"]
+{ target: byRole('slider', { name: 'Bass level' }) }          // role + accessible name
+{ target: byRole('button', { name: /export/i, within: '#transport' }) }
+{ target: byText('Bounce your first loop') }
+
+// Old builds still have #export-btn: try the stable locator first, fall back to the selector.
+{ target: firstOf(byTour('export'), byRole('button', { name: 'Export' }), '#export-btn') }
+```
+
+`byRole` understands explicit roles and the implicit ones of common elements (`<button>`, links,
+headings, form fields, `<nav>`, `<main>`…); the accessible name comes from `aria-labelledby`,
+`aria-label`, `<label>`, `alt`, then the text. All of them search open shadow roots and accept
+`within` to scope the search. Devtools' element picker suggests the most stable one for any
+element you click.
+
+An array means "all of these at once" (one highlight around them); `firstOf` means "the first one
+that exists".
 
 ## Async and missing targets
 

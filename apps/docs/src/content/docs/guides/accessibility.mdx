@@ -6,8 +6,15 @@ sidebar:
 ---
 
 import { Aside } from '~/components/mdx';
+import Preview from '../../../components/Preview.astro';
+import { AccessibilityDemo } from '../../../components/demos/AccessibilityDemo';
+import AccessibilityDemoSource from '../../../components/demos/AccessibilityDemo.tsx?raw';
 
 Accessibility is built into the primitives, so it's on even when you restyle everything.
+
+<Preview code={AccessibilityDemoSource} title="AccessibilityDemo.tsx">
+  <AccessibilityDemo client:visible />
+</Preview>
 
 ## Semantics
 

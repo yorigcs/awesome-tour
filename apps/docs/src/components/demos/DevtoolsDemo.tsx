@@ -1,33 +1,50 @@
 import { TourDevtools } from '@awesome-tour/devtools';
 import { createTour, Tour } from '@awesome-tour/react';
+import { LoopworkApp, parts } from '@loopwork';
 import { Wrench } from 'lucide-react';
 import { useState } from 'react';
 import { TourPopover } from '@/components/awesome-tour/tour';
-import { DemoFrame, MockApp, StartButton, worldButton } from './ui';
+import { DemoFrame, StartButton, worldButton } from './ui';
+
+const $ = parts('inspect');
 
 const tour = createTour({
   id: 'docs-devtools',
+  data: { plan: 'free' },
   steps: [
     {
       id: 'welcome',
-      title: 'Inspect me',
-      description: 'Open the devtools panel (bottom right) while the tour runs.',
-    },
-    { id: 'nav', target: '#devtools-nav', side: 'right', title: 'Navigation' },
-    {
-      id: 'beta',
-      target: '#devtools-beta',
-      title: 'Missing target',
-      description: 'Devtools flags targets that are not on the page.',
+      title: 'What’s new in 2.4',
+      description: 'Open the devtools panel (bottom right) while this runs.',
     },
     {
-      id: 'hidden',
-      target: '#devtools-new',
-      when: () => false,
-      title: 'Hidden',
-      description: 'when() returns false.',
+      id: 'sequencer',
+      target: $('sequencer'),
+      title: 'Swing per row',
+      description: 'Each drum row now has its own swing.',
     },
-    { id: 'stats', target: '#devtools-stat-1', title: 'Stats' },
+    {
+      // Not shipped to this build yet: devtools flags the missing target.
+      id: 'stems',
+      target: $('stems-export'),
+      title: 'Stems export',
+      description: 'One file per channel.',
+    },
+    {
+      // Pro only: `when` hides it on the free plan, and devtools says so.
+      id: 'mastering',
+      target: $('export'),
+      when: (ctx) => ctx.data.plan === 'pro',
+      title: 'Mastering presets',
+      description: 'Loudness targets for every platform.',
+    },
+    {
+      id: 'mixer',
+      target: $('mixer'),
+      side: 'left',
+      title: 'Wider meters',
+      description: 'Easier to read while you mix.',
+    },
   ],
 });
 
@@ -58,7 +75,7 @@ export function DevtoolsDemo() {
           </>
         }
       >
-        <MockApp id="devtools" />
+        <LoopworkApp scope="inspect" />
       </DemoFrame>
       <TourPopover />
       {show && <TourDevtools tours={[tour]} defaultOpen position="bottom-right" />}

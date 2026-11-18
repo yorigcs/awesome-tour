@@ -19,8 +19,10 @@ when it was snoozed.
   <RulesDemo client:visible />
 </Preview>
 
-Try it: on the **free** plan, "Open billing" does nothing — the audience rule blocks it. Switch to
-**pro** and open billing again. Snooze it, and watch the `snooze` rule count down.
+Try it: on the **free** plan, opening the Mix page does nothing — the audience rule blocks it.
+Switch to **pro** and open Mix again. Snooze it, then fast-forward the clock: the snooze, the
+one-day cooldown and the two-week schedule all expire on the demo's clock
+(`createTourManager({ clock })`).
 
 ## Rules
 
@@ -42,7 +44,8 @@ const tour = createTour({
 | ----------- | ----------------------------------------------------------------------------------- |
 | `audience`  | `audience({ data })` returns true (may be async — fetch a feature flag here).        |
 | `schedule`  | Now is between `startsAt` and `endsAt` (`Date`, ISO string or timestamp).            |
-| `once`      | The tour was never completed, skipped or dismissed. On by default; `once: false` to turn off. |
+| `once`      | `true` (default): never completed, skipped or dismissed. `'completed'`: never completed or skipped — closing it with <kbd>Esc</kbd> isn't final. `'seen'`: never shown. `false`: off. |
+| `dismissCooldownMs` | After a dismissal (close, <kbd>Esc</kbd>), at least this long has passed. Pairs with `once: 'completed'`. |
 | `maxShows`  | It was shown fewer than `maxShows` times.                                            |
 | `cooldown`  | At least `cooldownMs` passed since it was last shown.                                |
 | `snooze`    | Any `tour.snooze(ms)` has expired.                                                   |
@@ -75,6 +78,25 @@ function RemindLater() {
   const { tour } = useTour();
   return <button onClick={() => tour.snooze(24 * 60 * 60 * 1000)}>Remind me tomorrow</button>;
 }
+```
+
+## Across tours
+
+Rules are per tour; users experience all of them together. A manager-wide **cap** keeps automatic
+tours, announcements and surveys from piling up:
+
+```ts
+const manager = createTourManager({
+  tours,
+  cap: { perSession: 1, cooldownMs: 24 * 60 * 60_000 }, // one a session, a day apart
+});
+```
+
+When a tour's content changes, `frequency.perVersion` makes it eligible again for people who
+finished an older `version` — release notes that come back for each release:
+
+```ts
+createTour({ id: 'whats-new', version: 24, rules: { frequency: { once: true, perVersion: true } }, steps });
 ```
 
 ## Remembering impressions

@@ -14,6 +14,8 @@ export default defineConfig({
     alias: {
       // The shadcn registry: the playground uses exactly what `npx shadcn add` installs.
       '@': fileURLToPath(new URL('../../registry/src', import.meta.url)),
+      // Loopwork, the example app (shared with the docs demos).
+      '@loopwork': fileURLToPath(new URL('../../examples/loopwork/src/index.ts', import.meta.url)),
       '@awesome-tour/core/json': fileURLToPath(
         new URL('../../packages/core/src/json.ts', import.meta.url),
       ),

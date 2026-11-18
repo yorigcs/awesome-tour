@@ -33,8 +33,8 @@ All four are true together, and no single competitor can claim all of them:
 
 - React 18/19; Tailwind v4 + shadcn tokens for the registry and the docs demos; the library packages themselves ship no CSS.
 - Docs are a custom Astro 7 site (own layout, booklet-style navigation, Pagefind search, MDX); demos are React islands.
-- Bundle budgets enforced by size-limit (core 9 kB, react 18 kB, motion 4 kB, three 3 kB, devtools 6 kB, router 1 kB).
-- Open: roadmap features (eligibility rules, announcements, surveys, i18n…) are planned, not shipped — never present them as available.
+- Bundle budgets enforced by size-limit (`.size-limit.json` is the source of truth; core ~13 kB, react ~19 kB, react + surfaces ~24 kB, motion 4 kB, three 3 kB, devtools 7 kB, router 1 kB each).
+- Every demo runs on **Loopwork**, the fictional beat-maker in `examples/loopwork` (not published). The **stress lab** page proves the hard cases live: modal dialogs, transformed parents, iframes, shadow DOM, RTL, slow, virtualized and re-rendered targets.
 
 ## Brand Commitments
 

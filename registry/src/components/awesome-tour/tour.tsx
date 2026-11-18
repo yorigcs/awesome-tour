@@ -57,7 +57,11 @@ function TourSpotlight({ className, padding = 6, ...props }: TourSpotlightProps)
  * -----------------------------------------------------------------------------------------------*/
 
 const tourCardVariants = cva(
-  'relative rounded-xl border bg-popover text-popover-foreground shadow-xl outline-hidden origin-(--tour-content-transform-origin)',
+  [
+    'relative rounded-xl border bg-popover text-popover-foreground shadow-xl outline-hidden origin-(--tour-content-transform-origin)',
+    // Docked to the bottom on small screens (`layout="auto"`): full width, square bottom edge.
+    'data-[layout=sheet]:w-full data-[layout=sheet]:rounded-b-none data-[layout=sheet]:border-x-0 data-[layout=sheet]:border-b-0 data-[layout=sheet]:pb-[env(safe-area-inset-bottom)]',
+  ],
   {
     variants: {
       size: {
@@ -71,6 +75,7 @@ const tourCardVariants = cva(
           'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
           'data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2',
           'data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
+          'data-[layout=sheet]:slide-in-from-bottom-4 data-[layout=sheet]:zoom-in-100',
         ],
         false: '',
       },
@@ -98,12 +103,14 @@ function TourCard({
   arrow = true,
   sideOffset = 12,
   collisionPadding = 16,
+  layout = 'auto',
   children,
   ...props
 }: TourCardProps) {
   return (
     <Tour.Content
       data-slot="tour-card"
+      layout={layout}
       sideOffset={sideOffset}
       collisionPadding={collisionPadding}
       className={cn(tourCardVariants({ size, animated }), className)}

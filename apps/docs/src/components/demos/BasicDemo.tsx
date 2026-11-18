@@ -1,39 +1,45 @@
 import { createTour, Tour } from '@awesome-tour/react';
+import { LoopworkApp, parts } from '@loopwork';
 import { TourPopover } from '@/components/awesome-tour/tour';
-import { DemoFrame, MockApp, StartButton } from './ui';
+import { DemoFrame, StartButton } from './ui';
+
+const $ = parts('first-session');
 
 const tour = createTour({
   id: 'docs-basic',
   steps: [
     {
       id: 'welcome',
-      title: 'Welcome to Acme 👋',
-      description: 'A step without a target is centered. Use ← → or the buttons to move around.',
+      title: 'Your first session',
+      description:
+        'night-drive is an 8-bar sketch at 92 BPM. Four stops and you know your way around.',
     },
     {
-      id: 'nav',
-      target: '#basic-nav',
-      side: 'right',
-      title: 'Navigation',
-      description: 'Every area of the app lives here.',
+      id: 'transport',
+      target: $('transport'),
+      title: 'Transport',
+      description: 'Play, stop and record. The counter reads bar · beat · step.',
     },
     {
-      id: 'search',
-      target: '#basic-search',
-      title: 'Search',
-      description: 'Find anything in your workspace.',
+      id: 'arrangement',
+      target: $('arrangement'),
+      side: 'bottom',
+      title: 'Arrangement',
+      description: 'One lane per channel. Clips are the parts of your song, laid out bar by bar.',
     },
     {
-      id: 'new',
-      target: '#basic-new',
-      title: 'Create a project',
-      description: 'Projects group your reports and dashboards.',
+      id: 'backbone',
+      // Several targets in one step: the spotlight covers both rows.
+      target: [$('row-kick'), $('row-snare')],
+      title: 'Kick and snare',
+      description: 'The backbone of the beat. Click a cell to add a hit; each row is one bar.',
     },
     {
-      id: 'stats',
-      target: ['#basic-stat-1', '#basic-stat-3'],
-      title: 'Multiple targets',
-      description: 'A step can highlight several elements at once.',
+      id: 'mixer',
+      target: $('mixer'),
+      side: 'left',
+      title: 'Mixer',
+      description: 'Set each channel’s level. Drag a knob up, or focus it and use the arrow keys.',
     },
   ],
 });
@@ -42,7 +48,7 @@ export function BasicDemo() {
   return (
     <Tour.Root tour={tour}>
       <DemoFrame title="Live demo" actions={<StartButton />}>
-        <MockApp id="basic" />
+        <LoopworkApp scope="first-session" />
       </DemoFrame>
       <TourPopover />
     </Tour.Root>

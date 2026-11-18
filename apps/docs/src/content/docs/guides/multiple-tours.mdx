@@ -5,6 +5,10 @@ sidebar:
   order: 7
 ---
 
+import Preview from '../../../components/Preview.astro';
+import { MultipleToursDemo } from '../../../components/demos/MultipleToursDemo';
+import MultipleToursDemoSource from '../../../components/demos/MultipleToursDemo.tsx?raw';
+
 Real apps have many tours: the main onboarding, a "what's new" for each release, a tour per feature.
 `TourProvider` registers them and makes sure **only one is on screen at a time**.
 
@@ -31,6 +35,10 @@ function HelpMenu() {
   return <button onClick={() => start()}>Tour the reports page</button>;
 }
 ```
+
+<Preview code={MultipleToursDemoSource} title="MultipleToursDemo.tsx">
+  <MultipleToursDemo client:visible />
+</Preview>
 
 ## Queue and priority
 

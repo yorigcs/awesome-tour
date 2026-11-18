@@ -1,4 +1,5 @@
 import { createTour, Tour } from '@awesome-tour/react';
+import { LoopworkApp, parts } from '@loopwork';
 import { useState } from 'react';
 import { TourMotionPopover } from '@/components/awesome-tour/tour-motion';
 import {
@@ -8,35 +9,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { DemoFrame, MockApp, StartButton } from './ui';
+import { DemoFrame, StartButton } from './ui';
+
+const $ = parts('in-motion');
 
 const tour = createTour({
   id: 'docs-motion',
   steps: [
     {
-      id: 'nav',
-      target: '#motion-nav',
-      side: 'right',
-      title: 'Springs',
-      description: 'The cutout morphs between targets instead of jumping.',
+      id: 'play',
+      target: $('play'),
+      title: 'Press play',
+      description: 'Then go next and watch the spotlight ride the playhead.',
     },
     {
-      id: 'search',
-      target: '#motion-search',
-      title: 'Presets',
-      description: 'fade, scale, slide (direction from the placed side) or pop.',
+      id: 'playhead',
+      target: $('playhead'),
+      title: 'Springs follow',
+      description: 'The cutout chases a moving target with a spring instead of jumping.',
     },
     {
-      id: 'stat',
-      target: '#motion-stat-3',
-      title: 'animateStepChange',
-      description: 'The card animates in place between steps.',
+      id: 'clips',
+      target: [$('clip-c1'), $('clip-c3')],
+      title: 'Shapes morph',
+      description: 'Between steps the cutout morphs from one shape to the next.',
     },
     {
-      id: 'all',
-      target: ['#motion-stat-1', '#motion-stat-3'],
+      id: 'reduced',
+      target: $('mixer'),
+      side: 'left',
       title: 'Reduced motion',
-      description: 'Users who prefer reduced motion get instant transitions.',
+      description: 'With prefers-reduced-motion, every transition is instant.',
     },
   ],
 });
@@ -68,7 +71,7 @@ export function MotionDemo() {
           </>
         }
       >
-        <MockApp id="motion" />
+        <LoopworkApp scope="in-motion" />
       </DemoFrame>
       <TourMotionPopover preset={preset} />
     </Tour.Root>

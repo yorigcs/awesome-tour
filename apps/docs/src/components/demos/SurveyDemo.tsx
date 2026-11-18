@@ -1,64 +1,59 @@
 import { TourProvider, useTourManager } from '@awesome-tour/react';
-import { createSurvey, npsCategory, type SurveyAnswers } from '@awesome-tour/react/surfaces';
-import { MessageSquareHeart } from 'lucide-react';
-import { useState } from 'react';
+import { createSurvey, type SurveyAnswers } from '@awesome-tour/react/surfaces';
+import { LoopworkApp, useCreateLoopwork, useLoopwork } from '@loopwork';
+import { useEffect, useState } from 'react';
 import { SurveyCard } from '@/components/awesome-tour/survey';
-import { AppSurface, DemoFrame, worldButton } from './ui';
+import { DemoFrame } from './ui';
 
 let report: (answers: SurveyAnswers) => void = () => {};
 
 const survey = createSurvey({
-  id: 'docs-nps',
+  id: 'docs-csat',
   questions: [
-    { id: 'score', type: 'nps', prompt: 'How likely are you to recommend Acme to a colleague?' },
+    { id: 'sound', type: 'csat', prompt: 'How did the bounce sound?' },
     {
-      id: 'reason',
+      id: 'off',
       type: 'text',
-      prompt: 'What would make it a 10?',
-      placeholder: 'Optional',
+      prompt: 'What sounded off?',
+      placeholder: 'Too quiet, clipping, muddy low end…',
       optional: true,
-      when: (answers) => Number(answers.score) < 9,
+      when: (answers) => Number(answers.sound) <= 3,
     },
   ],
   onSubmit: (answers) => report(answers),
 });
 
-function Ask() {
+/** Asks right after the moment it's about: the first finished bounce. */
+function AskAfterBounce() {
   const manager = useTourManager();
-  return (
-    <button
-      type="button"
-      className={worldButton.primary}
-      onClick={() => void manager.start(survey.id, { force: true })}
-    >
-      <MessageSquareHeart aria-hidden="true" />
-      Ask for feedback
-    </button>
-  );
+  const status = useLoopwork((s) => s.export.status);
+  useEffect(() => {
+    if (status === 'done') void manager.start(survey.id, { force: true });
+  }, [status, manager]);
+  return null;
 }
 
 export function SurveyDemo() {
   const [answers, setAnswers] = useState<SurveyAnswers | null>(null);
   report = setAnswers;
-  const score = typeof answers?.score === 'number' ? answers.score : null;
+  const app = useCreateLoopwork({ route: 'mix' });
   return (
     <TourProvider tours={[survey]}>
       <DemoFrame
         title="Surveys"
-        actions={<Ask />}
         footer={
           <span aria-live="polite">
             {answers
-              ? `onSubmit(${JSON.stringify(answers)})${score != null ? ` → ${npsCategory(score)}` : ''}`
-              : 'Pick a score below 9 to get the follow-up question.'}
+              ? `onSubmit(${JSON.stringify(answers)})`
+              : 'Hit Bounce. Rate it 3 or lower to get the follow-up question.'}
           </span>
         }
       >
-        <AppSurface className="min-h-40 text-muted-foreground">
-          The survey opens in the corner as a non-modal panel: the page stays usable.
-        </AppSurface>
+        <LoopworkApp scope="feedback" app={app} layout="routed">
+          <AskAfterBounce />
+        </LoopworkApp>
       </DemoFrame>
-      <SurveyCard survey={survey} lowLabel="Not likely" highLabel="Very likely" />
+      <SurveyCard survey={survey} lowLabel="Rough" highLabel="Release-ready" />
     </TourProvider>
   );
 }

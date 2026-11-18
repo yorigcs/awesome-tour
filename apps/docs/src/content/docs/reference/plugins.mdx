@@ -24,7 +24,7 @@ interface TourPlugin<TId extends string = string, TData = any> {
 | ------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `setup`       | Once, synchronously, inside `createTour`.                              | Optional cleanup function, run by `tour.destroy()`. Use it to `tour.on(…)` / `tour.subscribe(…)`.                                                                   |
 | `beforeStart` | On every `start()` (also `restart()`, `goTo()` on an inactive tour), before the first step is resolved. Receives the `StartOptions`. | `false` blocks the start (status goes back to what it was). `{ stepId?, data? }` resumes at a step and/or merges data. `undefined` continues normally. |
-| `beforeStep`  | Before every transition, before the previous step is left. Receives `{ from, to, direction }`. | `false` cancels the transition (the current step stays). A step id redirects the transition there. `undefined` continues.                                |
+| `beforeStep`  | Before every transition, before the previous step is left. Receives `{ from, to, direction, signal }`; `signal` aborts when the transition is superseded. | `false` cancels the transition (the current step stays). A step id redirects the transition there. `undefined` continues.                                |
 
 Plugins run in array order. For `beforeStart`, an explicit `start({ stepId })` takes precedence over a `stepId` returned by a plugin; for `beforeStep`, a redirect returned by one plugin is the `to` the following plugins receive.
 

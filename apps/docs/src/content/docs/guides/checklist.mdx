@@ -9,8 +9,9 @@ import Preview from '../../../components/Preview.astro';
 import { ChecklistDemo } from '../../../components/demos/ChecklistDemo';
 import ChecklistDemoSource from '../../../components/demos/ChecklistDemo.tsx?raw';
 
-A checklist tracks onboarding across tours and actions: "Take the tour", "Invite a teammate",
-"Connect your data". It is headless like tours: `createChecklist` holds the state, `Checklist.*`
+A checklist tracks onboarding across tours and what the user does in your app: "Learn the beat
+grid", "Fill the bar", "Bounce your first loop". In the demo, each item completes a different
+way — with a tour, a predicate over the app's state, a signal, and by hand. It is headless like tours: `createChecklist` holds the state, `Checklist.*`
 renders it.
 
 <Preview code={ChecklistDemoSource} title="ChecklistDemo.tsx">

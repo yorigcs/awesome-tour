@@ -36,10 +36,12 @@ createTour({
 | `tour_dismissed` | The tour was closed (`close()`, Escape, ✕).                                   |
 | `tour_paused` / `tour_resumed` | `pause()` / `resume()`.                                         |
 | `target_missing` | A step's target wasn't found — a sign the tour is out of date.               |
+| `tour_goal_reached` | The tour's [goal](#goals) happened — with `goal`, `outcome` (how the run stood) and `durationMs` since the start. |
 | `tour_error`     | The tour stopped with an error.                                               |
 
 Every event carries `tourId`, `tourVersion`, `stepId`, `stepIndex`, `totalSteps`, `timestamp`, and
-the step's `meta`. End events add `durationMs` and `stepDurationMs`.
+the step's `meta`. End events add `durationMs` and `stepDurationMs`. Tours that are variants of an
+[experiment](../experiments/) also carry `experimentId` and `variant`.
 
 ```ts
 analytics(track, {
@@ -51,8 +53,30 @@ analytics(track, {
 Use step `meta` for labels your analytics team cares about:
 
 ```ts
-{ id: 'invite', target: '#invite', meta: { funnel: 'activation', label: 'invite-cta' } }
+{ id: 'bounce', target: '#bounce', meta: { funnel: 'activation', label: 'bounce-cta' } }
 ```
+
+## Goals
+
+"Completed the tour" is a vanity metric: people finish tours they ignored and skip tours they then
+follow. A `goal` names the action the tour exists to cause, and counts it whenever it happens —
+during the tour, or after it was finished, skipped or closed:
+
+```ts
+createTour({
+  id: 'first-session',
+  goal: {
+    name: 'first-bounce',
+    signal: 'bounced',            // tour.signal('bounced'), from your app
+    // or: event: { type: 'click', target: '#bounce' }, route: '/mix', when: (ctx) => …
+    within: 7 * 24 * 60 * 60_000, // stop watching after a week (default: while the page lives)
+  },
+  steps,
+});
+```
+
+The tour emits `goal` (`{ name, stepId, status, afterMs }`) once per run, and the analytics plugin
+turns it into `tour_goal_reached`. The demo above counts bounces next to the funnel.
 
 ## Ready-made adapters
 

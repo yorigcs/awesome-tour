@@ -28,6 +28,7 @@ import { TourProvider } from '@awesome-tour/react';
 | --------- | ---------------- | ------------------- | --------------------------------------------------------------------------- |
 | `tours`   | `TourInstance[]` | —                   | Tours to register. They are registered on the first render, so children can look them up right away. |
 | `router`  | `RouterAdapter`  | —                   | Router adapter set on every registered tour.                                |
+| `deepLink` | `boolean \| DeepLinkOptions` | —         | Start the tour named in the URL (`?tour=id&step=x`) once it's registered, then clean the URL. Options rename the parameters (`param`, `stepParam`) or keep them (`clean: false`). |
 | `anchors` | `AnchorRegistry` | the global registry | Registry used by `useTourAnchor`, `Tour.Anchor`, hotspots, inline tours and `TourTarget3D`. |
 | `manager` | `TourManager`    | created internally  | Bring your own manager, for example one created outside React with `createTourManager`. |
 

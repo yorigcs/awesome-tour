@@ -1,0 +1,36 @@
+---
+title: Stress lab
+description: The cases where product tours usually break — a modal dialog, a transformed parent, an iframe, shadow DOM, RTL, slow and virtualized targets, an element replaced mid-step — running live.
+sidebar:
+  order: 0.5
+---
+
+import Preview from '../../../components/Preview.astro';
+import { StressLabDemo } from '../../../components/demos/StressLabDemo';
+import StressLabDemoSource from '../../../components/demos/StressLabDemo.tsx?raw';
+
+Tour libraries rarely fail on the happy path. They fail when the target sits inside a Radix
+dialog, under a sticky header in a scrolling panel, inside a third-party iframe or a web component,
+in a right-to-left layout, in a list that only renders the rows on screen, or when the element is
+re-rendered while its step is open.
+
+Each case below runs the same Loopwork app and a tour aimed at the hard part. Pick one: the tour
+starts by itself.
+
+<Preview code={StressLabDemoSource} title="StressLabDemo.tsx">
+  <StressLabDemo client:visible />
+</Preview>
+
+## What makes each case work
+
+| Case                         | What the library does                                                                                                   | Guide                                                      |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Sticky header + scroll box   | Scrolls the nearest scrollable ancestors, honours `scroll-padding` and `scroll.offset`, re-measures on every scroll.    | [Targets](../targets/)                                     |
+| Inside a modal dialog        | `Tour.Portal` renders inside an open `<dialog>` or `aria-modal` dialog that holds the target, in the top layer.         | [Tour component](../../components/tour/)                   |
+| Transformed ancestor         | Positions against the target's real client rect, so transforms and zoom don't throw it off.                              | [Styling](../styling/)                                     |
+| Element in an iframe         | `frameTarget()` offsets the rect by the frame, scrolls both documents, and listens for `advanceOn` events in the frame. | [Targets](../targets/#async-and-missing-targets)           |
+| Shadow DOM                   | Selectors pierce every open shadow root; focus trap and `inert` cross them too.                                         | [Targets](../targets/)                                     |
+| Right to left                | `dir` comes from the document; `side: 'start' \| 'end'` and the arrow keys mirror.                                       | [Internationalization](../i18n/)                           |
+| Slow target                  | `onTargetMissing: 'wait'` keeps the step hidden (`phase: 'resolving'`) until the element exists.                        | [Steps reference](../../reference/steps/#missing-targets)  |
+| Virtualized list             | `beforeEnter` asks the app to render the row, then the target is awaited like any other.                                | [Steps reference](../../reference/steps/)                  |
+| Target re-rendered mid-step  | A shared observer notices the element left the page and picks up its replacement (`onTargetLost`).                      | [Steps reference](../../reference/steps/#lost-targets)     |

@@ -1,4 +1,5 @@
 import { useTour, useTourAnchor, useTourState } from '@awesome-tour/react';
+import { useLoopworkApp } from '@loopwork';
 import { Moon, Plus, RotateCcw, Search, Sparkles, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { HelpLauncher } from '@/components/awesome-tour/launcher';
@@ -18,7 +19,8 @@ function useDarkMode() {
 
 export function Topbar() {
   const { start, setData } = useTour<OnboardingData>('onboarding');
-  const role = useTourState((s) => (s.data as OnboardingData).role);
+  const plan = useTourState((s) => (s.data as OnboardingData).plan);
+  const app = useLoopworkApp().app;
   const createRef = useTourAnchor<HTMLButtonElement>('create');
   const [count, setCount] = useState(0);
   const [dark, setDark] = useDarkMode();
@@ -28,7 +30,7 @@ export function Topbar() {
         <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           id="search"
-          placeholder="Search…"
+          placeholder="Search sounds, projects…"
           aria-label="Search"
           className="pl-8"
           onChange={(e) => {
@@ -37,14 +39,18 @@ export function Topbar() {
         />
       </div>
       <label className="flex items-center gap-2 text-sm text-muted-foreground">
-        Role
+        Plan
         <select
-          value={role}
-          onChange={(e) => setData({ role: e.target.value as OnboardingData['role'] })}
+          value={plan}
+          onChange={(e) => {
+            const next = e.target.value as OnboardingData['plan'];
+            setData({ plan: next });
+            app.setPlan(next);
+          }}
           className="h-9 rounded-md border border-input bg-transparent px-2 text-sm text-foreground shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
         >
-          <option value="admin">admin</option>
-          <option value="member">member</option>
+          <option value="pro">pro</option>
+          <option value="free">free</option>
         </select>
       </label>
       <Button
@@ -52,11 +58,11 @@ export function Topbar() {
         variant="outline"
         onClick={() => {
           setCount((c) => c + 1);
-          gettingStarted.signal('project-created');
+          gettingStarted.signal('pattern-created');
         }}
       >
         <Plus />
-        New project{count ? ` (${count})` : ''}
+        New pattern{count ? ` (${count})` : ''}
       </Button>
       <Button onClick={() => start()}>
         <Sparkles />
@@ -70,7 +76,7 @@ export function Topbar() {
         side="bottom"
         className="relative right-auto bottom-auto size-9 shadow-none"
         tours={[
-          { tour: 'onboarding', title: 'Product tour', description: 'The essentials in a minute.' },
+          { tour: 'onboarding', title: 'Studio tour', description: 'The essentials in a minute.' },
           {
             tour: 'css-tour',
             title: 'CSS-only tour',

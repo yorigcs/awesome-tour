@@ -1,0 +1,52 @@
+---
+title: Help center
+description: One button for what's new (with an unread badge), the onboarding checklist, tours to replay and help links.
+sidebar:
+  order: 8
+---
+
+import { Tabs, TabItem, Code } from '~/components/mdx';
+import Preview from '../../../components/Preview.astro';
+import { HelpCenterDemo } from '../../../components/demos/HelpCenterDemo';
+import HelpCenterDemoSource from '../../../components/demos/HelpCenterDemo.tsx?raw';
+import componentSource from '../../../../../../registry/src/components/awesome-tour/help-center.tsx?raw';
+
+<Preview code={HelpCenterDemoSource} title="HelpCenterDemo.tsx">
+  <HelpCenterDemo client:visible />
+</Preview>
+
+## Installation
+
+<Tabs syncKey="pkg">
+  <TabItem label="pnpm">
+    ```sh
+    pnpm dlx shadcn@latest add @awesome-tour/help-center
+    ```
+  </TabItem>
+  <TabItem label="npm">
+    ```sh
+    npx shadcn@latest add @awesome-tour/help-center
+    ```
+  </TabItem>
+</Tabs>
+
+Built on the [Help launcher primitives](../../guides/launcher/) and a headless feed:
+
+```ts
+import { createFeed, localStorageAdapter } from '@awesome-tour/react';
+
+export const news = createFeed({
+  id: 'whats-new',
+  persistence: localStorageAdapter({ prefix: 'feed:' }),
+  items: await fetchReleaseNotes(), // { id, title, description?, date, href?, tour? }[]
+});
+
+<HelpCenter feed={news} checklist={gettingStarted} tours={[…]} links={[…]} />;
+```
+
+`createFeed` keeps read/unread state (`unread`, `markRead(id)`, `markAllRead()`, newest first);
+`useFeed(feed)` reads it in React. Items with a `tour` start it; items with an `href` link out.
+
+## Source
+
+<Code code={componentSource} lang="tsx" title="components/awesome-tour/help-center.tsx" />

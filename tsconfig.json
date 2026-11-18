@@ -14,8 +14,9 @@
       "@awesome-tour/testing/react": ["./packages/testing/src/react.tsx"],
       "@awesome-tour/testing/playwright": ["./packages/testing/src/playwright.ts"],
       "@awesome-tour/devtools": ["./packages/devtools/src/index.ts"],
-      "@/*": ["./registry/src/*"]
+      "@/*": ["./registry/src/*"],
+      "@loopwork": ["./examples/loopwork/src/index.ts"]
     }
   },
-  "include": ["./packages/*/src", "packages/*/test", "apps/*/src", "e2e", "*.ts"]
+  "include": ["./packages/*/src", "packages/*/test", "apps/*/src", "examples/*/src", "e2e", "*.ts"]
 }

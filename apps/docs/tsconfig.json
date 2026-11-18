@@ -13,6 +13,8 @@
       "@awesome-tour/react": ["../../packages/react/src/index.ts"],
       "@awesome-tour/motion": ["../../packages/motion/src/index.ts"],
       "@awesome-tour/devtools": ["../../packages/devtools/src/index.ts"],
+      "@awesome-tour/three": ["../../packages/three/src/index.ts"],
+      "@loopwork": ["../../examples/loopwork/src/index.ts"],
       "@/*": ["../../registry/src/*"],
       "~/*": ["./src/*"]
     }

@@ -21,12 +21,12 @@ import BasicDemoSource from '../../components/demos/BasicDemo.tsx?raw';
    import { createTour } from '@awesome-tour/react';
 
    export const onboarding = createTour({
-     id: 'onboarding',
+     id: 'first-session',
      steps: [
-       { id: 'welcome', title: 'Welcome to Acme 👋', description: 'A quick look around.' },
-       { id: 'nav', target: '#nav', side: 'right', title: 'Navigation' },
-       { id: 'search', target: '#search', title: 'Search' },
-       { id: 'new', target: '#new-project', title: 'Create a project' },
+       { id: 'welcome', title: 'Your first session', description: 'Four stops, then you’re making music.' },
+       { id: 'transport', target: '#transport', title: 'Transport' },
+       { id: 'arrangement', target: '#arrangement', title: 'Arrangement' },
+       { id: 'mixer', target: '[data-tour="mixer"]', side: 'left', title: 'Mixer' },
      ],
    });
    ```

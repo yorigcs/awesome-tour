@@ -32,27 +32,33 @@ import {
   useTourAnchor,
 } from '@awesome-tour/react';
 
-const onboarding = createTour({
-  id: 'onboarding',
+// The docs' demos all run on Loopwork, a small (fictional) beat-maker. So does this example.
+const firstSession = createTour({
+  id: 'first-session',
   version: 1, // bump to reset saved progress
   plugins: [persist(localStorageAdapter())],
   steps: [
-    { id: 'welcome', title: 'Welcome!', description: 'A quick look around.' }, // no target → centered
-    { id: 'nav', target: anchor('nav'), side: 'right', title: 'Navigation' }, // anchor, not a selector
-    { id: 'create', target: '#create', title: 'Create', advanceOn: { event: 'click' } }, // interactive
-    { id: 'admin', target: '#admin', when: (ctx) => ctx.data.isAdmin, title: 'Admin' }, // conditional
-    { id: 'reports', route: '/reports', target: '#chart', title: 'Reports' }, // multi-page
+    { id: 'welcome', title: 'Your first session' }, // no target → centered
+    { id: 'mixer', target: anchor('mixer'), side: 'start', title: 'Mixer' }, // anchor, not a selector
+    {
+      id: 'kick',
+      target: '#row-kick',
+      title: 'Lay down four kicks',
+      advanceOn: { when: () => project.kicks() >= 4 }, // waits for the user to do it
+    },
+    { id: 'stems', target: '#stems', when: (ctx) => ctx.data.plan === 'pro', title: 'Stems' }, // conditional
+    { id: 'bounce', route: '/mix', target: '#bounce', title: 'Bounce it' }, // multi-page
   ],
 });
 
-function Nav() {
-  const ref = useTourAnchor('nav');
-  return <nav ref={ref}>…</nav>;
+function Mixer() {
+  const ref = useTourAnchor('mixer');
+  return <section ref={ref}>…</section>;
 }
 
 export function App() {
   return (
-    <Tour.Root tour={onboarding}>
+    <Tour.Root tour={firstSession}>
       <Tour.Trigger>Take the tour</Tour.Trigger>
       <Tour.Portal>
         <Tour.Overlay className="overlay" />
@@ -75,9 +81,9 @@ export function App() {
 Steps can also be declared in JSX — their children become the step content:
 
 ```tsx
-<Tour.Root id="inline" defaultOpen>
-  <Tour.Step id="one" target="#stats" title="Your numbers">
-    <p>Any React content.</p>
+<Tour.Root id="jam" modal={false} defaultOpen>
+  <Tour.Step id="hats" target="#row-hat" title="Hats on the off-beats">
+    <p>Any React content. Change a prop and the step updates.</p>
   </Tour.Step>
   …
 </Tour.Root>;
@@ -85,19 +91,22 @@ Steps can also be declared in JSX — their children become the step content:
 
 ## Core concepts
 
-| Feature           | How                                                                                                                                                                                                     |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Targets           | CSS selector (pierces open shadow roots), element, ref, function, `anchor(id)`, virtual element (`getBoundingClientRect`), or an array (union rect).                                                    |
-| Missing targets   | `onTargetMissing: 'center' \| 'wait' \| 'skip' \| 'error'`, `targetTimeout` (default 3000 ms). Targets that appear later are awaited (MutationObserver + anchor registry).                              |
-| Conditional steps | `when(ctx)` (sync or async).                                                                                                                                                                            |
-| Branching         | `next: 'stepId' \| null \| (ctx) => id`. `prev()` walks back through the path actually taken.                                                                                                           |
-| Interactive steps | `advanceOn: { event }`, `{ when }`, `{ signal }` (+ `tour.signal(name)`), optional `to`.                                                                                                                |
-| Multi-page        | `route` + a `RouterAdapter` (`createBrowserRouter()` or ~10 lines for your router). Navigating away hides the step until the user returns.                                                              |
-| Lifecycle         | `beforeEnter` / `afterLeave` per step; `start / next / prev / goTo / pause / resume / close / skip / complete / restart`. Superseded transitions are aborted.                                           |
-| Persistence       | `persist(adapter, { resume, once, persistData, sync })`. Adapters: `localStorageAdapter`, `memoryStorage`, or any async backend. Versioned; cross-tab sync.                                             |
-| Plugins           | `beforeStart` (block / resume), `beforeStep` (cancel / redirect), `setup` (subscribe to events).                                                                                                        |
-| Analytics         | `analytics(track, { includeData, filter })` emits `tour_started`, `step_viewed` (with time on the previous step), `tour_completed` / `tour_skipped` / `tour_dismissed`, `target_missing`, `tour_error`. |
-| Many tours        | `createTourManager` / `<TourProvider tours>`: one tour on screen, others queued by `priority`, `interrupt` to preempt.                                                                                  |
+| Feature           | How                                                                                                                                                                                                                                                   |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Targets           | CSS selector (pierces open shadow roots), element, ref, function, `anchor(id)`, virtual element (`getBoundingClientRect`), or an array (union rect).                                                                                                  |
+| Missing targets   | `onTargetMissing: 'center' \| 'wait' \| 'skip' \| 'error'`, `targetTimeout` (default 3000 ms). Targets that appear later are awaited (one shared MutationObserver + anchor registry).                                                                 |
+| Lost targets      | A target removed while its step is shown is re-resolved (a re-rendered element is picked up), then `onTargetLost: 'reresolve' \| 'center' \| 'close'`.                                                                                                |
+| Hard places       | Targets inside Radix/vaul/native modal dialogs (the tour renders in their top layer), iframes (`frameTarget`), open shadow roots, transformed parents, nested scroll boxes, RTL (`side: 'start' \| 'end'`).                                           |
+| Conditional steps | `when(ctx)` (sync or async).                                                                                                                                                                                                                          |
+| Branching         | `next: 'stepId' \| null \| (ctx) => id`. `prev()` walks back through the path actually taken.                                                                                                                                                         |
+| Interactive steps | `advanceOn: { event }`, `{ when }`, `{ signal }` (+ `tour.signal(name)`), optional `to`.                                                                                                                                                              |
+| Multi-page        | `route` + a `RouterAdapter` (`createBrowserRouter()` or ~10 lines for your router). Navigating away hides the step until the user returns.                                                                                                            |
+| Lifecycle         | `beforeEnter` (with `enterTimeout`) / `beforeLeave` / `afterLeave` per step; `start / next / prev / goTo / pause / resume / close / skip / complete / restart`. Superseded transitions are aborted; a failed one puts the previous step back.         |
+| Persistence       | `persist(adapter, { resume, once, persistData, sync, migrate, onError })`. Adapters: `localStorageAdapter`, `memoryStorage`, `httpAdapter` (retries, `keepalive` flush, polling), or any async backend. Versioned with migrations; one tab at a time. |
+| Plugins           | `beforeStart` (block / resume), `beforeStep` (cancel / redirect), `setup` (subscribe to events).                                                                                                                                                      |
+| Analytics         | `analytics(track, { includeData, filter })` emits `tour_started`, `step_viewed` (with time on the previous step), `tour_completed` / `tour_skipped` / `tour_dismissed`, `target_missing`, `tour_error`.                                               |
+| Many tours        | `createTourManager` / `<TourProvider tours>`: one tour on screen, others queued by `priority`, `interrupt` to preempt.                                                                                                                                |
+| Display rules     | `rules: { audience, schedule, frequency: { once, maxShows, cooldownMs, dismissCooldownMs }, trigger }`, `manager.explain(id)`, a `clock` to preview campaigns.                                                                                        |
 
 State is an immutable snapshot (`tour.getState()`, `tour.subscribe()`); events via `tour.on('stepChange' | 'complete' | 'skip' | …)`.
 
@@ -140,12 +149,12 @@ Presets: `fade`, `scale`, `slide` (direction from the placed side), `pop`, or a 
 import { TourTarget3D, useTourCamera } from '@awesome-tour/three';
 
 <Canvas>
-  <TourTarget3D name="engine">
-    <Engine />
+  <TourTarget3D name="pads">
+    <DrumPads />
   </TourTarget3D>
-  <CameraRig /> {/* useTourCamera({ engine: { position: [3, 2, 4], lookAt: [0, 0, 0] } }) */}
+  <CameraRig /> {/* useTourCamera({ pads: { position: [0, 3, 3], lookAt: [0, 0, 0] } }) */}
 </Canvas>;
-// step: { id: 'engine', target: anchor('engine') }
+// step: { id: 'pads', target: anchor('pads') }
 ```
 
 The object's bounding box is projected to the screen on demand, so the DOM overlay and popover follow it as the camera moves.
@@ -174,21 +183,22 @@ Steps with `route: '/projects/:id'` navigate there first; `:params` and `*` matc
 ```tsx
 import { Checklist, createChecklist, localStorageAdapter } from '@awesome-tour/react';
 
-const gettingStarted = createChecklist({
-  id: 'getting-started',
+const firstLoop = createChecklist({
+  id: 'first-loop',
   persistence: localStorageAdapter({ prefix: 'checklist:' }),
   onComplete: () => confetti(),
   items: [
-    { id: 'tour', tour: 'onboarding', meta: { title: 'Take the tour' } }, // completed by a tour
-    { id: 'invite', signal: 'invited', meta: { title: 'Invite a teammate' } }, // gettingStarted.signal('invited')
-    { id: 'profile', when: () => user.hasAvatar, meta: { title: 'Add a photo' } },
+    { id: 'tour', tour: 'first-session', meta: { title: 'Learn the beat grid' } }, // completed by a tour
+    { id: 'bass', signal: 'bass-up', meta: { title: 'Bring the bass up' } }, // firstLoop.signal('bass-up')
+    { id: 'drums', when: () => project.hits() >= 20, meta: { title: 'Fill the bar' } }, // refresh()
+    { id: 'bounce', meta: { title: 'Bounce your first loop' } }, // firstLoop.complete('bounce')
   ],
 });
 
-<Checklist.Root checklist={gettingStarted}>
+<Checklist.Root checklist={firstLoop}>
   <Checklist.Progress />
   <Checklist.List>
-    {gettingStarted.getItems().map((item) => (
+    {firstLoop.getItems().map((item) => (
       <Checklist.Item key={item.id} value={item.id}>
         <Checklist.ItemIndicator>✓</Checklist.ItemIndicator>
         <Checklist.ItemTrigger>{item.meta.title}</Checklist.ItemTrigger>{' '}
@@ -219,12 +229,19 @@ It stays usable during modal tours thanks to `data-tour-keep`: any element with 
 
 ## Development
 
+The demos, the playground and the docs' landing page all run on **Loopwork**, a fictional beat-maker
+that lives in [`examples/loopwork`](./examples/loopwork) (transport, arrangement, step sequencer,
+mixer with keyboard knobs, a 400-sample virtualized browser, a Radix effects dialog). It's a real
+app to tour, not a mock, and the [stress lab](https://yorigcs.github.io/awesome-tour/guides/stress-lab/)
+runs it through the cases where tours usually break.
+
 ```bash
 pnpm install
-pnpm dev         # playground at http://localhost:5173 (uses package sources)
+pnpm dev         # playground (the full Loopwork app) at http://localhost:5173
 pnpm docs:dev    # docs site at http://localhost:4321/awesome-tour/
 pnpm test        # unit tests (Vitest + Testing Library + axe)
-pnpm e2e         # Playwright against the built playground
+pnpm e2e         # Playwright (Chromium) against the built playground and docs
+PW_CROSS=1 pnpm e2e  # + the @cross tests in Firefox and WebKit (always on in CI)
 pnpm typecheck && pnpm lint && pnpm build && pnpm size
 pnpm changeset   # describe a change for the next release
 pnpm check:packages  # publint + Are The Types Wrong on the built packages
