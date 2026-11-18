@@ -20,7 +20,7 @@ const onboarding = createTour({
 
 ## persist(adapter, options?)
 
-A [plugin](../plugins/) that writes `{ status, stepId, version }` to the adapter whenever the status or step changes, and reads it back in `beforeStart`.
+A [plugin](../plugins/) that writes `{ status, stepId, version }` to the adapter whenever the status or step changes, and reads it back in `beforeStart`. For tours with a [`goal`](../../guides/analytics/#goals) it also saves when the last run started and whether the goal was reached, and resumes watching it on the next visit (`tour.trackGoal`).
 
 | Option        | Type                         | Default        | Description                                                                                                         |
 | ------------- | ---------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------- |

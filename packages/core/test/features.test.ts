@@ -239,3 +239,42 @@ describe('JSON: locators, goal, new options', () => {
     ]);
   });
 });
+
+describe('goals across reloads', () => {
+  it('persist() keeps watching a goal from an earlier visit, and counts it once', async () => {
+    const { persist } = await import('../src');
+    const storage = memoryStorage<any>();
+    const make = () =>
+      createTour({
+        id: 'reload-goal',
+        goal: { signal: 'bounced', within: 60_000 },
+        plugins: [persist(storage)],
+        steps: [{ id: 'a' }],
+      });
+    const first = make();
+    await first.start();
+    first.complete();
+    await tick();
+    first.destroy();
+
+    // Next visit: the tour won't start again (completed), but the goal is still open.
+    const second = make();
+    const goal = vi.fn();
+    second.on('goal', goal);
+    await tick();
+    second.signal('bounced');
+    expect(goal).toHaveBeenCalledTimes(1);
+    expect(goal.mock.calls[0]![0].afterMs).toBeGreaterThanOrEqual(0);
+    await tick();
+    expect((await storage.get('reload-goal'))?.goal?.reachedAt).toEqual(expect.any(Number));
+    second.destroy();
+
+    // And after that, it isn't counted again.
+    const third = make();
+    const again = vi.fn();
+    third.on('goal', again);
+    await tick();
+    third.signal('bounced');
+    expect(again).not.toHaveBeenCalled();
+  });
+});

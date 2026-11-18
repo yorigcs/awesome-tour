@@ -665,15 +665,15 @@ export function createTour<
   const goalSignals = new Set<string>();
 
   /** Arms the goal for a new run: it outlives the tour until reached or `within` expires. */
-  function armGoal() {
+  function armGoal(startedAt = Date.now()) {
     const goal = options.goal;
     goalController?.abort();
     goalSignals.clear();
     if (!goal) return;
+    if (goal.within != null && Date.now() - startedAt >= goal.within) return;
     const controller = new AbortController();
     goalController = controller;
     const { signal } = controller;
-    const startedAt = Date.now();
     const reach = () => {
       if (signal.aborted) return;
       controller.abort();
@@ -686,7 +686,7 @@ export function createTour<
       });
     };
     if (goal.within != null) {
-      const timer = setTimeout(() => controller.abort(), goal.within);
+      const timer = setTimeout(() => controller.abort(), goal.within - (Date.now() - startedAt));
       signal.addEventListener('abort', () => clearTimeout(timer));
     }
     if (goal.signal) goalSignals.add(goal.signal);
@@ -975,6 +975,11 @@ export function createTour<
     },
     refresh,
     setRouter,
+    trackGoal(since) {
+      // Resume watching a run's goal (after a reload); never re-arms one that is being watched.
+      if (!options.goal || (goalController && !goalController.signal.aborted)) return;
+      armGoal(since);
+    },
     use(plugin) {
       plugins.push(plugin);
       const cleanup = plugin.setup?.(tour);

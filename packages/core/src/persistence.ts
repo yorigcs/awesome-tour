@@ -7,6 +7,8 @@ export interface PersistedTourState {
   version: number;
   data?: unknown;
   updatedAt: number;
+  /** The last run's goal: when it was armed, and when it was reached. */
+  goal?: { since: number; reachedAt?: number };
 }
 
 /** Storage backend. Can be sync (localStorage) or async (your API). */
@@ -374,12 +376,20 @@ export function persist(adapter: PersistenceAdapter, options: PersistOptions = {
       let last = '';
       /** Set while another tab takes the tour over: this tab's pause must not be saved. */
       let yielding = false;
-      const unsubscribe = tour.subscribe(() => {
+      /** The goal of the latest run, kept across reloads so it's counted when it happens later. */
+      let goal: PersistedTourState['goal'];
+      /** What an earlier visit saved: rewritten as-is (plus the goal) while this tab hasn't run it. */
+      let previous: PersistedTourState | null = null;
+      const write = () => {
         const { status, stepId, data } = tour.getState();
-        if (!PERSISTED.includes(status) || yielding || frozen.has(key)) return;
-        const signature = `${status}|${stepId}`;
-        if (signature === last && !persistData) return;
-        last = signature;
+        if (yielding || frozen.has(key)) return;
+        if (!PERSISTED.includes(status)) {
+          if (previous && goal) {
+            const saved = { ...previous, goal, updatedAt: Date.now() };
+            guard(key, 'set', () => adapter.set(key, saved));
+          }
+          return;
+        }
         guard(key, 'set', () =>
           adapter.set(key, {
             status,
@@ -387,9 +397,38 @@ export function persist(adapter: PersistenceAdapter, options: PersistOptions = {
             version: tour.version,
             updatedAt: Date.now(),
             ...(persistData ? { data } : {}),
+            ...(goal ? { goal } : {}),
           }),
         );
+      };
+      const unsubscribe = tour.subscribe(() => {
+        const { status, stepId } = tour.getState();
+        const signature = `${status}|${stepId}`;
+        if (signature === last && !persistData) return;
+        last = signature;
+        write();
       });
+      const offGoal = [
+        tour.on('start', () => {
+          goal = { since: Date.now() };
+          write();
+        }),
+        tour.on('goal', () => {
+          goal = { ...(goal ?? { since: Date.now() }), reachedAt: Date.now() };
+          write();
+        }),
+      ];
+      // A run from an earlier visit whose goal hasn't happened yet: keep watching for it.
+      Promise.resolve()
+        .then(() => adapter.get(key))
+        .then((saved) => {
+          if (!isPersistedTourState(saved) || saved.version !== tour.version) return;
+          previous = saved;
+          if (!saved.goal || saved.goal.reachedAt != null || goal) return;
+          goal = saved.goal;
+          tour.trackGoal(saved.goal.since);
+        })
+        .catch((error) => onError(error, { key, operation: 'get' }));
       const unsubscribeRemote =
         sync && adapter.subscribe
           ? adapter.subscribe(key, (value) => {
@@ -423,7 +462,7 @@ export function persist(adapter: PersistenceAdapter, options: PersistOptions = {
       return () => {
         unsubscribe();
         unsubscribeRemote?.();
-        for (const off of offs) off();
+        for (const off of [...offs, ...offGoal]) off();
         channel?.close();
       };
     },

@@ -38,6 +38,8 @@ export interface TourManager {
   startIfEligible(id: string, options?: QueueOptions): Promise<boolean>;
   /** Fire tours whose `rules.trigger.signal` is `name`. */
   signal(name: string): void;
+  /** What the manager remembers about a tour: shows, outcome, snooze (from `impressions`). */
+  getImpression(id: string): Promise<ImpressionRecord>;
   /** Forget impressions (shows, outcome, snooze) of one tour, or of all. */
   resetImpressions(id?: string): Promise<void>;
   getState(): TourManagerState;
@@ -301,6 +303,9 @@ export function createTourManager(options: TourManagerOptions = {}): TourManager
     },
     signal(name) {
       for (const entry of tours.values()) entry.live?.triggers.onSignal(name);
+    },
+    async getImpression(id) {
+      return (await impressions.get(id)) ?? emptyImpression();
     },
     async resetImpressions(id) {
       const ids = id ? [id] : [...tours.keys()];

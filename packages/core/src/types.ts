@@ -455,6 +455,12 @@ export interface Tour<TStep extends StepDefinition<TData, string> = StepDefiniti
    * Attach a plugin after creation (runs its `setup`). Returns a function that detaches it and runs
    * its cleanup. Frameworks use this to tie plugins to a component's lifetime.
    */
+  /**
+   * Watch the tour's `goal` for a run that started at `since` (a timestamp), e.g. after a reload
+   * when the tour itself won't start again. `persist()` does this for you. No-op without a goal,
+   * once `within` has passed, or while a goal is already being watched.
+   */
+  trackGoal(since: number): void;
   use(plugin: TourPlugin<any, TData>): () => void;
   destroy(): void;
 }

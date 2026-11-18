@@ -69,6 +69,7 @@ All navigation methods are safe to call at any time: they no-op when they don't 
 | `getCurrentStep()`     | `TStep \| undefined`          | The current step.                                                                                   |
 | `setSteps(steps)`      | `void`                        | Replace the step list (used by declarative `<Tour.Step>`).                                          |
 | `isOpen()`             | `boolean`                     | `status === 'active'`.                                                                              |
+| `trackGoal(since)`     | `void`                        | Watch the tour's `goal` for a run that started at `since` (after a reload, when the tour won't start again). `persist()` does it for you. |
 | `use(plugin)`          | `() => void`                  | Attach a plugin after creation (runs its `setup`); the returned function detaches it. `Tour.Root` uses it to tie inline plugins to the component. |
 | `destroy()`            | `void`                        | Abort transitions, detach plugins, leave the current step (its `afterLeave` gets an aborted signal), set an open tour to `closed` without emitting `close`, then drop every listener and signal. |
 

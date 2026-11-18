@@ -76,7 +76,9 @@ createTour({
 ```
 
 The tour emits `goal` (`{ name, stepId, status, afterMs }`) once per run, and the analytics plugin
-turns it into `tour_goal_reached`. The demo above counts bounces next to the funnel.
+turns it into `tour_goal_reached`. With [`persist()`](../../reference/persistence/), the run's goal
+survives reloads: a user who finishes the tour today and bounces tomorrow still converts (within
+`within`), and is counted once. Without it, call `tour.trackGoal(since)` yourself. The demo above counts bounces next to the funnel.
 
 ## Ready-made adapters
 

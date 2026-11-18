@@ -71,3 +71,30 @@ describe('TourProvider deepLink', () => {
     expect(window.location.search).toBe('');
   });
 });
+
+describe('launcher status across sessions', () => {
+  it('a tour completed in an earlier session is "done", not "new"', async () => {
+    const { useLauncherStatus } = await import('../src/surfaces');
+    const impressions = memoryStorage<any>();
+    impressions.set('old-tour', {
+      shows: 1,
+      lastShownAt: 1,
+      finished: true,
+      outcome: 'completed',
+      snoozedUntil: null,
+    });
+    const tour = createTour({ id: 'old-tour', steps: [{ id: 'a' }] });
+    const fresh = createTour({ id: 'fresh-tour', steps: [{ id: 'a' }] });
+    function Status({ id }: { id: string }) {
+      return <span data-testid={id}>{useLauncherStatus(id)}</span>;
+    }
+    render(
+      <TourProvider tours={[tour, fresh]} impressions={impressions}>
+        <Status id="old-tour" />
+        <Status id="fresh-tour" />
+      </TourProvider>,
+    );
+    expect(await screen.findByText('done')).toHaveAttribute('data-testid', 'old-tour');
+    expect(screen.getByTestId('fresh-tour').textContent).toBe('new');
+  });
+});

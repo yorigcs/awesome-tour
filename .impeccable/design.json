@@ -1,85 +1,437 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-15T00:00:00Z",
+  "generatedAt": "2026-11-18T03:16:08Z",
   "title": "Design System: awesome-tour",
   "extensions": {
     "colorMeta": {
-      "marker": { "role": "primary", "displayName": "Marker Yellow", "canonical": "#ffd23f", "tonalRamp": ["oklch(0.30 0.06 92)", "oklch(0.42 0.09 92)", "oklch(0.55 0.12 92)", "oklch(0.68 0.15 92)", "oklch(0.80 0.17 92)", "oklch(0.88 0.17 92)", "oklch(0.93 0.11 92)", "oklch(0.97 0.05 92)"] },
-      "marker-ink": { "role": "primary", "displayName": "Marker Ink", "canonical": "#111111" },
-      "dont": { "role": "tertiary", "displayName": "Don't Red", "canonical": "#c8261d", "tonalRamp": ["oklch(0.25 0.09 29)", "oklch(0.35 0.13 29)", "oklch(0.45 0.17 29)", "oklch(0.54 0.20 29)", "oklch(0.64 0.19 29)", "oklch(0.74 0.14 29)", "oklch(0.86 0.07 29)", "oklch(0.95 0.03 29)"] },
-      "dont-dark": { "role": "tertiary", "displayName": "Don't Red (dark theme)", "canonical": "#ff6b5f" },
-      "paper": { "role": "neutral", "displayName": "Paper", "canonical": "#ffffff" },
-      "paper-2": { "role": "neutral", "displayName": "Tinted Paper", "canonical": "#f2f2ef" },
-      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "#111111", "tonalRamp": ["oklch(0.15 0.003 100)", "oklch(0.25 0.003 100)", "oklch(0.35 0.004 100)", "oklch(0.45 0.005 100)", "oklch(0.60 0.006 100)", "oklch(0.75 0.006 100)", "oklch(0.88 0.005 100)", "oklch(0.95 0.004 100)"] },
-      "ink-2": { "role": "neutral", "displayName": "Pencil", "canonical": "#4a4a47" },
-      "rule": { "role": "neutral", "displayName": "Faint Rule", "canonical": "#d6d6d1" },
-      "paper-dark": { "role": "neutral", "displayName": "Paper (dark theme)", "canonical": "#131312" },
-      "paper-2-dark": { "role": "neutral", "displayName": "Tinted Paper (dark theme)", "canonical": "#1d1d1b" },
-      "ink-dark": { "role": "neutral", "displayName": "Ink (dark theme)", "canonical": "#f1f1ec" },
-      "ink-2-dark": { "role": "neutral", "displayName": "Pencil (dark theme)", "canonical": "#b9b9b1" },
-      "rule-dark": { "role": "neutral", "displayName": "Faint Rule (dark theme)", "canonical": "#3a3a37" },
-      "tour-overlay": { "role": "neutral", "displayName": "Tour Overlay", "canonical": "rgb(17 17 17 / 0.62)" },
-      "tour-overlay-dark": { "role": "neutral", "displayName": "Tour Overlay (dark theme)", "canonical": "rgb(0 0 0 / 0.72)" },
-      "app-background": { "role": "neutral", "displayName": "Your App: Background", "canonical": "#ffffff" },
-      "app-foreground": { "role": "neutral", "displayName": "Your App: Foreground / Primary", "canonical": "#18181b", "tonalRamp": ["#18181b", "#27272a", "#3f3f46", "#63636b", "#a1a1aa", "#e4e4e7", "#f4f4f5", "#fafafa"] },
-      "app-muted": { "role": "neutral", "displayName": "Your App: Muted", "canonical": "#f4f4f5" },
-      "app-muted-foreground": { "role": "neutral", "displayName": "Your App: Muted Text", "canonical": "#63636b" },
-      "app-border": { "role": "neutral", "displayName": "Your App: Border", "canonical": "#e4e4e7" },
-      "app-ring": { "role": "neutral", "displayName": "Your App: Ring", "canonical": "#a1a1aa" },
-      "app-sidebar": { "role": "neutral", "displayName": "Your App: Sidebar", "canonical": "#fafafa" },
-      "app-background-dark": { "role": "neutral", "displayName": "Your App: Background (dark)", "canonical": "#18181b" },
-      "app-card-dark": { "role": "neutral", "displayName": "Your App: Card (dark)", "canonical": "#1f1f23" },
-      "app-foreground-dark": { "role": "neutral", "displayName": "Your App: Foreground (dark)", "canonical": "#fafafa" },
-      "app-muted-dark": { "role": "neutral", "displayName": "Your App: Muted (dark)", "canonical": "#27272a" },
-      "app-muted-foreground-dark": { "role": "neutral", "displayName": "Your App: Muted Text (dark)", "canonical": "#a1a1aa" },
-      "app-border-dark": { "role": "neutral", "displayName": "Your App: Border (dark)", "canonical": "#33333a" }
+      "marker": {
+        "role": "primary",
+        "displayName": "Marker Yellow",
+        "canonical": "#ffd23f",
+        "tonalRamp": [
+          "oklch(0.30 0.06 92)",
+          "oklch(0.42 0.09 92)",
+          "oklch(0.55 0.12 92)",
+          "oklch(0.68 0.15 92)",
+          "oklch(0.80 0.17 92)",
+          "oklch(0.88 0.17 92)",
+          "oklch(0.93 0.11 92)",
+          "oklch(0.97 0.05 92)"
+        ]
+      },
+      "marker-ink": {
+        "role": "primary",
+        "displayName": "Marker Ink",
+        "canonical": "#111111"
+      },
+      "dont": {
+        "role": "tertiary",
+        "displayName": "Don't Red",
+        "canonical": "#c8261d",
+        "tonalRamp": [
+          "oklch(0.25 0.09 29)",
+          "oklch(0.35 0.13 29)",
+          "oklch(0.45 0.17 29)",
+          "oklch(0.54 0.20 29)",
+          "oklch(0.64 0.19 29)",
+          "oklch(0.74 0.14 29)",
+          "oklch(0.86 0.07 29)",
+          "oklch(0.95 0.03 29)"
+        ]
+      },
+      "dont-dark": {
+        "role": "tertiary",
+        "displayName": "Don't Red (dark theme)",
+        "canonical": "#ff6b5f"
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#ffffff"
+      },
+      "paper-2": {
+        "role": "neutral",
+        "displayName": "Tinted Paper",
+        "canonical": "#f2f2ef"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#111111",
+        "tonalRamp": [
+          "oklch(0.15 0.003 100)",
+          "oklch(0.25 0.003 100)",
+          "oklch(0.35 0.004 100)",
+          "oklch(0.45 0.005 100)",
+          "oklch(0.60 0.006 100)",
+          "oklch(0.75 0.006 100)",
+          "oklch(0.88 0.005 100)",
+          "oklch(0.95 0.004 100)"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Pencil",
+        "canonical": "#4a4a47"
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Faint Rule",
+        "canonical": "#d6d6d1"
+      },
+      "paper-dark": {
+        "role": "neutral",
+        "displayName": "Paper (dark theme)",
+        "canonical": "#131312"
+      },
+      "paper-2-dark": {
+        "role": "neutral",
+        "displayName": "Tinted Paper (dark theme)",
+        "canonical": "#1d1d1b"
+      },
+      "ink-dark": {
+        "role": "neutral",
+        "displayName": "Ink (dark theme)",
+        "canonical": "#f1f1ec"
+      },
+      "ink-2-dark": {
+        "role": "neutral",
+        "displayName": "Pencil (dark theme)",
+        "canonical": "#b9b9b1"
+      },
+      "rule-dark": {
+        "role": "neutral",
+        "displayName": "Faint Rule (dark theme)",
+        "canonical": "#3a3a37"
+      },
+      "tour-overlay": {
+        "role": "neutral",
+        "displayName": "Tour Overlay",
+        "canonical": "rgb(17 17 17 / 0.62)"
+      },
+      "tour-overlay-dark": {
+        "role": "neutral",
+        "displayName": "Tour Overlay (dark theme)",
+        "canonical": "rgb(0 0 0 / 0.72)"
+      },
+      "app-background": {
+        "role": "neutral",
+        "displayName": "Your App: Background",
+        "canonical": "#ffffff"
+      },
+      "app-foreground": {
+        "role": "neutral",
+        "displayName": "Your App: Foreground / Primary",
+        "canonical": "#18181b",
+        "tonalRamp": [
+          "#18181b",
+          "#27272a",
+          "#3f3f46",
+          "#63636b",
+          "#a1a1aa",
+          "#e4e4e7",
+          "#f4f4f5",
+          "#fafafa"
+        ]
+      },
+      "app-muted": {
+        "role": "neutral",
+        "displayName": "Your App: Muted",
+        "canonical": "#f4f4f5"
+      },
+      "app-muted-foreground": {
+        "role": "neutral",
+        "displayName": "Your App: Muted Text",
+        "canonical": "#63636b"
+      },
+      "app-border": {
+        "role": "neutral",
+        "displayName": "Your App: Border",
+        "canonical": "#e4e4e7"
+      },
+      "app-ring": {
+        "role": "neutral",
+        "displayName": "Your App: Ring",
+        "canonical": "#a1a1aa"
+      },
+      "app-sidebar": {
+        "role": "neutral",
+        "displayName": "Your App: Sidebar",
+        "canonical": "#fafafa"
+      },
+      "app-background-dark": {
+        "role": "neutral",
+        "displayName": "Your App: Background (dark)",
+        "canonical": "#18181b"
+      },
+      "app-card-dark": {
+        "role": "neutral",
+        "displayName": "Your App: Card (dark)",
+        "canonical": "#1f1f23"
+      },
+      "app-foreground-dark": {
+        "role": "neutral",
+        "displayName": "Your App: Foreground (dark)",
+        "canonical": "#fafafa"
+      },
+      "app-muted-dark": {
+        "role": "neutral",
+        "displayName": "Your App: Muted (dark)",
+        "canonical": "#27272a"
+      },
+      "app-muted-foreground-dark": {
+        "role": "neutral",
+        "displayName": "Your App: Muted Text (dark)",
+        "canonical": "#a1a1aa"
+      },
+      "app-border-dark": {
+        "role": "neutral",
+        "displayName": "Your App: Border (dark)",
+        "canonical": "#33333a"
+      },
+      "track-drums": {
+        "role": "accent",
+        "displayName": "Drums Amber (Loopwork track)",
+        "canonical": "oklch(0.66 0.16 58)",
+        "tonalRamp": [
+          "oklch(0.25 0.080 58)",
+          "oklch(0.35 0.120 58)",
+          "oklch(0.45 0.144 58)",
+          "oklch(0.55 0.160 58)",
+          "oklch(0.65 0.160 58)",
+          "oklch(0.75 0.136 58)",
+          "oklch(0.86 0.080 58)",
+          "oklch(0.95 0.032 58)"
+        ]
+      },
+      "track-bass": {
+        "role": "accent",
+        "displayName": "Bass Violet (Loopwork track)",
+        "canonical": "oklch(0.56 0.19 295)",
+        "tonalRamp": [
+          "oklch(0.25 0.095 295)",
+          "oklch(0.35 0.143 295)",
+          "oklch(0.45 0.171 295)",
+          "oklch(0.55 0.190 295)",
+          "oklch(0.65 0.190 295)",
+          "oklch(0.75 0.162 295)",
+          "oklch(0.86 0.095 295)",
+          "oklch(0.95 0.038 295)"
+        ]
+      },
+      "track-keys": {
+        "role": "accent",
+        "displayName": "Keys Teal (Loopwork track)",
+        "canonical": "oklch(0.58 0.12 170)",
+        "tonalRamp": [
+          "oklch(0.25 0.060 170)",
+          "oklch(0.35 0.090 170)",
+          "oklch(0.45 0.108 170)",
+          "oklch(0.55 0.120 170)",
+          "oklch(0.65 0.120 170)",
+          "oklch(0.75 0.102 170)",
+          "oklch(0.86 0.060 170)",
+          "oklch(0.95 0.024 170)"
+        ]
+      },
+      "track-vox": {
+        "role": "accent",
+        "displayName": "Vox Rose (Loopwork track)",
+        "canonical": "oklch(0.6 0.18 15)",
+        "tonalRamp": [
+          "oklch(0.25 0.090 15)",
+          "oklch(0.35 0.135 15)",
+          "oklch(0.45 0.162 15)",
+          "oklch(0.55 0.180 15)",
+          "oklch(0.65 0.180 15)",
+          "oklch(0.75 0.153 15)",
+          "oklch(0.86 0.090 15)",
+          "oklch(0.95 0.036 15)"
+        ]
+      },
+      "track-fx": {
+        "role": "accent",
+        "displayName": "Effects Blue (Loopwork track)",
+        "canonical": "oklch(0.57 0.16 250)",
+        "tonalRamp": [
+          "oklch(0.25 0.080 250)",
+          "oklch(0.35 0.120 250)",
+          "oklch(0.45 0.144 250)",
+          "oklch(0.55 0.160 250)",
+          "oklch(0.65 0.160 250)",
+          "oklch(0.75 0.136 250)",
+          "oklch(0.86 0.080 250)",
+          "oklch(0.95 0.032 250)"
+        ]
+      }
     },
     "typographyMeta": {
-      "display": { "displayName": "Display", "purpose": "Landing hero headline only (font-display utility)." },
-      "display-section": { "displayName": "Display, section", "purpose": "Landing section titles; the closing line runs at clamp(2.5rem, 6vw, 4.75rem)." },
-      "display-page": { "displayName": "Display, page", "purpose": "Docs page h1 (2.25rem, 3.25rem from md), beside the folio numeral." },
-      "numeral": { "displayName": "Numeral", "purpose": "font-numeral utility: assembly step numbers, docs page number, kB budget figures." },
-      "headline": { "displayName": "Headline", "purpose": "Prose h2, under a 2px ink top rule." },
-      "title": { "displayName": "Title", "purpose": "Prose h3." },
-      "body": { "displayName": "Body", "purpose": "Reading column, capped at 62ch." },
-      "label": { "displayName": "Label", "purpose": "Table headers; nav group names and 'On this page' at 700, uppercase, wide tracking." },
-      "disc": { "displayName": "Disc letter", "purpose": "The letter inside a part disc." },
-      "code": { "displayName": "Code", "purpose": "Code frames, package names, install commands. Ligatures off." },
-      "folio": { "displayName": "Folio", "purpose": "Page folios (B·04), quantity tags, kbd hints." }
+      "display": {
+        "displayName": "Display",
+        "purpose": "Landing hero headline only (font-display utility)."
+      },
+      "display-section": {
+        "displayName": "Display, section",
+        "purpose": "Landing section titles; the closing line runs at clamp(2.5rem, 6vw, 4.75rem)."
+      },
+      "display-page": {
+        "displayName": "Display, page",
+        "purpose": "Docs page h1 (2.25rem, 3.25rem from md), beside the folio numeral."
+      },
+      "numeral": {
+        "displayName": "Numeral",
+        "purpose": "font-numeral utility: assembly step numbers, docs page number, kB budget figures."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Prose h2, under a 2px ink top rule."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Prose h3."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Reading column, capped at 62ch."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Table headers; nav group names and 'On this page' at 700, uppercase, wide tracking."
+      },
+      "disc": {
+        "displayName": "Disc letter",
+        "purpose": "The letter inside a part disc."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "Code frames, package names, install commands. Ligatures off."
+      },
+      "folio": {
+        "displayName": "Folio",
+        "purpose": "Page folios (B·04), quantity tags, kbd hints."
+      }
     },
     "lineWeights": [
-      { "name": "line", "value": "2px solid var(--ink)", "purpose": "The one structural stroke: dividers, outlines, frames, tabs, table rules, h2 rule, tour card border." },
-      { "name": "hairline", "value": "1px solid var(--rule)", "purpose": "Secondary dividers: table rows, list rows." },
-      { "name": "assembly-dash", "value": "2px dashed var(--ink)", "purpose": "Assembly arrows after step numerals, callout leaders, dashed 'sold separately' card." },
-      { "name": "rule-dash", "value": "1-2px dashed var(--rule)", "purpose": "Nav tree border, Steps connector, hr." }
+      {
+        "name": "line",
+        "value": "2px solid var(--ink)",
+        "purpose": "The one structural stroke: dividers, outlines, frames, tabs, table rules, h2 rule, tour card border."
+      },
+      {
+        "name": "hairline",
+        "value": "1px solid var(--rule)",
+        "purpose": "Secondary dividers: table rows, list rows."
+      },
+      {
+        "name": "assembly-dash",
+        "value": "2px dashed var(--ink)",
+        "purpose": "Assembly arrows after step numerals, callout leaders, dashed 'sold separately' card."
+      },
+      {
+        "name": "rule-dash",
+        "value": "1-2px dashed var(--rule)",
+        "purpose": "Nav tree border, Steps connector, hr."
+      }
     ],
     "shadows": [
-      { "name": "floating-part", "value": "0 18px 40px -18px rgb(0 0 0 / 0.35)", "purpose": "Tour card, hotspot card and checklist, as re-themed by the site." },
-      { "name": "dialog", "value": "0 30px 60px -20px rgb(0 0 0 / 0.45)", "purpose": "Search dialog, over a black 50% backdrop." },
-      { "name": "app-window", "value": "0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px -12px rgb(0 0 0 / 0.18)", "purpose": "AppSurface inside [data-app] only." },
-      { "name": "arrow-stroke", "value": "drop-shadow(0 2px 0 var(--ink))", "purpose": "Draws the ink line on the tour card arrow." },
-      { "name": "tab-marker", "value": "inset 0 4px 0 var(--marker)", "purpose": "Top marker bar on the selected tab." }
+      {
+        "name": "floating-part",
+        "value": "0 18px 40px -18px rgb(0 0 0 / 0.35)",
+        "purpose": "Tour card, hotspot card and checklist, as re-themed by the site."
+      },
+      {
+        "name": "dialog",
+        "value": "0 30px 60px -20px rgb(0 0 0 / 0.45)",
+        "purpose": "Search dialog, over a black 50% backdrop."
+      },
+      {
+        "name": "app-window",
+        "value": "0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px -12px rgb(0 0 0 / 0.18)",
+        "purpose": "AppSurface inside [data-app] only."
+      },
+      {
+        "name": "arrow-stroke",
+        "value": "drop-shadow(0 2px 0 var(--ink))",
+        "purpose": "Draws the ink line on the tour card arrow."
+      },
+      {
+        "name": "tab-marker",
+        "value": "inset 0 4px 0 var(--marker)",
+        "purpose": "Top marker bar on the selected tab."
+      }
     ],
     "motion": [
-      { "name": "snap", "value": "750ms cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Hero parts snapping together; staggered 0-330ms, starting 1.4s after load." },
-      { "name": "link-fill", "value": "150ms ease-out", "purpose": "Prose link marker fill on hover." },
-      { "name": "state", "value": "200-500ms, Tailwind default easing", "purpose": "Color, opacity and disc transitions in the hero and controls." },
-      { "name": "spotlight", "value": "300ms ease-out", "purpose": "Tour spotlight ring and progress bar width." },
-      { "name": "card-enter", "value": "tw-animate-css fade-in + zoom-in-95 + slide 2 (side-aware)", "purpose": "Tour card open and close." },
-      { "name": "lift", "value": "translateY(-2px) on hover (-1px compact), 0 on active", "purpose": "Primary button hover." },
-      { "name": "reduced-motion", "value": "transition: none; timers at 0", "purpose": "prefers-reduced-motion: the snap is instant, motion tours fall back to instant transitions." }
+      {
+        "name": "snap",
+        "value": "750ms cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Hero parts snapping together; staggered 0-330ms, starting 1.4s after load."
+      },
+      {
+        "name": "link-fill",
+        "value": "150ms ease-out",
+        "purpose": "Prose link marker fill on hover."
+      },
+      {
+        "name": "state",
+        "value": "200-500ms, Tailwind default easing",
+        "purpose": "Color, opacity and disc transitions in the hero and controls."
+      },
+      {
+        "name": "spotlight",
+        "value": "300ms ease-out",
+        "purpose": "Tour spotlight ring and progress bar width."
+      },
+      {
+        "name": "card-enter",
+        "value": "tw-animate-css fade-in + zoom-in-95 + slide 2 (side-aware)",
+        "purpose": "Tour card open and close."
+      },
+      {
+        "name": "lift",
+        "value": "translateY(-2px) on hover (-1px compact), 0 on active",
+        "purpose": "Primary button hover."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "transition: none; timers at 0",
+        "purpose": "prefers-reduced-motion: the snap is instant, motion tours fall back to instant transitions."
+      }
     ],
     "breakpoints": [
-      { "name": "sm", "value": "640px" },
-      { "name": "md", "value": "768px" },
-      { "name": "lg", "value": "1024px" },
-      { "name": "xl", "value": "1280px" }
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
     ],
     "scopes": [
-      { "name": ":root", "purpose": "The manual world (light)." },
-      { "name": ".dark", "purpose": "Dark theme, toggled on <html>; saved in localStorage 'awesome-tour-theme', else OS preference." },
-      { "name": "[data-app]", "purpose": "'Your app' inside demos: neutral zinc shadcn tokens, radius 0.5rem. The world's ink, marker and line art never enter it." },
-      { "name": ".dark [data-app]", "purpose": "Dark 'your app' tokens." }
+      {
+        "name": ":root",
+        "purpose": "The manual world (light)."
+      },
+      {
+        "name": ".dark",
+        "purpose": "Dark theme, toggled on <html>; saved in localStorage 'awesome-tour-theme', else OS preference."
+      },
+      {
+        "name": "[data-app]",
+        "purpose": "'Your app' inside demos: neutral zinc shadcn tokens, radius 0.5rem. The world's ink, marker and line art never enter it."
+      },
+      {
+        "name": ".dark [data-app]",
+        "purpose": "Dark 'your app' tokens."
+      }
     ]
   },
   "components": [
@@ -154,6 +506,22 @@
       "description": "Registry tour card wearing the world: 2px ink border, heavy title, ink progress, marker Next.",
       "html": "<div class=\"ds-tour-card\" role=\"dialog\" aria-label=\"Create a project\"><div class=\"ds-tour-progress\"><span>Step 2 of 4</span><span class=\"ds-tour-track\"><span></span></span></div><p class=\"ds-tour-title\">Create a project</p><p class=\"ds-tour-desc\">Projects group your reports. Click the button to continue.</p><div class=\"ds-tour-footer\"><button class=\"ds-tour-back\">Back</button><button class=\"ds-tour-next\">Next</button></div></div>",
       "css": ".ds-tour-card { display: flex; flex-direction: column; gap: 12px; width: min(22rem, calc(100vw - 2rem)); padding: 20px; border: 2px solid var(--ink, #111111); border-radius: 10px; background: var(--paper, #ffffff); color: var(--ink, #111111); font-family: 'Archivo Variable', system-ui, sans-serif; font-size: 0.875rem; box-shadow: 0 18px 40px -18px rgb(0 0 0 / 0.35); } .ds-tour-progress { display: flex; flex-direction: column; gap: 6px; color: var(--ink-2, #4a4a47); font-size: 0.75rem; font-weight: 500; font-variant-numeric: tabular-nums; } .ds-tour-track { display: block; height: 4px; border-radius: 9999px; background: var(--paper-2, #f2f2ef); overflow: hidden; } .ds-tour-track > span { display: block; width: 50%; height: 100%; border-radius: 9999px; background: var(--ink, #111111); transition: width 300ms ease-out; } .ds-tour-title { margin: 0; font-variation-settings: 'wdth' 112; font-weight: 800; font-size: 1.125rem; letter-spacing: -0.015em; } .ds-tour-desc { margin: 0; color: var(--ink-2, #4a4a47); line-height: 1.625; } .ds-tour-footer { display: flex; justify-content: space-between; margin-top: 4px; } .ds-tour-back { border: 0; background: transparent; color: var(--ink-2, #4a4a47); font: inherit; font-weight: 500; cursor: pointer; } .ds-tour-next { height: 32px; padding: 0 12px; border: 2px solid var(--ink, #111111); border-radius: 4px; background: var(--marker, #ffd23f); color: var(--marker-ink, #111111); font: inherit; font-weight: 700; cursor: pointer; } .ds-tour-back:focus-visible, .ds-tour-next:focus-visible { outline: 2px solid var(--ink, #111111); outline-offset: 2px; }"
+    },
+    {
+      "name": "Loopwork Knob",
+      "kind": "custom",
+      "refersTo": "track-bass",
+      "description": "Rotary control (role=slider) in the demo app: a 270° arc in the channel's track color around a plain cap with a pointer.",
+      "html": "<div class=\"ds-knob\" role=\"slider\" tabindex=\"0\" aria-label=\"Bass level\" aria-valuenow=\"60\" aria-valuemin=\"0\" aria-valuemax=\"100\"><svg viewBox=\"0 0 40 40\" width=\"44\" height=\"44\" aria-hidden=\"true\"><path d=\"M 8.686 31.314 A 16 16 0 1 1 31.314 31.314\" fill=\"none\" stroke=\"#f4f4f5\" stroke-width=\"3.5\" stroke-linecap=\"round\"/><path d=\"M 8.686 31.314 A 16 16 0 0 1 30.4 8.2\" fill=\"none\" stroke=\"oklch(0.56 0.19 295)\" stroke-width=\"3.5\" stroke-linecap=\"round\"/><circle cx=\"20\" cy=\"20\" r=\"10\" fill=\"#ffffff\" stroke=\"#e4e4e7\"/><line x1=\"22\" y1=\"18\" x2=\"25.5\" y2=\"14\" stroke=\"#18181b\" stroke-width=\"2\" stroke-linecap=\"round\"/></svg></div>",
+      "css": ".ds-knob { display: inline-flex; border-radius: 9999px; cursor: ns-resize; outline: none; } .ds-knob:focus-visible { box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #a1a1aa; }"
+    },
+    {
+      "name": "Loopwork Step Cell",
+      "kind": "custom",
+      "refersTo": "track-drums",
+      "description": "One step of the 16-step sequencer: a square toggle, downbeats on a muted fill, filled with the drums track color when on, ringed while it plays.",
+      "html": "<div class=\"ds-steps\"><button class=\"ds-step ds-step-down\" aria-pressed=\"true\" aria-label=\"Kick, step 1\"></button><button class=\"ds-step\" aria-pressed=\"false\" aria-label=\"Kick, step 2\"></button><button class=\"ds-step ds-step-playing\" aria-pressed=\"false\" aria-label=\"Kick, step 3\"></button><button class=\"ds-step\" aria-pressed=\"true\" aria-label=\"Kick, step 4\"></button></div>",
+      "css": ".ds-steps { display: flex; gap: 3px; } .ds-step { width: 28px; height: 28px; border-radius: 4px; border: 1px solid #e4e4e7; background: #ffffff; cursor: pointer; transition: background 150ms; } .ds-step-down { background: #f4f4f5; } .ds-step:hover { background: #f4f4f5; } .ds-step[aria-pressed=true] { background: oklch(0.66 0.16 58); border-color: transparent; } .ds-step-playing { box-shadow: 0 0 0 2px rgb(24 24 27 / 0.7); } .ds-step:focus-visible { outline: 2px solid #a1a1aa; outline-offset: 1px; }"
     }
   ],
   "narrative": {
@@ -167,14 +535,56 @@
       "A neutral `[data-app]` scope inside demos, so the tour is the only thing wearing the world."
     ],
     "rules": [
-      { "name": "The One Marker Rule", "body": "Yellow marks the single thing to act on in its context: the primary button, the current page, the active tab, the selected text. Never use it as a background band, a decoration or a second accent.", "section": "colors" },
-      { "name": "The Red Means No Rule", "body": "`dont` appears only on ✗ marks, struck-through anti-patterns, and caution or danger asides. Never on a button, link, or heading.", "section": "colors" },
-      { "name": "The App Is Not The Manual Rule", "body": "Anything that stands for the user's product goes inside `[data-app]` and uses only shadcn tokens. Ink, marker and line art belong to the tour layer and the docs chrome.", "section": "colors" },
-      { "name": "The Width Is The Voice Rule", "body": "Hierarchy is carried by the width axis and weight of one family (wdth 100 / 108 / 112 / 116 / 125). Do not add a second display family.", "section": "typography" },
-      { "name": "The Mono Is Literal Rule", "body": "Mono only for things the reader types or reads as an identifier: code, package names, commands, folios, quantities. Never for prose or headings.", "section": "typography" },
-      { "name": "The Folio Rule", "body": "Every docs page has a folio, and the folio appears wherever the page is linked from the booklet (contents, pager, landing index).", "section": "layout" },
-      { "name": "The Only Floating Things Rule", "body": "A shadow means the element floats over the page: a tour step, a hotspot, a checklist, a dialog. Cards, frames, buttons and sections stay flat.", "section": "elevation" },
-      { "name": "The One Stroke Rule", "body": "Structural line art is 2px ink. Do not introduce 1px ink outlines or 3px borders on components.", "section": "shapes" }
+      {
+        "name": "The One Marker Rule",
+        "body": "Yellow marks the single thing to act on in its context: the primary button, the current page, the active tab, the selected text. Never use it as a background band, a decoration or a second accent.",
+        "section": "colors"
+      },
+      {
+        "name": "The Red Means No Rule",
+        "body": "`dont` appears only on ✗ marks, struck-through anti-patterns, and caution or danger asides. Never on a button, link, or heading.",
+        "section": "colors"
+      },
+      {
+        "name": "The App Is Not The Manual Rule",
+        "body": "Anything that stands for the user's product goes inside [data-app] and uses only shadcn tokens. Ink, marker and line art belong to the tour layer and the docs chrome. A tour card rendered inside the app (in a modal dialog's top layer) still wears the world: [data-app] [data-tour-top-layer] restores the manual's tokens.",
+        "section": "colors"
+      },
+      {
+        "name": "The Width Is The Voice Rule",
+        "body": "Hierarchy is carried by the width axis and weight of one family (wdth 100 / 108 / 112 / 116 / 125). Do not add a second display family.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono Is Literal Rule",
+        "body": "Mono only for things the reader types or reads as an identifier: code, package names, commands, folios, quantities. Never for prose or headings.",
+        "section": "typography"
+      },
+      {
+        "name": "The Folio Rule",
+        "body": "Every docs page has a folio, and the folio appears wherever the page is linked from the booklet (contents, pager, landing index).",
+        "section": "layout"
+      },
+      {
+        "name": "The Only Floating Things Rule",
+        "body": "A shadow means the element floats over the page: a tour step, a hotspot, a checklist, a dialog. Cards, frames, buttons and sections stay flat.",
+        "section": "elevation"
+      },
+      {
+        "name": "The One Stroke Rule",
+        "body": "Structural line art is 2px ink. Do not introduce 1px ink outlines or 3px borders on components.",
+        "section": "shapes"
+      },
+      {
+        "name": "The One Product Rule",
+        "body": "Demos are scenes of Loopwork (examples/loopwork), never a new mock app, a grid of labelled boxes, or a generic dashboard. Copy is product copy, never a description of the API. A demo that needs something Loopwork doesn't have adds it to the kit.",
+        "section": "colors"
+      },
+      {
+        "name": "The Track Color Rule",
+        "body": "Track colors (--chart-1…5 inside [data-app]) mark channels and what belongs to them: clips, pads, knob arcs, meters. Never buttons, links or text. Each is at least 3:1 against the app background in both themes.",
+        "section": "colors"
+      }
     ],
     "dos": [
       "**Do** draw every structural line at 2px ink (`--line`), and use 1px `rule` only as a secondary hairline.",
