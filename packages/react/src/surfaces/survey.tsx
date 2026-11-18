@@ -86,7 +86,13 @@ export function createSurvey(options: SurveyOptions): Survey {
       ...(q.when ? { when: (ctx) => q.when!(ctx.data.answers) } : {}),
     })),
   });
-  tour.on('complete', () => void onSubmit?.(tour.getState().data.answers));
+  tour.on('complete', () => {
+    Promise.resolve()
+      .then(() => onSubmit?.(tour.getState().data.answers))
+      .catch((error) => console.error('[awesome-tour] survey onSubmit failed', error));
+  });
+  // A new run starts with blank answers.
+  tour.on('start', () => tour.setData((d) => ({ ...d, answers: {} })));
   return Object.assign(tour, {
     questions,
     answer(questionId: string, value: number | string | undefined) {

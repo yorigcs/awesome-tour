@@ -1,4 +1,4 @@
-import { isBrowser, isElement } from './dom';
+import { isBrowser, isElement, subscribeDomActivity, subscribeTicker } from './dom';
 import type { PersistenceAdapter } from './persistence';
 import { matchRoute } from './router';
 import { resolveTarget } from './targets';
@@ -18,26 +18,43 @@ export interface ImpressionRecord {
   lastShownAt: number | null;
   /** Completed, skipped or dismissed: `once` keeps it from auto-starting again. */
   finished: boolean;
+  /**
+   * How the last run ended: `completed`, `skipped` (the user opted out) or `dismissed` (closed,
+   * e.g. Escape). Absent in records written before 0.2.
+   */
+  outcome?: 'completed' | 'skipped' | 'dismissed' | null;
   snoozedUntil: number | null;
+  /** Tour `version` of the last show (for `frequency.perVersion`). */
+  version?: number;
 }
 
 export const emptyImpression = (): ImpressionRecord => ({
   shows: 0,
   lastShownAt: null,
   finished: false,
+  outcome: null,
   snoozedUntil: null,
 });
 
-const toTime = (d: DateInput) => (d instanceof Date ? d.getTime() : new Date(d).getTime());
+const toTime = (d: DateInput) => {
+  const time = d instanceof Date ? d.getTime() : new Date(d).getTime();
+  if (Number.isNaN(time)) console.warn(`[awesome-tour] rules.schedule: invalid date ${String(d)}`);
+  return time;
+};
 const when = (t: number) => new Date(t).toISOString();
 
 /** Evaluates a tour's rules against its impression record. Pure apart from `audience`. */
 export async function evaluateRules(
   tour: Tour<any, any>,
-  record: ImpressionRecord,
+  initial: ImpressionRecord,
   now = Date.now(),
 ): Promise<EligibilityReport> {
+  let record = initial;
   const rules: TourRules = tour.rules ?? {};
+  // Per-version counting: a record from an older version doesn't hold a new one back.
+  if (rules.frequency?.perVersion && record.version != null && record.version < tour.version) {
+    record = emptyImpression();
+  }
   const checks: EligibilityReport['checks'] = [];
   const add = (rule: EligibilityRule, ok: boolean, detail: string) =>
     checks.push({ rule, ok, detail });
@@ -67,11 +84,38 @@ export async function evaluateRules(
   }
 
   const frequency = rules.frequency ?? {};
-  if (frequency.once !== false) {
+  const once = frequency.once ?? true;
+  if (once !== false) {
+    // Records written before `outcome` existed only know `finished`.
+    const outcome = record.outcome ?? (record.finished ? 'dismissed' : null);
+    let ok: boolean;
+    let detail: string;
+    if (once === 'seen') {
+      ok = record.shows === 0;
+      detail = ok ? 'never shown' : `already shown ${record.shows} time(s)`;
+    } else if (once === 'completed') {
+      ok = outcome !== 'completed' && outcome !== 'skipped';
+      detail = ok
+        ? outcome === 'dismissed'
+          ? 'dismissed, not completed: may show again'
+          : 'not finished yet'
+        : `already ${outcome}`;
+    } else {
+      ok = !record.finished;
+      detail = ok ? 'not finished yet' : `already ${outcome ?? 'finished or dismissed'}`;
+    }
+    add('once', ok, detail);
+  }
+  if (
+    frequency.dismissCooldownMs != null &&
+    record.outcome === 'dismissed' &&
+    record.lastShownAt != null
+  ) {
+    const until = record.lastShownAt + frequency.dismissCooldownMs;
     add(
-      'once',
-      !record.finished,
-      record.finished ? 'already finished or dismissed' : 'not finished yet',
+      'cooldown',
+      now >= until,
+      now >= until ? 'dismissal cooldown over' : `dismissed; cooling down until ${when(until)}`,
     );
   }
   if (frequency.maxShows != null) {
@@ -101,18 +145,45 @@ export async function evaluateRules(
 export function trackImpressions(
   tour: Tour<any, any>,
   store: PersistenceAdapter<ImpressionRecord>,
+  clock: () => number = Date.now,
 ): () => void {
-  const update = async (patch: (r: ImpressionRecord) => Partial<ImpressionRecord>) => {
-    const current = (await store.get(tour.id)) ?? emptyImpression();
-    await store.set(tour.id, { ...current, ...patch(current) });
+  // Serialized per tour: `close` then `snooze` must not interleave their read-modify-writes.
+  let queue: Promise<void> = Promise.resolve();
+  const update = (patch: (r: ImpressionRecord) => Partial<ImpressionRecord>) => {
+    queue = queue
+      .then(async () => {
+        const current = (await store.get(tour.id)) ?? emptyImpression();
+        await store.set(tour.id, { ...current, ...patch(current) });
+      })
+      .catch((error) => console.warn('[awesome-tour] saving impressions failed', error));
+    return queue;
   };
   const offs = [
-    tour.on('start', () => void update((r) => ({ shows: r.shows + 1, lastShownAt: Date.now() }))),
-    tour.on('complete', () => void update(() => ({ finished: true }))),
-    tour.on('skip', () => void update(() => ({ finished: true }))),
-    tour.on('close', () => void update(() => ({ finished: true }))),
+    tour.on(
+      'start',
+      () =>
+        void update((r) => {
+          // A new version under `perVersion` starts counting from zero.
+          const fresh =
+            tour.rules?.frequency?.perVersion && r.version != null && r.version < tour.version;
+          const base = fresh ? emptyImpression() : r;
+          return { ...base, shows: base.shows + 1, lastShownAt: clock(), version: tour.version };
+        }),
+    ),
+    tour.on('complete', () => void update(() => ({ finished: true, outcome: 'completed' }))),
+    tour.on('skip', () => void update(() => ({ finished: true, outcome: 'skipped' }))),
+    tour.on('close', () => void update(() => ({ finished: true, outcome: 'dismissed' }))),
     // `snooze` follows its `close`: it isn't a dismissal, just "later".
-    tour.on('snooze', ({ until }) => void update(() => ({ finished: false, snoozedUntil: until }))),
+    tour.on(
+      'snooze',
+      // `until` is in real time; re-base the duration on the manager's clock.
+      ({ until }) =>
+        void update(() => ({
+          finished: false,
+          outcome: null,
+          snoozedUntil: clock() + (until - Date.now()),
+        })),
+    ),
   ];
   return () => {
     for (const off of offs) off();
@@ -162,12 +233,11 @@ export function watchTriggers(
         stop();
         fire();
       };
-      const mo = new MutationObserver(check);
-      mo.observe(document.body, { childList: true, subtree: true });
-      const interval = setInterval(check, 500);
+      const offActivity = subscribeDomActivity(check);
+      const offTicker = subscribeTicker(500, check);
       const stop = () => {
-        mo.disconnect();
-        clearInterval(interval);
+        offActivity();
+        offTicker();
       };
       cleanups.push(stop);
       queueMicrotask(check);

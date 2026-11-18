@@ -35,6 +35,7 @@ export function frameTarget(
     if (!inner) return null;
     return {
       contextElement: iframe,
+      element: inner,
       getBoundingClientRect(): RectLike {
         const outer = iframe.getBoundingClientRect();
         const style = getComputedStyle(iframe);

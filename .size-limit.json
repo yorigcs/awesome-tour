@@ -2,12 +2,18 @@
   {
     "name": "@awesome-tour/core",
     "path": "packages/core/dist/index.js",
-    "limit": "10 kB"
+    "limit": "15 kB"
+  },
+  {
+    "name": "@awesome-tour/core (createTour only, tree-shaken)",
+    "path": "packages/core/dist/index.js",
+    "import": "{ createTour }",
+    "limit": "8 kB"
   },
   {
     "name": "@awesome-tour/core/json",
     "path": "packages/core/dist/json.js",
-    "limit": "2 kB"
+    "limit": "3 kB"
   },
   {
     "name": "@awesome-tour/core/adapters",
@@ -17,13 +23,13 @@
   {
     "name": "@awesome-tour/react",
     "path": "packages/react/dist/index.js",
-    "limit": "19 kB",
+    "limit": "20 kB",
     "ignore": ["react", "react-dom", "@awesome-tour/core"]
   },
   {
     "name": "@awesome-tour/react + surfaces",
     "path": ["packages/react/dist/index.js", "packages/react/dist/surfaces.js"],
-    "limit": "23 kB",
+    "limit": "25 kB",
     "ignore": ["react", "react-dom", "@awesome-tour/core"]
   },
   {

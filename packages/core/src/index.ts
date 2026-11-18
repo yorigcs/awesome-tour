@@ -11,9 +11,11 @@ export type {
   ChecklistState,
 } from './checklist';
 export { createChecklist } from './checklist';
+export { type DeepLinkOptions, deepLink } from './deep-link';
 export type { ObserveRectOptions } from './dom';
 export {
   createVirtualTarget,
+  getObserverStats,
   getRect,
   getTargetsRect,
   inertOthers,
@@ -21,30 +23,63 @@ export {
   isBrowser,
   isElement,
   isFromKeptElement,
+  isTargetConnected,
   isVirtualElement,
   KEEP_ATTRIBUTE,
   lockScroll,
   observeRect,
+  observeShadowRoot,
   prefersReducedMotion,
   rectsEqual,
   scrollTargetsIntoView,
+  subscribeDomActivity,
+  subscribeTicker,
   toRect,
   unionRects,
   waitForStableRect,
 } from './dom';
 export type { Emitter } from './emitter';
 export { createEmitter } from './emitter';
+export {
+  createExperiment,
+  type Experiment,
+  type ExperimentOptions,
+  getExperiment,
+  hashString,
+} from './experiments';
+export {
+  createFeed,
+  type Feed,
+  type FeedEntry,
+  type FeedItem,
+  type FeedOptions,
+  type FeedSnapshot,
+  type FeedState,
+} from './feed';
 export { type FrameInput, frameTarget } from './frames';
+export {
+  accessibleName,
+  type ByRoleOptions,
+  type ByTextOptions,
+  byRole,
+  byText,
+  byTour,
+  firstOf,
+  type LocatorOptions,
+  roleOf,
+} from './locators';
 export type { QueueOptions, TourManager, TourManagerOptions, TourManagerState } from './manager';
 export { createTourManager } from './manager';
 export type {
   HttpAdapterOptions,
+  HttpPersistenceAdapter,
   PersistedTourState,
   PersistenceAdapter,
   PersistOptions,
 } from './persistence';
 export {
   httpAdapter,
+  isPersistedTourState,
   localStorageAdapter,
   memoryStorage,
   migrateState,

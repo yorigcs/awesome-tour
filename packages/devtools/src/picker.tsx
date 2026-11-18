@@ -1,4 +1,4 @@
-import { KEEP_ATTRIBUTE, type RectLike } from '@awesome-tour/react';
+import { accessibleName, byRole, KEEP_ATTRIBUTE, type RectLike, roleOf } from '@awesome-tour/react';
 import * as React from 'react';
 
 const isUnstableId = (id: string) => /^:|:$|^[\d-]|\d{4,}|[0-9a-f]{8,}/i.test(id);
@@ -14,11 +14,15 @@ const unique = (selector: string, el: Element) => {
 };
 
 export interface PickedTarget {
-  /** Value to paste as `target:` (a selector string, or an `anchor('…')` call). */
+  /** Value to paste as `target:` (a selector string, or a call such as `anchor('…')`). */
   target: string;
   /** How stable the suggestion is. */
   quality: 'anchor' | 'stable' | 'structural';
+  /** `target` is code (`anchor(…)`, `byTour(…)`, `byRole(…)`), not a selector string. */
+  code?: boolean;
 }
+
+const quote = (value: string) => `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 
 /**
  * A stable way to point a step at `el`: an existing tour anchor, a test id, a meaningful id or
@@ -26,7 +30,25 @@ export interface PickedTarget {
  */
 export function suggestTarget(el: Element): PickedTarget {
   const anchorName = el.closest('[data-tour-anchor]')?.getAttribute('data-tour-anchor');
-  if (anchorName) return { target: `anchor('${anchorName}')`, quality: 'anchor' };
+  if (anchorName) return { target: `anchor('${anchorName}')`, quality: 'anchor', code: true };
+
+  // What a person (and Testing Library) would call it: a data-tour hook, then role + name.
+  const tourName = el.getAttribute('data-tour');
+  if (tourName && unique(`[data-tour="${esc(tourName)}"]`, el)) {
+    return { target: `byTour(${quote(tourName)})`, quality: 'stable', code: true };
+  }
+  const role = roleOf(el);
+  const name = role ? accessibleName(el) : '';
+  if (role && name && name.length <= 60) {
+    const found = byRole(role, { name, exact: true })();
+    if (found.length === 1 && found[0] === el) {
+      return {
+        target: `byRole(${quote(role)}, { name: ${quote(name)} })`,
+        quality: 'stable',
+        code: true,
+      };
+    }
+  }
 
   const own = (node: Element): string | null => {
     for (const attr of ['data-tour', 'data-testid', 'data-test', 'data-cy']) {
@@ -139,7 +161,6 @@ export function usePicker(active: boolean, onPick: (el: Element) => void, onCanc
 
 /** Step snippet for a picked element. */
 export function stepSnippet(picked: PickedTarget) {
-  const target =
-    picked.quality === 'anchor' ? picked.target : `'${picked.target.replace(/'/g, "\\'")}'`;
+  const target = picked.code ? picked.target : `'${picked.target.replace(/'/g, "\\'")}'`;
   return `{\n  id: 'new-step',\n  target: ${target},\n  title: '',\n  description: '',\n}`;
 }

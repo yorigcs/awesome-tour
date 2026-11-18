@@ -37,6 +37,7 @@ export { createTour } from './create-tour';
 export {
   type ExternalStore,
   type UseTourResult,
+  useFeed,
   useStoreSelector,
   useTargetRect,
   useTargetRects,
@@ -108,7 +109,7 @@ export {
   useTourLayer,
 } from './tour';
 export { composeEventHandlers, composeRefs, useComposedRefs } from './utils/compose';
-export type { Align, PositionerOptions, Side } from './utils/positioner';
+export type { Align, PhysicalSide, PositionerOptions, Side } from './utils/positioner';
 export { Presence, usePresence } from './utils/presence';
 export { Primitive, type PrimitiveProps } from './utils/primitive';
 export { Slot } from './utils/slot';

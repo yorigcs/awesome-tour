@@ -1,6 +1,8 @@
 export interface Emitter<TEvents extends object> {
   on<K extends keyof TEvents>(event: K, handler: (payload: TEvents[K]) => void): () => void;
   emit<K extends keyof TEvents>(event: K, payload: TEvents[K]): void;
+  /** Whether anyone listens to `event`. */
+  has<K extends keyof TEvents>(event: K): boolean;
   clear(): void;
 }
 
@@ -32,6 +34,9 @@ export function createEmitter<TEvents extends object>(
           else throw error;
         }
       }
+    },
+    has(event) {
+      return (handlers.get(event)?.size ?? 0) > 0;
     },
     clear() {
       handlers.clear();

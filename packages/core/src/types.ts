@@ -25,10 +25,20 @@ export interface VirtualElement {
   getBoundingClientRect(): RectLike;
   /** Element used to find scroll ancestors / owner document. */
   contextElement?: Element;
+  /**
+   * The real element this stands for, when it lives in another document (e.g. inside an iframe):
+   * used to scroll it into view, listen to its events and notice when it is removed.
+   */
+  element?: Element;
 }
 
 export interface AnchorTarget {
   readonly __tourAnchor: string;
+}
+
+/** `firstOf(a, b, c)`: the first candidate that resolves to something. */
+export interface FallbackTarget {
+  readonly __tourFirstOf: readonly TargetInput[];
 }
 
 export type TourTargetNode = Element | VirtualElement;
@@ -38,11 +48,27 @@ export type TargetInput =
   | Element
   | VirtualElement
   | AnchorTarget
+  | FallbackTarget
   | { readonly current: Element | null | undefined }
   | (() => TargetInput | null | undefined)
   | readonly TargetInput[];
 
 export type TargetMissingPolicy = 'wait' | 'skip' | 'center' | 'error';
+
+/**
+ * What to do when a step's target is removed from the page while the step is shown.
+ * `reresolve` (default): look for it again (a re-rendered element is picked up), waiting up to
+ * `targetTimeout`, then fall back to `center`. `center`: keep the step, centered. `close`: close.
+ */
+export type TargetLostPolicy = 'reresolve' | 'center' | 'close';
+
+/** Extra room a target needs from the viewport edges (a sticky header that sets no scroll-padding). */
+export type ScrollOffset = number | Partial<Record<'top' | 'right' | 'bottom' | 'left', number>>;
+
+/** `scrollIntoView` options, plus `offset` to keep targets clear of sticky/fixed bars. */
+export interface TourScrollOptions extends ScrollIntoViewOptions {
+  offset?: ScrollOffset;
+}
 
 /* -------------------------------------------------------------------------------------------------
  * Steps
@@ -91,12 +117,19 @@ export interface StepDefinition<TData = any, TId extends string = string> {
   onTargetMissing?: TargetMissingPolicy;
   /** How long to wait for the target to appear (ms). Default: 3000. */
   targetTimeout?: number;
+  /** What to do if the target is removed while the step is shown. Default: `'reresolve'`. */
+  onTargetLost?: TargetLostPolicy;
   /** Scroll the target into view. Default: true. */
-  scroll?: boolean | ScrollIntoViewOptions;
+  scroll?: boolean | TourScrollOptions;
   /** Override tour-level `modal` for this step. */
   modal?: boolean;
   /** Runs before the step is shown (after navigation, before target resolution). */
   beforeEnter?: (ctx: StepContext<TData, TId>) => MaybePromise<void>;
+  /**
+   * Fail the transition when `beforeEnter` hasn't settled after this many ms. The previous step
+   * stays on screen and an `error` is emitted. Default: tour-level `enterTimeout` (none).
+   */
+  enterTimeout?: number;
   /** Runs after the step is left. */
   afterLeave?: (ctx: StepContext<TData, TId>) => MaybePromise<void>;
   /**
@@ -117,6 +150,34 @@ export interface StepDefinition<TData = any, TId extends string = string> {
 }
 
 export type StepIdOf<TStep extends StepDefinition> = TStep['id'];
+
+/**
+ * Compile-time check that a step's string `next` names a step of the same tour (`createTour`
+ * intersects each step with this). A typo becomes a type error instead of a runtime one.
+ */
+export type CheckedStep<TStep, TId extends string> = TStep extends { next: infer N }
+  ? N extends string
+    ? N extends TId
+      ? TStep
+      : TStep & { next: TId }
+    : TStep
+  : TStep;
+
+/** A tour's conversion: any one of the conditions, reached within `within` ms of the start. */
+export interface TourGoal<TData = any> {
+  /** Name reported with the event (analytics: `goal`). Default: the tour id. */
+  name?: string;
+  /** `tour.signal(name)` was called. */
+  signal?: string;
+  /** A DOM event on (or inside) `target`, e.g. `{ type: 'click', target: '#bounce' }`. */
+  event?: { type: string; target?: TargetInput };
+  /** The router reached this route (`/mix`, `/projects/:id`). */
+  route?: string;
+  /** This predicate became true (re-checked on DOM activity and on a timer). */
+  when?: (ctx: { data: TData }) => boolean;
+  /** Give up after this many ms from the start. Default: as long as the page lives. */
+  within?: number;
+}
 
 /* -------------------------------------------------------------------------------------------------
  * State
@@ -176,6 +237,10 @@ export interface TourEvents<TId extends string = string, TData = any> {
   stepChange: { from: TId | null; to: TId; direction: TourDirection };
   stepLeave: { stepId: TId };
   targetMissing: { stepId: TId };
+  /** The tour's goal was reached: where the run was, and how long after its start. */
+  goal: { name: string; stepId: TId | null; status: TourStatus; afterMs: number };
+  /** The shown step's target left the page. `recovered` once it was found again (or not). */
+  targetLost: { stepId: TId; recovered: boolean };
   complete: { stepId: TId | null };
   skip: { stepId: TId | null };
   close: { stepId: TId | null };
@@ -204,7 +269,10 @@ export interface TourPlugin<TId extends string = string, TData = any> {
   /** Return `false` to cancel a transition or a step id to redirect it. */
   beforeStep?: (
     tour: Tour<any, TData>,
-    transition: TransitionInfo<TId>,
+    transition: TransitionInfo<TId> & {
+      /** Aborted when the transition is superseded. */
+      signal: AbortSignal;
+    },
   ) => MaybePromise<void | false | TId>;
 }
 
@@ -252,8 +320,17 @@ export interface TourOptions<TStep extends StepDefinition<TData, string>, TData 
   targetTimeout?: number;
   /** Default policy for missing targets. Default: 'center'. */
   onTargetMissing?: TargetMissingPolicy;
+  /** Default policy when a shown step's target is removed. Default: 'reresolve'. */
+  onTargetLost?: TargetLostPolicy;
   /** Default scroll behavior for all steps. */
-  scroll?: boolean | ScrollIntoViewOptions;
+  scroll?: boolean | TourScrollOptions;
+  /** Default `beforeEnter` timeout for all steps (ms). Default: none. */
+  enterTimeout?: number;
+  /**
+   * What the tour is for: the action that counts as a conversion. Watched from each start — also
+   * after the tour ends — until it happens or `within` runs out; emits `goal` once per run.
+   */
+  goal?: TourGoal<TData>;
   /**
    * Who sees the tour, when, and how often. Evaluated by the tour manager (`TourProvider`), which
    * also auto-starts tours with a `trigger`. Explicit `start()` calls are never blocked.
@@ -273,8 +350,19 @@ export interface TourRules<TData = any> {
   /** Only show between these dates. */
   schedule?: { startsAt?: DateInput; endsAt?: DateInput };
   frequency?: {
-    /** Never show again once completed or skipped. Default: true. */
-    once?: boolean;
+    /**
+     * Stop auto-starting after a run. `true` (default): once it was completed, skipped or
+     * dismissed (closed). `'completed'`: only once completed or skipped — a dismissed tour may show
+     * again (pair it with `dismissCooldownMs`). `'seen'`: after the first show. `false`: never stop.
+     */
+    once?: boolean | 'completed' | 'seen';
+    /** After a dismissal (close/Escape), wait this long before showing again (ms). */
+    dismissCooldownMs?: number;
+    /**
+     * Count shows and outcomes per tour `version`: bumping the version (new content) makes the
+     * tour eligible again for people who already saw an older one. Default: false.
+     */
+    perVersion?: boolean;
     /** Show at most this many times. */
     maxShows?: number;
     /** Wait this long after a show before showing again (ms). */
@@ -297,7 +385,14 @@ export interface TourRules<TData = any> {
   priority?: number;
 }
 
-export type EligibilityRule = 'audience' | 'schedule' | 'once' | 'maxShows' | 'cooldown' | 'snooze';
+export type EligibilityRule =
+  | 'audience'
+  | 'schedule'
+  | 'once'
+  | 'maxShows'
+  | 'cooldown'
+  | 'snooze'
+  | 'cap';
 
 export interface EligibilityReport {
   tourId: string;
@@ -356,5 +451,10 @@ export interface Tour<TStep extends StepDefinition<TData, string> = StepDefiniti
   setRouter(router: RouterAdapter | undefined): void;
 
   isOpen(): boolean;
+  /**
+   * Attach a plugin after creation (runs its `setup`). Returns a function that detaches it and runs
+   * its cleanup. Frameworks use this to tie plugins to a component's lifetime.
+   */
+  use(plugin: TourPlugin<any, TData>): () => void;
   destroy(): void;
 }

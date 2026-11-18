@@ -110,11 +110,18 @@ export function createChecklist(options: ChecklistOptions): Checklist {
     }
     if (!next.done) notifiedComplete = false;
     if (persistence && next.hydrated) {
-      void persistence.set(options.id, {
-        items: { ...statuses },
-        dismissed,
-        updatedAt: Date.now(),
-      });
+      const warn = (error: unknown) =>
+        console.warn('[awesome-tour] checklist: saving failed', error);
+      try {
+        const saving = persistence.set(options.id, {
+          items: { ...statuses },
+          dismissed,
+          updatedAt: Date.now(),
+        });
+        if (saving instanceof Promise) saving.catch(warn);
+      } catch (error) {
+        warn(error);
+      }
     }
   };
 
