@@ -2,6 +2,7 @@ import { TourTarget3D, useTourCamera } from '@awesome-tour/three';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
 import type { Group } from 'three';
+import { hasWebGL2 } from '../webgl';
 
 const AMBER = '#c97b1d';
 const LIT = new Set([0, 3, 6, 8, 11, 12]);
@@ -53,6 +54,13 @@ function CameraRig() {
 }
 
 export function Scene() {
+  if (!hasWebGL2()) {
+    return (
+      <p className="grid h-[360px] place-items-center rounded-lg border border-dashed text-sm text-muted-foreground">
+        The 3D view needs WebGL, which this browser doesn't offer.
+      </p>
+    );
+  }
   return (
     <Canvas camera={{ position: [0, 3, 5], fov: 45 }} style={{ height: 360 }} data-testid="canvas">
       <ambientLight intensity={0.55} />
