@@ -13,6 +13,7 @@ import {
 } from '@awesome-tour/react';
 import { createAnnouncement, createSurvey } from '@awesome-tour/react/surfaces';
 import { router } from './router';
+import { hasWebGL2 } from './webgl';
 
 /** Last analytics events, shown in the playground (would go to Segment/PostHog in an app). */
 export const eventLog = createStore<{ events: TourAnalyticsEvent[] }>({ events: [] });
@@ -90,6 +91,8 @@ const steps = [
   {
     id: 'model',
     route: '/studio',
+    // Without WebGL the scene can't render, so the step is skipped instead of waiting on it.
+    when: () => hasWebGL2(),
     target: anchor('lw16'),
     title: 'The LW-16, in 3D',
     description:

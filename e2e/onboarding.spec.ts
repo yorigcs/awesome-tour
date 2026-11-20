@@ -55,14 +55,19 @@ test('full onboarding: anchors, interactive steps, branching, routes, lazy targe
   await expect(dialog(page)).toHaveAccessibleName('Inside a scroll box');
   await expect(page.locator('#deep-item')).toBeInViewport();
 
+  // Headless Firefox without a GPU (CI) has no WebGL2: the tour skips the 3D step there.
+  const webgl = await page.evaluate(() => !!document.createElement('canvas').getContext('webgl2'));
   await next(page).click();
-  await expect(page).toHaveURL(/\/studio$/);
-  await expect(dialog(page)).toHaveAccessibleName('The LW-16, in 3D', { timeout: 10_000 });
-  const canvas = await page.getByTestId('canvas').boundingBox();
-  const box = await dialog(page).boundingBox();
-  expect(box!.y).toBeGreaterThan(canvas!.y - 400);
-
-  await next(page).click();
+  if (webgl) {
+    await expect(page).toHaveURL(/\/studio$/);
+    await expect(dialog(page)).toHaveAccessibleName('The LW-16, in 3D', { timeout: 10_000 });
+    const canvas = await page.getByTestId('canvas').boundingBox();
+    const box = await dialog(page).boundingBox();
+    expect(box!.y).toBeGreaterThan(canvas!.y - 400);
+    await next(page).click();
+  } else {
+    test.info().annotations.push({ type: 'skipped-step', description: '3D step: no WebGL2' });
+  }
   await expect(page).toHaveURL(/\/$/);
   await expect(dialog(page)).toHaveAccessibleName('Drums and keys');
   await expect(page.locator('[data-tour="lane-drums"]')).toHaveAttribute('data-tour-target', '');
