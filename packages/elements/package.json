@@ -1,6 +1,6 @@
 {
   "name": "@awesome-tour/elements",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "awesome-tour without React: a DOM renderer (mountTour) and an <awesome-tour> custom element for Vue, Svelte, Angular or plain HTML.",
   "license": "MIT",
   "author": "Yor\u00ed",
