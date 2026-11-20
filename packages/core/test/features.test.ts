@@ -278,3 +278,218 @@ describe('goals across reloads', () => {
     expect(again).not.toHaveBeenCalled();
   });
 });
+
+describe('checklist dependencies, optional items and sections', () => {
+  it('locks items until their dependencies are done, and points at what is next', async () => {
+    const { createChecklist } = await import('../src');
+    const tour = createTour({ id: 'grid-tour', steps: [{ id: 'a' }] });
+    const list = createChecklist({
+      id: 'first-loop',
+      sections: [
+        { id: 'make', title: 'Make a beat' },
+        { id: 'share', title: 'Share it' },
+      ],
+      items: [
+        { id: 'learn', tour, section: 'make' },
+        { id: 'drums', after: 'learn', section: 'make' },
+        { id: 'bounce', after: ['drums'], section: 'share' },
+        { id: 'invite', optional: true, section: 'share' },
+      ],
+    });
+    let s = list.getState();
+    expect(s.locked).toEqual({ learn: false, drums: true, bounce: true, invite: false });
+    expect(s.next).toBe('learn');
+    expect(s.total).toBe(3); // optional items don't count
+    await list.startItem('bounce'); // locked: no-op
+    list.complete('learn');
+    s = list.getState();
+    expect(s.locked.drums).toBe(false);
+    expect(s.next).toBe('drums');
+    expect(s.sections.map((x) => [x.id, x.title, x.completed, x.total, x.done])).toEqual([
+      ['make', 'Make a beat', 1, 2, false],
+      ['share', 'Share it', 0, 1, false],
+    ]);
+    list.complete('drums');
+    list.complete('bounce');
+    expect(list.getState()).toMatchObject({ done: true, next: 'invite' });
+  });
+});
+
+describe('localized content', () => {
+  it('localize picks exact, language, regional, fallback, then first', async () => {
+    const { localize, isLocalized } = await import('../src');
+    const text = { en: 'Mixer', 'pt-BR': 'Mixer (BR)', ar: 'المِكسر' };
+    expect(localize(text, 'pt-BR')).toBe('Mixer (BR)');
+    expect(localize(text, 'pt')).toBe('Mixer (BR)'); // regional variant of the language
+    expect(localize(text, 'ar-EG')).toBe('المِكسر'); // language of a regional tag
+    expect(localize(text, 'fr')).toBe('Mixer'); // fallback en
+    expect(localize({ de: 'Mischpult' }, 'fr')).toBe('Mischpult'); // first entry
+    expect(localize('plain', 'fr')).toBe('plain');
+    expect(isLocalized({ title: 'x' })).toBe(false); // not locale tags
+  });
+
+  it('JSON accepts text per locale and rejects anything else', async () => {
+    const { validateTourJSON } = await import('../src/json');
+    expect(
+      validateTourJSON({ id: 'x', steps: [{ id: 'a', title: { en: 'Hi', pt: 'Oi' } }] }),
+    ).toEqual([]);
+    expect(validateTourJSON({ id: 'x', steps: [{ id: 'a', title: { en: 3 } }] })).toEqual([
+      'steps[0].title must be a string or an object of locale tags to strings',
+    ]);
+  });
+});
+
+describe('tour preview', () => {
+  it('loads a draft from the URL, runs it without saving or tracking, then restores the live tour', async () => {
+    const { persist, previewFromUrl } = await import('../src');
+    window.history.replaceState(null, '', '/?tour-preview=first-session&step=b');
+    const storage = memoryStorage<any>();
+    const impressions = memoryStorage<ImpressionRecord>();
+    const events: TourAnalyticsEvent[] = [];
+    const live = createTour({ id: 'first-session', steps: [{ id: 'old' }] });
+    const manager = createTourManager({ tours: [live], impressions });
+    const stop = previewFromUrl(manager, {
+      load: async () => ({
+        id: 'first-session',
+        rules: { audience: () => false }, // ignored in preview
+        plugins: [persist(storage), analytics((e) => events.push(e))],
+        steps: [{ id: 'a' }, { id: 'b' }],
+      }),
+    });
+    await tick();
+    await tick();
+    const draft = manager.get('first-session')!;
+    expect(draft).not.toBe(live);
+    expect(draft.preview).toBe(true);
+    expect(draft.getState()).toMatchObject({ status: 'active', stepId: 'b' });
+    expect((await manager.explain('first-session')).eligible).toBe(true);
+    draft.complete();
+    await tick();
+    expect(await storage.get('first-session')).toBeNull();
+    expect(await impressions.get('first-session')).toBeNull();
+    expect(events).toEqual([]);
+    stop();
+    expect(manager.get('first-session')).toBe(live);
+  });
+});
+
+describe('behavior triggers', () => {
+  const setup = (
+    trigger: NonNullable<NonNullable<Parameters<typeof createTour>[0]['rules']>['trigger']>,
+  ) => {
+    const tour = createTour({
+      id: `bt-${Math.random()}`,
+      rules: { trigger },
+      steps: [{ id: 'a' }],
+    });
+    const manager = createTourManager({ tours: [tour] });
+    return { tour, manager };
+  };
+  const active = (tour: { getState(): { status: string } }) => tour.getState().status === 'active';
+
+  it('dwell: lingering on the target for long enough', async () => {
+    vi.useFakeTimers();
+    try {
+      document.body.innerHTML =
+        '<section id="mixer"><button>Bass</button></section><p id="away"></p>';
+      const { tour } = setup({ dwell: { target: '#mixer', ms: 1000 } });
+      const over = (el: Element) =>
+        el.dispatchEvent(new Event('pointerover', { bubbles: true, composed: true }));
+      over(document.querySelector('button')!);
+      await vi.advanceTimersByTimeAsync(500);
+      over(document.getElementById('away')!); // left before the time was up
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(active(tour)).toBe(false);
+      over(document.querySelector('button')!);
+      await vi.advanceTimersByTimeAsync(1100);
+      expect(active(tour)).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('idle: no activity for the given time', async () => {
+    vi.useFakeTimers();
+    try {
+      const { tour } = setup({ idle: 1000 });
+      await vi.advanceTimersByTimeAsync(800);
+      document.dispatchEvent(new Event('keydown'));
+      await vi.advanceTimersByTimeAsync(800);
+      expect(active(tour)).toBe(false);
+      await vi.advanceTimersByTimeAsync(300);
+      expect(active(tour)).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('rageClick: several fast clicks on the same element', async () => {
+    document.body.innerHTML = '<button id="export">Export</button><button id="other">x</button>';
+    const { tour } = setup({ rageClick: { target: '#export', clicks: 3, within: 1000 } });
+    const exportBtn = document.getElementById('export')!;
+    exportBtn.click();
+    document.getElementById('other')!.click();
+    exportBtn.click();
+    await tick();
+    expect(active(tour)).toBe(false);
+    exportBtn.click();
+    exportBtn.click();
+    await tick();
+    await tick();
+    expect(active(tour)).toBe(true);
+  });
+
+  it('repeat: the same signal several times', async () => {
+    const { tour, manager } = setup({ repeat: { signal: 'export-failed', times: 2 } });
+    manager.signal('export-failed');
+    await tick();
+    expect(active(tour)).toBe(false);
+    manager.signal('export-failed');
+    await tick();
+    await tick();
+    expect(active(tour)).toBe(true);
+  });
+});
+
+describe('tour audit', () => {
+  it('checks each step on its page and reports missing targets', async () => {
+    const { auditTours, formatAudit } = await import('../src');
+    const pages: Record<string, string> = {
+      '/': '<nav id="nav"></nav>',
+      '/mix': '<section id="mixer"></section>',
+    };
+    const router = {
+      path: '/',
+      getPath: () => router.path,
+      navigate(p: string) {
+        router.path = p;
+        document.body.innerHTML = pages[p] ?? '';
+      },
+    };
+    router.navigate('/');
+    const tour = createTour({
+      id: 'onboarding',
+      data: { pro: false },
+      steps: [
+        { id: 'welcome' },
+        { id: 'nav', target: '#nav' },
+        { id: 'pro', target: '#pro', when: (ctx) => ctx.data.pro },
+        { id: 'mixer', route: '/mix', target: '#mixer' },
+        { id: 'bounce', target: '#bounce' }, // on /mix too, but gone
+        { id: 'project', route: '/projects/:id', target: '#p' },
+      ],
+    });
+    const [audit] = await auditTours([tour], { router, timeout: 20 });
+    expect(audit!.ok).toBe(false);
+    expect(audit!.steps.map((s) => [s.stepId, s.status])).toEqual([
+      ['welcome', 'no-target'],
+      ['nav', 'found'],
+      ['pro', 'hidden'],
+      ['mixer', 'found'],
+      ['bounce', 'missing'],
+      ['project', 'unchecked'],
+    ]);
+    expect(router.path).toBe('/'); // left where it was
+    expect(formatAudit([audit!])).toContain('✗ bounce (/mix)');
+  });
+});

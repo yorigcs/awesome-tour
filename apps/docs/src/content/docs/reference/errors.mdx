@@ -51,3 +51,8 @@ to `createTour` or to `TourProvider`.
 manager: the first can no longer be started by id, and their impressions mix. Usually a tour
 created inside a component body (a new instance per render) — create it at module level, or in
 `useState(() => createTour(…))`.
+
+## AT008
+
+**A checklist item comes `after` an item that doesn't exist.** Its dependency can never be done, so
+the item stays locked forever. Check the id, or remove it from `after`.

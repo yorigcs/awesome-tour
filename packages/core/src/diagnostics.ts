@@ -9,7 +9,16 @@ declare const process: { env: Record<string, string | undefined> } | undefined;
 
 export const DEV = typeof process !== 'undefined' && process.env.NODE_ENV !== 'production';
 
-export type DiagnosticCode = 'AT001' | 'AT002' | 'AT003' | 'AT004' | 'AT005' | 'AT006' | 'AT007';
+export type DiagnosticCode =
+  | 'AT001'
+  | 'AT002'
+  | 'AT003'
+  | 'AT004'
+  | 'AT005'
+  | 'AT006'
+  | 'AT007'
+  | 'AT008'
+  | 'AT009';
 
 const DOCS = 'https://yorigcs.github.io/awesome-tour/reference/errors/';
 

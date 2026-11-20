@@ -1,8 +1,12 @@
 import { createTour, type Tour as TourInstance, type TourOptions } from '@awesome-tour/core';
 import * as React from 'react';
-import { type ReactStepDefinition, useTourContext } from '../context';
+import { type LocalizedNode, type ReactStepDefinition, useTourContext } from '../context';
 import { useStoreSelector } from '../hooks';
-import { useTourMessages } from '../messages';
+import { useLocalize, useTourMessages } from '../messages';
+
+/** Plain text of a node, for accessible names (undefined when it isn't text). */
+const textOf = (node: React.ReactNode) => (typeof node === 'string' ? node : undefined);
+
 import { Portal, Tour, type TourRootProps } from '../tour';
 import { composeEventHandlers } from '../utils/compose';
 import { Primitive, type PrimitiveProps } from '../utils/primitive';
@@ -13,7 +17,7 @@ export type SurveyAnswers = Record<string, number | string | undefined>;
 interface QuestionBase {
   id: string;
   /** The question, shown by `Survey.Prompt`. */
-  prompt: React.ReactNode;
+  prompt: LocalizedNode;
   /** Ask only when this returns true (e.g. a follow-up for low scores). */
   when?: (answers: SurveyAnswers) => boolean;
   /** Allow moving on without an answer. Default: false. */
@@ -137,6 +141,7 @@ const SurveyScale = React.forwardRef<HTMLDivElement, SurveyScaleProps>(function 
   { autoAdvance = false, children, ...props },
   ref,
 ) {
+  const localizeText = useLocalize();
   const { survey, question, value, dir } = useSurvey('<Survey.Scale>');
   const messages = useTourMessages();
   const scale = question ? scaleOf(question) : null;
@@ -170,7 +175,7 @@ const SurveyScale = React.forwardRef<HTMLDivElement, SurveyScaleProps>(function 
   return (
     <Primitive.div
       role="radiogroup"
-      aria-label={typeof question.prompt === 'string' ? question.prompt : undefined}
+      aria-label={textOf(localizeText(question.prompt))}
       data-type={question.type}
       {...props}
       ref={ref}
@@ -211,10 +216,11 @@ const SurveyScale = React.forwardRef<HTMLDivElement, SurveyScaleProps>(function 
 const SurveyComment = React.forwardRef<HTMLTextAreaElement, PrimitiveProps<'textarea'>>(
   function SurveyComment({ onChange, ...props }, ref) {
     const { survey, question, value } = useSurvey('<Survey.Comment>');
+    const localizeText = useLocalize();
     if (question?.type !== 'text') return null;
     return (
       <Primitive.textarea
-        aria-label={typeof question.prompt === 'string' ? question.prompt : undefined}
+        aria-label={textOf(localizeText(question.prompt))}
         placeholder={question.placeholder}
         value={typeof value === 'string' ? value : ''}
         {...props}

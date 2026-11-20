@@ -88,6 +88,7 @@ const DEMO_PAGES = [
   'guides/accessibility',
   'guides/three',
   'guides/experiments',
+  'guides/without-react',
 ];
 
 /** Returning visitor: the landing tour has already introduced itself. */

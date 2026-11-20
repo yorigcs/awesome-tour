@@ -60,6 +60,29 @@ element (links don't navigate, buttons don't fire). <kbd>Esc</kbd> cancels.
 **Export JSON** downloads a snapshot of every tour's state, the manager's queue and the event log —
 attach it to a bug report.
 
+## Funnel
+
+The **Funnel** tab counts this session's runs of each tour: how many reached each step, where they
+dropped off, how they ended, and how many reached the tour's [goal](../analytics/#goals). Click
+through a tour a few times, closing it at different steps, and you see the drop-off before any
+analytics is wired up.
+
+## Recorder
+
+The **Record** tab builds a tour by clicking through your app:
+
+1. **+ Element**, then click the thing the step should point at. The picker keeps the most stable
+   target it can find (`anchor`, `byTour`, `byRole` and name, then an id or selector) and the page
+   you were on. Navigate between picks as you like; the recording survives reloads.
+2. Type a title and description, pick a side, reorder or remove steps. **+ Centered** adds a step
+   without a target.
+3. **Play** runs it right away, as a [preview](../json-tours/#previewing-drafts) (nothing saved or
+   tracked).
+4. **Copy JSON** for your CMS, or **Copy code** for a `createTour` call — routes are written where
+   the page changes.
+
+Then put the result through the [health check](../testing/#tour-health-checks) in CI.
+
 ## Usable during modal tours
 
 The panel carries the `data-tour-keep` attribute: modal tours don't make it `inert`, and tour

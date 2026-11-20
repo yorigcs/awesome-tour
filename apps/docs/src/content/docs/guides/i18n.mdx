@@ -45,6 +45,34 @@ const ptBR: Partial<TourMessages> = {
 <TourProvider messages={ptBR}>…</TourProvider>;
 ```
 
+## Step content in several languages
+
+The messages above are the library's own strings. Your tours' text can be translated in place: any
+`title`, `description` or `content` (and announcement and survey text) can be an object of
+[BCP 47](https://www.rfc-editor.org/info/bcp47) locale tags:
+
+```ts
+createTour({
+  id: 'first-session',
+  steps: [
+    {
+      id: 'mixer',
+      target: '#mixer',
+      title: { en: 'Mixer', 'pt-BR': 'Mixer', ar: 'المِكسر' },
+      description: { en: 'Set the levels.', 'pt-BR': 'Ajuste os volumes.', ar: 'اضبط المستويات.' },
+    },
+  ],
+});
+
+<TourProvider locale={user.locale} fallbackLocale="en">…</TourProvider>;
+```
+
+The locale comes from the nearest `locale` prop (`TourProvider` or `Tour.Root`), else from
+`<html lang>` — read after hydration, so server and client agree. A text is picked by exact tag
+(`pt-BR`), then language (`pt`), then any regional variant of it (`pt-PT`), then `fallbackLocale`,
+then its first entry. The same objects work in [tours as JSON](../json-tours/), so translators can
+edit them in your CMS. `useLocalize()` resolves them in your own components.
+
 ## `TourMessages`
 
 | Key                 | Default                       | Used by                                      |

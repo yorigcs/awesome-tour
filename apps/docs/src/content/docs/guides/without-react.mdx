@@ -1,0 +1,85 @@
+---
+title: Without React
+description: Use awesome-tour from Vue, Svelte, Angular or plain HTML with a DOM renderer and an <awesome-tour> custom element.
+sidebar:
+  order: 23
+---
+
+import Preview from '../../../components/Preview.astro';
+import { VanillaDemo } from '../../../components/demos/VanillaDemo';
+import VanillaDemoSource from '../../../components/demos/VanillaDemo.tsx?raw';
+
+The engine (`@awesome-tour/core`) has no framework in it. `@awesome-tour/elements` adds a renderer
+that needs none either: overlay, card, keyboard, focus trap, `inert`, RTL and screen-reader
+announcements in plain DOM, inside a shadow root.
+
+<Preview code={VanillaDemoSource} title="VanillaDemo.tsx">
+  <VanillaDemo client:visible />
+</Preview>
+
+```bash
+pnpm add @awesome-tour/core @awesome-tour/elements
+```
+
+## The `<awesome-tour>` element
+
+For a page that has no build step, or a CMS that serves [tours as JSON](../json-tours/):
+
+```html
+<script type="module">
+  import '@awesome-tour/elements/define';
+</script>
+
+<awesome-tour src="/tours/first-session.json" autostart persist locale="pt-BR"></awesome-tour>
+```
+
+| Attribute   | Effect                                                              |
+| ----------- | ------------------------------------------------------------------- |
+| `src`       | URL of a tour JSON document (validated by `fromJSON`).              |
+| `autostart` | Start once loaded.                                                  |
+| `persist`   | Remember progress in `localStorage` (resume, don't show again).     |
+| `locale`    | Language for [text per locale](../i18n/#step-content-in-several-languages). |
+| `modal`     | `"false"` for a non-blocking tour.                                  |
+
+Properties: `tour` (hand it a tour instead of `src`) and `actions` (the functions the JSON names).
+Methods: `start()`, `close()`. Events, bubbling: `tour-start`, `tour-step` (`detail.stepId`),
+`tour-complete`, `tour-close`, `tour-skip`, `tour-error`.
+
+```js
+const el = document.querySelector('awesome-tour');
+el.actions = { isPro: () => user.plan === 'pro' };
+el.addEventListener('tour-complete', () => analytics.track('tour_completed'));
+```
+
+## From code: `mountTour`
+
+```ts
+import { createTour } from '@awesome-tour/core';
+import { mountTour } from '@awesome-tour/elements';
+
+const tour = createTour({ id: 'first-session', steps });
+const unmount = mountTour(tour, { modal: true, locale: 'pt-BR', labels: { next: 'Próximo' } });
+tour.start();
+```
+
+In Vue, call it in `onMounted` and the returned function in `onUnmounted`; in Svelte, in `onMount`
+(return the function). Everything else — rules, persistence, analytics, goals, the
+[manager](../multiple-tours/) — is the same core API.
+
+## Theming
+
+The card lives in a shadow root, so page CSS can't break it by accident. Style it on purpose:
+
+```css
+awesome-tour-layer {
+  --tour-bg: #0f0f12;
+  --tour-fg: #f4f4f5;
+  --tour-accent: #8b7dff;
+  --tour-radius: 16px;
+  --tour-overlay: rgb(0 0 0 / 0.6);
+}
+awesome-tour-layer::part(title) { font-family: 'Your Display', sans-serif; }
+```
+
+Parts: `overlay`, `card`, `header`, `progress`, `close`, `title`, `description`, `footer`, `back`,
+`next`. `mountTour(tour, { unstyled: true })` leaves out the built-in look entirely.

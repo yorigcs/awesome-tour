@@ -22,6 +22,7 @@ export {
 } from './checklist';
 export {
   defaultKeyMap,
+  type LocalizedNode,
   type ReactStepDefinition,
   type StepRenderProps,
   TourContext,
@@ -62,9 +63,12 @@ export {
 } from './hotspot';
 export {
   defaultMessages,
+  LocaleScope,
   MessagesScope,
   type TourMessages,
   type TourMessagesInput,
+  useLocale,
+  useLocalize,
   useTourMessages,
 } from './messages';
 export { type UseRouterAdapterOptions, useRouterAdapter } from './router';

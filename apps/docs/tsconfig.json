@@ -14,6 +14,8 @@
       "@awesome-tour/motion": ["../../packages/motion/src/index.ts"],
       "@awesome-tour/devtools": ["../../packages/devtools/src/index.ts"],
       "@awesome-tour/three": ["../../packages/three/src/index.ts"],
+      "@awesome-tour/elements": ["../../packages/elements/src/index.ts"],
+      "@awesome-tour/elements/define": ["../../packages/elements/src/define.ts"],
       "@loopwork": ["../../examples/loopwork/src/index.ts"],
       "@/*": ["../../registry/src/*"],
       "~/*": ["./src/*"]

@@ -1,0 +1,78 @@
+{
+  "name": "@awesome-tour/elements",
+  "version": "0.0.0",
+  "description": "awesome-tour without React: a DOM renderer (mountTour) and an <awesome-tour> custom element for Vue, Svelte, Angular or plain HTML.",
+  "license": "MIT",
+  "author": "Yor\u00ed",
+  "homepage": "https://yorigcs.github.io/awesome-tour/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yorigcs/awesome-tour.git",
+    "directory": "packages/elements"
+  },
+  "bugs": {
+    "url": "https://github.com/yorigcs/awesome-tour/issues"
+  },
+  "type": "module",
+  "sideEffects": [
+    "./dist/define.js",
+    "./dist/define.cjs"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./define": {
+      "import": {
+        "types": "./dist/define.d.ts",
+        "default": "./dist/define.js"
+      },
+      "require": {
+        "types": "./dist/define.d.cts",
+        "default": "./dist/define.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "tour",
+    "onboarding",
+    "product-tour",
+    "walkthrough",
+    "web-components",
+    "custom-elements",
+    "vanilla",
+    "a11y"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "@awesome-tour/core": "workspace:^"
+  },
+  "devDependencies": {
+    "@awesome-tour/core": "workspace:^"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

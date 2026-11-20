@@ -59,4 +59,20 @@ export const css = /* css */ `
 .atd-progress { height: 4px; border-radius: 4px; background: var(--atd-line); overflow: hidden; flex: 1; }
 .atd-progress > span { display: block; height: 100%; background: var(--atd-accent); }
 @media (prefers-reduced-motion: no-preference) { .atd-progress > span { transition: width 200ms ease; } }
+.atd-funnels { display: flex; flex-direction: column; gap: 10px; }
+.atd-funnel { list-style: none; margin: 6px 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.atd-funnel li { display: grid; grid-template-columns: minmax(0, 7rem) 1fr auto; align-items: center; gap: 8px; }
+.atd-funnel li > .atd-mono:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.atd-bar { height: 6px; border-radius: 3px; background: var(--atd-panel); overflow: hidden; }
+.atd-bar > span { display: block; height: 100%; background: var(--atd-accent); }
+.atd-drop { color: var(--atd-bad); }
+.atd-recording { list-style: none; margin: 8px 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.atd-recorded { display: flex; flex-direction: column; gap: 4px; padding: 8px; border: 1px solid var(--atd-line); border-radius: 8px; background: var(--atd-panel); }
+.atd-recorded code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.atd-spacer { flex: 1; }
+.atd-input { font: inherit; color: var(--atd-text); background: var(--atd-bg); border: 1px solid var(--atd-line); border-radius: 6px; padding: 4px 6px; resize: vertical; }
+.atd-input:focus-visible { outline: 2px solid var(--atd-accent); outline-offset: 1px; }
+.atd-play-overlay { position: fixed; inset: 0; background: rgb(0 0 0 / 0.45); z-index: 2147482999; }
+.atd-play-card { z-index: 2147483001; width: min(20rem, calc(100vw - 2rem)); display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 10px; background: var(--atd-bg); color: var(--atd-text); border: 1px solid var(--atd-accent); box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.5); font: 13px/1.4 system-ui, sans-serif; }
+.atd-play-title { margin: 0; font-size: 14px; font-weight: 600; }
 `;

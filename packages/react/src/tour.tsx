@@ -28,7 +28,13 @@ import {
   useTourProvider,
 } from './context';
 import { useTargetRect, useTargetRects, useTourAnchor, useTourSelector } from './hooks';
-import { MessagesScope, type TourMessagesInput, useTourMessages } from './messages';
+import {
+  LocaleScope,
+  MessagesScope,
+  type TourMessagesInput,
+  useLocalize,
+  useTourMessages,
+} from './messages';
 import { composeEventHandlers, useComposedRefs } from './utils/compose';
 import {
   getTabbables,
@@ -109,6 +115,11 @@ export interface TourRootProps<TData = any> {
     | ((info: { state: TourState; step: ReactStepDefinition | undefined }) => string);
   /** Translations for the strings this tour's parts render (merged over inherited messages). */
   messages?: TourMessagesInput;
+  /**
+   * Locale for step content given per locale (`title: { en, pt }`). Default: the provider's, else
+   * `<html lang>`.
+   */
+  locale?: string;
   children?: React.ReactNode;
 }
 
@@ -145,6 +156,7 @@ function TourRoot<TData = any>(props: TourRootProps<TData>) {
     restoreFocus = true,
     announce,
     messages,
+    locale,
     children,
   } = props;
 
@@ -371,12 +383,14 @@ function TourRoot<TData = any>(props: TourRootProps<TData>) {
 
   return (
     <MessagesScope messages={messages}>
-      <TourContext.Provider value={value}>
-        {children}
-        {announce !== false && (
-          <Announcer announce={announce} open={open} state={state} step={step} />
-        )}
-      </TourContext.Provider>
+      <LocaleScope locale={locale}>
+        <TourContext.Provider value={value}>
+          {children}
+          {announce !== false && (
+            <Announcer announce={announce} open={open} state={state} step={step} />
+          )}
+        </TourContext.Provider>
+      </LocaleScope>
     </MessagesScope>
   );
 }
@@ -1165,6 +1179,7 @@ const TourContentImpl = React.forwardRef<HTMLDivElement, Omit<TourContentProps, 
             data-align={centered ? 'center' : positioner.placedAlign}
             data-placement={sheet ? 'sheet' : centered ? 'center' : 'anchored'}
             data-layout={sheet ? 'sheet' : 'popover'}
+            data-preview={tour.preview ? '' : undefined}
             data-step={state.stepId ?? undefined}
             data-phase={state.phase ?? undefined}
             data-direction={state.direction ?? undefined}
@@ -1269,11 +1284,12 @@ const TourTitle = React.forwardRef<HTMLHeadingElement, PrimitiveProps<'h2'>>(fun
   ref,
 ) {
   const { step } = useTourContext('<Tour.Title>');
+  const localizeNode = useLocalize();
   const content = useTourContentContext();
   const id = useRegisteredId(content.setTitleId, idProp);
   return (
     <Primitive.h2 id={id} {...props} ref={ref}>
-      {children ?? step?.title}
+      {children ?? localizeNode(step?.title)}
     </Primitive.h2>
   );
 });
@@ -1281,11 +1297,12 @@ const TourTitle = React.forwardRef<HTMLHeadingElement, PrimitiveProps<'h2'>>(fun
 const TourDescription = React.forwardRef<HTMLParagraphElement, PrimitiveProps<'p'>>(
   function TourDescription({ children, id: idProp, ...props }, ref) {
     const { step } = useTourContext('<Tour.Description>');
+    const localizeNode = useLocalize();
     const content = useTourContentContext();
     const id = useRegisteredId(content.setDescriptionId, idProp);
     return (
       <Primitive.p id={id} {...props} ref={ref}>
-        {children ?? step?.description}
+        {children ?? localizeNode(step?.description)}
       </Primitive.p>
     );
   },
@@ -1301,6 +1318,7 @@ export interface TourStepContentProps {
 /** Renders the current step's content: `<Tour.Step>` children, or the step's `content` field. */
 function TourStepContent({ fallback = null, children }: TourStepContentProps) {
   const { tour, state, step, contents } = useTourContext('<Tour.StepContent>');
+  const localizeNode = useLocalize();
   const declared = React.useSyncExternalStore(
     contents.subscribe,
     () => (state.stepId ? contents.get(state.stepId) : undefined),
@@ -1311,7 +1329,9 @@ function TourStepContent({ fallback = null, children }: TourStepContentProps) {
   let node: React.ReactNode;
   if (children) node = children(renderProps);
   else if (declared !== undefined) node = declared;
-  else node = typeof step.content === 'function' ? step.content(renderProps) : step.content;
+  else
+    node =
+      typeof step.content === 'function' ? step.content(renderProps) : localizeNode(step.content);
   return <React.Suspense fallback={fallback}>{node}</React.Suspense>;
 }
 

@@ -42,6 +42,9 @@ Render it with the [Checklist components](../../components/checklist/). In React
 | `tour`   | `string \| Tour`          | A tour that completes this item when it completes (`complete` event, or already `completed` when linked). A tour **id** needs a connected manager (`connect(manager)`; automatic under `TourProvider`). |
 | `signal` | `string`                  | Complete when `checklist.signal(name)` is called.                                                                   |
 | `when`   | `() => boolean`           | Complete when the predicate returns `true`, checked on `refresh()` (and after loading persisted state).             |
+| `after`  | `string \| string[]`      | Items that must be done or skipped first. Until then the item is `locked`: `startItem` does nothing and `Checklist.ItemTrigger` is `aria-disabled`. Doing the thing anyway still completes it. |
+| `optional` | `boolean`               | A nice-to-have: excluded from `completed`, `total`, `progress` and `done`.                                          |
+| `section` | `string`                 | Groups the item (`state.sections`); titles come from `options.sections`.                                            |
 | `meta`   | `Record<string, unknown>` | Free-form data for rendering: title, description, icon…                                                             |
 
 An item can combine several of these; any of them completes it. Items can always be completed manually with `complete(id)`.
@@ -77,7 +80,10 @@ Unknown item ids are ignored by `complete`, `skip` and `reset`.
 | `completed` | `number`                                     | Items `done` or `skipped`.                                            |
 | `total`     | `number`                                     | Number of items.                                                      |
 | `progress`  | `number`                                     | `completed / total`, from `0` to `1`.                                 |
-| `done`      | `boolean`                                    | Every item is done or skipped.                                        |
+| `done`      | `boolean`                                    | Every required (non-`optional`) item is done or skipped.              |
+| `locked`    | `Record<string, boolean>`                    | Items waiting on their `after` dependencies.                          |
+| `next`      | `string \| null`                             | The first pending, unlocked item (required ones first): what to do next. |
+| `sections`  | `{ id, title?, items, completed, total, done }[]` | Items grouped by `section`, in order of first appearance.        |
 | `dismissed` | `boolean`                                    | The user hid the checklist.                                           |
 | `hydrated`  | `boolean`                                    | Persisted state has been loaded (`true` immediately without `persistence`). |
 

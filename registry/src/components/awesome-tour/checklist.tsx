@@ -8,7 +8,7 @@ import {
   useStoreSelector,
   useTourMessages,
 } from '@awesome-tour/react';
-import { Check, ChevronRight, Minus, X } from 'lucide-react';
+import { Check, ChevronRight, Lock, Minus, X } from 'lucide-react';
 import type * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -112,7 +112,12 @@ function ChecklistRow({
     <Checklist.Item
       value={value}
       data-slot="checklist-row"
-      className={cn('group/item relative flex items-center gap-3 rounded-lg', className)}
+      className={cn(
+        'group/item relative flex items-center gap-3 rounded-lg',
+        // What to do next stands out; locked items recede until their turn.
+        'data-[next]:bg-accent/60 data-[locked]:opacity-60',
+        className,
+      )}
     >
       <Checklist.ItemIndicator
         forceMount
@@ -130,18 +135,28 @@ function ChecklistRow({
         className={cn(
           'flex w-full cursor-pointer items-center gap-3 rounded-lg py-2 pr-2 pl-10 text-left outline-none transition-colors',
           'hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50',
+          'data-[locked]:cursor-not-allowed data-[locked]:hover:bg-transparent',
           'group-data-[state=done]/item:text-muted-foreground group-data-[state=done]/item:line-through group-data-[state=skipped]/item:text-muted-foreground',
         )}
       >
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="font-medium">{title}</span>
+          <span className="font-medium">
+            {title}
+            <span className="ml-1.5 hidden text-[11px] font-normal text-muted-foreground group-data-[optional]/item:inline">
+              Optional
+            </span>
+          </span>
           {description && (
             <span className="text-xs font-normal text-muted-foreground no-underline">
               {description}
             </span>
           )}
         </span>
-        <ChevronRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/item:opacity-100 group-data-[state=done]/item:hidden" />
+        <Lock
+          aria-hidden="true"
+          className="hidden size-3.5 shrink-0 text-muted-foreground group-data-[locked]/item:block"
+        />
+        <ChevronRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/item:opacity-100 group-data-[state=done]/item:hidden group-data-[locked]/item:hidden" />
       </Checklist.ItemTrigger>
     </Checklist.Item>
   );
@@ -164,6 +179,60 @@ const defaultRenderItem = (item: ChecklistItemDefinition) => ({
   title: (item.meta?.title as React.ReactNode) ?? item.id,
   description: item.meta?.description as React.ReactNode,
 });
+
+/** Items, grouped under their `section` titles when the checklist declares sections. */
+function ChecklistSections({
+  checklist,
+  renderItem,
+}: {
+  checklist: ChecklistInstance;
+  renderItem: NonNullable<ChecklistPanelProps['renderItem']>;
+}) {
+  const sections = useStoreSelector(checklist, (s) => s.sections);
+  const items = checklist.getItems();
+  if (sections.length === 0) {
+    return (
+      <ChecklistItems>
+        {items.map((item) => (
+          <ChecklistRow key={item.id} value={item.id} {...renderItem(item)} />
+        ))}
+      </ChecklistItems>
+    );
+  }
+  const loose = items.filter((item) => !item.section);
+  return (
+    <div className="flex flex-col gap-3">
+      {sections.map((section) => (
+        <section
+          key={section.id}
+          aria-label={section.title ?? section.id}
+          className="flex flex-col gap-1"
+        >
+          <p className="flex items-baseline justify-between text-xs font-medium text-muted-foreground">
+            <span>{section.title ?? section.id}</span>
+            <span className="tabular-nums">
+              {section.completed}/{section.total}
+            </span>
+          </p>
+          <ChecklistItems>
+            {items
+              .filter((item) => item.section === section.id)
+              .map((item) => (
+                <ChecklistRow key={item.id} value={item.id} {...renderItem(item)} />
+              ))}
+          </ChecklistItems>
+        </section>
+      ))}
+      {loose.length > 0 && (
+        <ChecklistItems>
+          {loose.map((item) => (
+            <ChecklistRow key={item.id} value={item.id} {...renderItem(item)} />
+          ))}
+        </ChecklistItems>
+      )}
+    </div>
+  );
+}
 
 /** A complete onboarding checklist card, with a "Show checklist" button once dismissed. */
 function ChecklistPanel({
@@ -189,11 +258,7 @@ function ChecklistPanel({
     <ChecklistCard checklist={checklist} aria-labelledby={titleId} className={className} {...props}>
       <ChecklistHeader title={title} description={description} titleId={titleId} />
       <ChecklistProgressBar />
-      <ChecklistItems>
-        {checklist.getItems().map((item) => (
-          <ChecklistRow key={item.id} value={item.id} {...renderItem(item)} />
-        ))}
-      </ChecklistItems>
+      <ChecklistSections checklist={checklist} renderItem={renderItem} />
       {children}
     </ChecklistCard>
   );

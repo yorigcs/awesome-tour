@@ -73,3 +73,31 @@ The JSON Schema ships with the package — point your editor or CMS at it for au
   A tour document controls what your users see. Load it from a source you trust, the same way you
   would load any remote configuration.
 </Aside>
+
+## Previewing drafts
+
+Tours that live in a CMS need a way to try a draft on the real app before publishing it. Open any
+page with `?tour-preview=<id>` and the provider loads the draft and runs it:
+
+```tsx
+import { fromJSON } from '@awesome-tour/core/json';
+
+<TourProvider
+  tours={publishedTours}
+  preview={{
+    // Fetch the draft (and check the user may preview it): return tour options, or null.
+    load: async (id) => {
+      const res = await fetch(`/api/tours/${id}/draft`, { credentials: 'include' });
+      return res.ok ? fromJSON(await res.json(), { actions }) : null;
+    },
+  }}
+>
+  …
+</TourProvider>;
+```
+
+A preview replaces the published tour with the same id while it runs, starts at `?step=` if
+given, and is marked `tour.preview`: it saves no progress, records no impressions, sends no
+analytics and ignores display rules — so previewing on production touches nobody's data. The
+registry card shows a dashed "Preview" pill (`data-preview` on `Tour.Content`). Without React, use
+`previewFromUrl(manager, { load })`.

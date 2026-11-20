@@ -1,4 +1,4 @@
-import { createTour, type ReactStepDefinition, Tour, type TourMessages } from '@awesome-tour/react';
+import { createTour, Tour, type TourMessages } from '@awesome-tour/react';
 import { LoopworkApp, parts } from '@loopwork';
 import { useState } from 'react';
 import { TourPopover } from '@/components/awesome-tour/tour';
@@ -24,36 +24,44 @@ const messages: Record<Lang, Partial<TourMessages> | undefined> = {
   },
 };
 
-const copy: Record<Lang, [string, string][]> = {
-  en: [
-    ['Transport', 'Play, stop and record. The counter reads bar · beat · step.'],
-    ['The beat', 'Click a cell to add a hit. Each row is one bar.'],
-    ['Mixer', 'Set each channel’s level with its knob, or with the arrow keys.'],
+// One tour, its text in three languages: the Root's `locale` picks one (or `<html lang>`).
+const tour = createTour({
+  id: 'docs-i18n',
+  steps: [
+    {
+      id: 'transport',
+      target: $('transport'),
+      title: { en: 'Transport', pt: 'Transporte', ar: 'أدوات التشغيل' },
+      description: {
+        en: 'Play, stop and record. The counter reads bar · beat · step.',
+        pt: 'Toque, pare e grave. O contador mostra compasso · tempo · passo.',
+        ar: 'شغّل وأوقف وسجّل. العدّاد يعرض المازورة · النبضة · الخطوة.',
+      },
+    },
+    {
+      id: 'beat',
+      target: $('sequencer'),
+      title: { en: 'The beat', pt: 'A batida', ar: 'الإيقاع' },
+      description: {
+        en: 'Click a cell to add a hit. Each row is one bar.',
+        pt: 'Clique numa célula para adicionar um toque. Cada linha é um compasso.',
+        ar: 'انقر على خانة لإضافة ضربة. كل صف مازورة واحدة.',
+      },
+    },
+    {
+      id: 'mixer',
+      target: $('mixer'),
+      // `start` is the left in LTR and the right in RTL.
+      side: 'start',
+      title: { en: 'Mixer', pt: 'Mixer', ar: 'المِكسر' },
+      description: {
+        en: 'Set each channel’s level with its knob, or with the arrow keys.',
+        pt: 'Ajuste o volume de cada canal no knob ou com as setas.',
+        ar: 'اضبط مستوى كل قناة بالمقبض أو بمفاتيح الأسهم.',
+      },
+    },
   ],
-  pt: [
-    ['Transporte', 'Toque, pare e grave. O contador mostra compasso · tempo · passo.'],
-    ['A batida', 'Clique numa célula para adicionar um toque. Cada linha é um compasso.'],
-    ['Mixer', 'Ajuste o volume de cada canal no knob ou com as setas.'],
-  ],
-  ar: [
-    ['أدوات التشغيل', 'شغّل وأوقف وسجّل. العدّاد يعرض المازورة · النبضة · الخطوة.'],
-    ['الإيقاع', 'انقر على خانة لإضافة ضربة. كل صف مازورة واحدة.'],
-    ['المِكسر', 'اضبط مستوى كل قناة بالمقبض أو بمفاتيح الأسهم.'],
-  ],
-};
-
-const targets = [$('transport'), $('sequencer'), $('mixer')];
-const stepsFor = (lang: Lang): ReactStepDefinition[] =>
-  copy[lang].map(([title, description], i) => ({
-    id: ['transport', 'beat', 'mixer'][i]!,
-    target: targets[i],
-    // `start`/`end` sides would mirror too; here the card sits below or beside.
-    side: i === 2 ? 'left' : 'bottom',
-    title,
-    description,
-  }));
-
-const tour = createTour({ id: 'docs-i18n', steps: stepsFor('pt') });
+});
 
 const LABELS: Record<Lang, string> = { en: 'EN', pt: 'PT', ar: 'عربي' };
 
@@ -61,7 +69,7 @@ export function I18nDemo() {
   const [lang, setLang] = useState<Lang>('pt');
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
   return (
-    <Tour.Root tour={tour} messages={messages[lang]} dir={dir}>
+    <Tour.Root tour={tour} messages={messages[lang]} dir={dir} locale={lang}>
       <DemoFrame
         title="Internationalization"
         actions={
@@ -74,10 +82,7 @@ export function I18nDemo() {
                   type="button"
                   lang={l}
                   aria-pressed={lang === l}
-                  onClick={() => {
-                    setLang(l);
-                    tour.setSteps(stepsFor(l));
-                  }}
+                  onClick={() => setLang(l)}
                   className={`${worldButton.secondary} h-8 rounded-none border-0`}
                 >
                   {LABELS[l]}

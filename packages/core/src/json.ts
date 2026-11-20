@@ -5,6 +5,7 @@
  * through `actions`.
  */
 import { anchor } from './anchors';
+import { isLocalized } from './localize';
 import { byRole, byText, byTour, firstOf } from './locators';
 import type {
   AdvanceOn,
@@ -44,10 +45,13 @@ export interface AdvanceJSON {
   to?: string;
 }
 
+/** Text, or text per locale tag: `{ "en": "Mixer", "pt-BR": "Mixer" }`. */
+export type TextJSON = string | Record<string, string>;
+
 export interface StepJSON {
   id: string;
-  title?: string;
-  description?: string;
+  title?: TextJSON;
+  description?: TextJSON;
   target?: TargetJSON | null;
   route?: string;
   side?: 'top' | 'right' | 'bottom' | 'left' | 'start' | 'end';
@@ -112,6 +116,10 @@ export interface TourJSON {
       event?: { type: string; target?: TargetJSON };
       delay?: number;
       targetVisible?: TargetJSON;
+      dwell?: { target: TargetJSON; ms?: number };
+      idle?: number;
+      rageClick?: { target?: TargetJSON; clicks?: number; within?: number };
+      repeat?: { signal: string; times?: number; within?: number };
     };
     priority?: number;
   };
@@ -120,8 +128,8 @@ export interface TourJSON {
 
 /** The step shape `fromJSON` produces (core fields + the React-rendered ones). */
 export type JSONStep = StepDefinition & {
-  title?: string;
-  description?: string;
+  title?: TextJSON;
+  description?: TextJSON;
   side?: StepJSON['side'];
   align?: StepJSON['align'];
   interactive?: boolean;
@@ -178,6 +186,11 @@ export function validateTourJSON(json: unknown, actions: Record<string, unknown>
       });
     } else checkLocator(path, value);
   };
+  const checkText = (path: string, value: unknown) => {
+    if (value === undefined || typeof value === 'string') return;
+    if (isLocalized(value) && Object.values(value).every((v) => typeof v === 'string')) return;
+    errors.push(`${path} must be a string or an object of locale tags to strings`);
+  };
   const needAction = (path: string, name: unknown) => {
     if (name === undefined) return;
     if (typeof name !== 'string') errors.push(`${path} must be an action name (string)`);
@@ -197,6 +210,8 @@ export function validateTourJSON(json: unknown, actions: Record<string, unknown>
     needAction(`${at}.afterLeave`, step.afterLeave);
     needAction(`${at}.canNext`, step.canNext);
     needAction(`${at}.beforeLeave`, step.beforeLeave);
+    checkText(`${at}.title`, step.title);
+    checkText(`${at}.description`, step.description);
     oneOf(`${at}.side`, step.side, ['top', 'right', 'bottom', 'left', 'start', 'end']);
     oneOf(`${at}.align`, step.align, ['start', 'center', 'end']);
     oneOf(`${at}.onTargetMissing`, step.onTargetMissing, ['wait', 'skip', 'center', 'error']);
@@ -341,6 +356,21 @@ export function fromJSON(json: TourJSON, options: FromJSONOptions = {}): TourOpt
     }
     if (t?.targetVisible !== undefined)
       trigger.targetVisible = target(t.targetVisible) as TargetInput;
+    if (t?.dwell) {
+      trigger.dwell = {
+        target: target(t.dwell.target) as TargetInput,
+        ...(t.dwell.ms !== undefined ? { ms: t.dwell.ms } : {}),
+      };
+    }
+    if (t?.idle !== undefined) trigger.idle = t.idle;
+    if (t?.rageClick) {
+      const { target: rt, ...rest } = t.rageClick;
+      trigger.rageClick = {
+        ...rest,
+        ...(rt !== undefined ? { target: target(rt) as TargetInput } : {}),
+      };
+    }
+    if (t?.repeat) trigger.repeat = t.repeat;
     rules = {
       ...(schedule ? { schedule } : {}),
       ...(frequency ? { frequency } : {}),

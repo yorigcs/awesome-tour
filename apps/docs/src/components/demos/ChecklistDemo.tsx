@@ -30,20 +30,39 @@ const gridTour = createTour({
 const checklist = createChecklist({
   id: 'docs-first-loop',
   persistence: memoryStorage(),
+  sections: [
+    { id: 'make', title: 'Make a beat' },
+    { id: 'release', title: 'Release it' },
+  ],
   items: [
-    { id: 'tour', tour: gridTour, meta: { title: 'Learn the beat grid' } },
+    { id: 'tour', tour: gridTour, section: 'make', meta: { title: 'Learn the beat grid' } },
     {
       id: 'drums',
+      after: 'tour', // locked until the tour is done
+      section: 'make',
       // A predicate over your app's state, re-checked on `checklist.refresh()`.
       when: () => activeCells(app.getState()) >= 20,
       meta: { title: 'Fill the bar', description: '20 hits or more' },
     },
     {
       id: 'bass',
+      after: 'tour',
+      section: 'make',
       signal: 'bass-up',
       meta: { title: 'Bring the bass up', description: 'Bass at 60% or more' },
     },
-    { id: 'bounce', meta: { title: 'Bounce your first loop' } },
+    {
+      id: 'bounce',
+      after: ['drums', 'bass'],
+      section: 'release',
+      meta: { title: 'Bounce your first loop' },
+    },
+    {
+      id: 'sound',
+      optional: true, // a nice-to-have: doesn't count toward progress
+      section: 'release',
+      meta: { title: 'Turn the preview audio on' },
+    },
   ],
 });
 
@@ -53,6 +72,9 @@ app.on('level-changed', () => {
   if (app.getState().mixer.bass.level >= 0.6) checklist.signal('bass-up');
 });
 app.on('bounced', () => checklist.complete('bounce'));
+app.subscribe(() => {
+  if (app.getState().sound) checklist.complete('sound');
+});
 
 export function ChecklistDemo() {
   useEffect(() => connectAudio(app), []);
@@ -76,7 +98,7 @@ export function ChecklistDemo() {
       <div className="grid gap-4">
         <ChecklistPanel
           checklist={checklist}
-          description="Four steps to your first bounce"
+          description="From an empty grid to your first bounce"
           className="max-w-md"
         />
         <LoopworkApp scope="first-loop" app={app} layout="routed" />

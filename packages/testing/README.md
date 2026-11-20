@@ -2,7 +2,8 @@
 
 Test helpers for [awesome-tour](https://yorigcs.github.io/awesome-tour/):
 
-- `@awesome-tour/testing/playwright` — Playwright `test` with a `tour` fixture (`expectStep`, `next`, `expectNotObscuring`…).
+- `npx awesome-tour-check <url>` — a CI health check: every step of every tour still finds its target (exits 1 otherwise).
+- `@awesome-tour/testing/playwright` — `expectToursHealthy(page)`, and Playwright `test` with a `tour` fixture (`expectStep`, `next`, `expectNotObscuring`…).
 - `@awesome-tour/testing/react` — `renderWithTour` (React Testing Library inside a `TourProvider`).
 - `@awesome-tour/testing` — `waitForStep`, `waitForTourEnd`, `mockRect` / `mockLayout`, `createMemoryRouter`.
 

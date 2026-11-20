@@ -9,7 +9,9 @@ Unstyled, accessible, composable primitives for product tours and onboarding in 
 - **Motion adapter** (`@awesome-tour/motion`): spotlight that morphs between targets with springs, enter/exit presets.
 - **3D adapter** (`@awesome-tour/three`): highlight objects inside a react-three-fiber scene and fly the camera per step.
 - **Router adapters** (`@awesome-tour/router`): React Router, Next.js App Router and TanStack Router for multi-page tours.
-- **Devtools** (`@awesome-tour/devtools`): inspect tours, jump between steps, check target health, watch events.
+- **Devtools** (`@awesome-tour/devtools`): inspect tours, jump between steps, check target health, watch events, see the drop-off funnel, and record new tours by clicking through your app.
+- **Without React** (`@awesome-tour/elements`): a DOM renderer and an `<awesome-tour src="tour.json">` custom element for Vue, Svelte, Angular or plain HTML.
+- **CI health check** (`npx awesome-tour-check <url>`, from `@awesome-tour/testing`): every step of every tour still finds its target.
 - **Onboarding checklist** and **analytics** built in: track progress across tours, send flat events to any analytics tool.
 
 ```bash
@@ -18,6 +20,7 @@ pnpm add @awesome-tour/motion motion    # optional
 pnpm add @awesome-tour/three            # optional, needs @react-three/fiber + three
 pnpm add @awesome-tour/router           # optional, router adapters
 pnpm add -D @awesome-tour/devtools      # optional, development panel
+pnpm add @awesome-tour/elements         # optional, no React: mountTour() / <awesome-tour>
 ```
 
 ## Quick start

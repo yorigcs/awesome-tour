@@ -154,6 +154,20 @@
   color: var(--ink);
 }
 
+/* @awesome-tour/elements' card (shadow DOM), themed through its custom properties. */
+awesome-tour-layer {
+  --tour-bg: var(--paper);
+  --tour-fg: var(--ink);
+  --tour-muted: var(--ink-2);
+  --tour-border: var(--ink);
+  --tour-accent: var(--marker);
+  --tour-accent-fg: var(--marker-ink);
+  --tour-radius: 6px;
+  --tour-button-radius: 4px;
+  --tour-overlay: var(--tour-overlay-color);
+  --tour-font: 15px / 1.5 "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+}
+
 @theme inline {
   --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;

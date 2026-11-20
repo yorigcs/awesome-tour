@@ -48,6 +48,8 @@ export interface AnalyticsOptions {
   includeData?: boolean;
   /** Drop events you don't care about. */
   filter?: (event: TourAnalyticsEvent) => boolean;
+  /** Also report tours in preview (drafts). Default: false — previews don't skew your data. */
+  includePreviews?: boolean;
 }
 
 /**
@@ -64,6 +66,7 @@ export function analytics(
   return {
     name: 'analytics',
     setup(tour: Tour) {
+      if (tour.preview && !options.includePreviews) return;
       let startedAt = 0;
       let stepStartedAt = 0;
       const now = () => Date.now();

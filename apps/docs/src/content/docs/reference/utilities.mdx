@@ -59,6 +59,8 @@ In React use `useTourAnchor(id)` or `<Tour.Anchor>`; in react-three-fiber, `<Tou
 | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `createExperiment(options)`                  | A/B test tours: stable assignment, control groups, `variant` on analytics events. See [Experiments](../../guides/experiments/).                     |
 | `createFeed(options)`                        | A "what's new" feed with read/unread state (`useFeed` in React). See [Help center](../../registry/help-center/).                                    |
+| `previewFromUrl(manager, { load })`          | Run the draft named in `?tour-preview=` as a `preview` tour. Returns a cleanup that restores the published one.                                     |
+| `localize(value, locale, fallback?)` / `isLocalized(value)` | Pick the text for a locale from `{ en, pt, … }`. `useLocalize()` in React.                                                         |
 | `deepLink(manager, options?)`                | Start the tour named in the URL. `TourProvider`'s `deepLink` prop wraps it.                                                                          |
 
 ## Geometry

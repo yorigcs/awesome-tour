@@ -7,6 +7,7 @@ import type {
   EligibilityReport,
   EligibilityRule,
   RouterAdapter,
+  TargetInput,
   Tour,
   TourRules,
 } from './types';
@@ -206,8 +207,24 @@ export function watchTriggers(
     if (!trigger?.route || !router) return;
     if ((router.match ?? matchRoute)(trigger.route, router.getPath())) fire();
   };
+  const repeats: number[] = [];
   const onSignal = (name: string) => {
     if (trigger?.signal === name) fire();
+    const repeat = trigger?.repeat;
+    if (repeat && repeat.signal === name) {
+      const now = Date.now();
+      repeats.push(now);
+      const window = repeat.within ?? Number.POSITIVE_INFINITY;
+      while (repeats.length && now - repeats[0]! > window) repeats.shift();
+      if (repeats.length >= (repeat.times ?? 2)) {
+        repeats.length = 0;
+        fire();
+      }
+    }
+  };
+  const inside = (target: TargetInput, event: Event) => {
+    const path = event.composedPath();
+    return resolveTarget(target, tour.anchors).some((n) => isElement(n) && path.includes(n));
   };
 
   if (trigger && isBrowser) {
@@ -241,6 +258,78 @@ export function watchTriggers(
       };
       cleanups.push(stop);
       queueMicrotask(check);
+    }
+    if (trigger.dwell) {
+      const { target, ms = 2000 } = trigger.dwell;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      let hovering = false;
+      let focused = false;
+      const update = () => {
+        if (hovering || focused) {
+          if (!timer) {
+            timer = setTimeout(() => {
+              timer = undefined;
+              fire();
+            }, ms);
+          }
+        } else if (timer) {
+          clearTimeout(timer);
+          timer = undefined;
+        }
+      };
+      const onOver = (e: Event) => {
+        hovering = inside(target, e);
+        update();
+      };
+      const onFocus = (e: Event) => {
+        focused = e.type === 'focusin' && inside(target, e);
+        update();
+      };
+      document.addEventListener('pointerover', onOver, true);
+      document.addEventListener('focusin', onFocus, true);
+      document.addEventListener('focusout', onFocus, true);
+      cleanups.push(() => {
+        clearTimeout(timer);
+        document.removeEventListener('pointerover', onOver, true);
+        document.removeEventListener('focusin', onFocus, true);
+        document.removeEventListener('focusout', onFocus, true);
+      });
+    }
+    if (trigger.idle != null) {
+      const ms = trigger.idle;
+      let timer = setTimeout(fire, ms);
+      const reset = () => {
+        clearTimeout(timer);
+        timer = setTimeout(fire, ms);
+      };
+      const events = ['pointermove', 'pointerdown', 'keydown', 'wheel', 'scroll', 'touchstart'];
+      for (const type of events) {
+        document.addEventListener(type, reset, { capture: true, passive: true });
+      }
+      cleanups.push(() => {
+        clearTimeout(timer);
+        for (const type of events) document.removeEventListener(type, reset, true);
+      });
+    }
+    if (trigger.rageClick) {
+      const { target, clicks = 3, within = 800 } = trigger.rageClick;
+      let last: EventTarget | null = null;
+      let times: number[] = [];
+      const onClick = (e: Event) => {
+        if (target && !inside(target, e)) return;
+        const now = Date.now();
+        if (e.target !== last) {
+          last = e.target;
+          times = [];
+        }
+        times = [...times.filter((t) => now - t <= within), now];
+        if (times.length >= clicks) {
+          times = [];
+          fire();
+        }
+      };
+      document.addEventListener('click', onClick, true);
+      cleanups.push(() => document.removeEventListener('click', onClick, true));
     }
     if (trigger.route) queueMicrotask(onRoute);
   }

@@ -129,6 +129,8 @@ interface ItemContextValue {
   item: ChecklistItemDefinition;
   status: ChecklistItemStatus;
   statusId: string;
+  /** Waiting on the items in its `after`. */
+  locked: boolean;
 }
 
 const ItemContext = React.createContext<ItemContextValue | null>(null);
@@ -162,9 +164,18 @@ const ChecklistItem = React.forwardRef<HTMLLIElement, ChecklistItemProps>(functi
   const statusId = `checklist-status${React.useId().replace(/:/g, '')}`;
   if (!item) throw new Error(`[awesome-tour] Unknown checklist item "${value}"`);
   const itemStatus = state.items[value] ?? 'pending';
+  const locked = !!state.locked[value];
   return (
-    <ItemContext.Provider value={{ item, status: itemStatus, statusId }}>
-      <Primitive.li data-state={itemStatus} data-item={value} {...props} ref={ref} />
+    <ItemContext.Provider value={{ item, status: itemStatus, statusId, locked }}>
+      <Primitive.li
+        data-state={itemStatus}
+        data-item={value}
+        data-locked={locked ? '' : undefined}
+        data-next={state.next === value ? '' : undefined}
+        data-optional={item.optional ? '' : undefined}
+        {...props}
+        ref={ref}
+      />
     </ItemContext.Provider>
   );
 });
@@ -184,10 +195,17 @@ const ChecklistItemTrigger = React.forwardRef<HTMLButtonElement, ChecklistItemTr
       <Primitive.button
         type="button"
         aria-describedby={ctx.statusId}
+        aria-disabled={ctx.locked || undefined}
         data-state={ctx.status}
+        data-locked={ctx.locked ? '' : undefined}
         {...props}
         ref={ref}
-        onClick={composeEventHandlers(onClick, () => {
+        onClick={composeEventHandlers(onClick, (event) => {
+          // Locked: focusable (so screen readers can find it and hear why) but inert.
+          if (ctx.locked) {
+            event.preventDefault();
+            return;
+          }
           if (ctx.item.tour) void checklist.startItem(ctx.item.id);
         })}
       />
@@ -206,12 +224,16 @@ export interface ChecklistItemIndicatorProps extends PrimitiveProps<'span'> {
 const ChecklistItemIndicator = React.forwardRef<HTMLSpanElement, ChecklistItemIndicatorProps>(
   function ChecklistItemIndicator({ labels, forceMount, children, ...props }, ref) {
     const ctx = React.useContext(ItemContext);
-    const { itemStatus } = useTourMessages();
+    const { itemStatus, itemLocked, itemOptional } = useTourMessages();
     if (!ctx)
       throw new Error(
         '[awesome-tour] <Checklist.ItemIndicator> must be used within <Checklist.Item>',
       );
-    const text = { ...itemStatus, ...labels }[ctx.status];
+    const base =
+      ctx.status === 'pending' && ctx.locked
+        ? itemLocked
+        : { ...itemStatus, ...labels }[ctx.status];
+    const text = ctx.item.optional ? `${base} (${itemOptional})` : base;
     return (
       <Primitive.span data-state={ctx.status} {...props} ref={ref}>
         {(forceMount || ctx.status !== 'pending') && <span aria-hidden="true">{children}</span>}

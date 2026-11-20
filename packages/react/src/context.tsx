@@ -4,8 +4,12 @@ import {
   type DeepLinkOptions,
   deepLink,
   defaultAnchors,
+  exposeForAudit,
   type ImpressionRecord,
+  type Localized,
   type PersistenceAdapter,
+  type PreviewOptions,
+  previewFromUrl,
   type RouterAdapter,
   type StepDefinition,
   type Tour,
@@ -13,7 +17,7 @@ import {
   type TourState,
 } from '@awesome-tour/core';
 import * as React from 'react';
-import { MessagesScope, type TourMessagesInput } from './messages';
+import { LocaleScope, MessagesScope, type TourMessagesInput } from './messages';
 import type { Align, Side } from './utils/positioner';
 
 /* -------------------------------------------------------------------------------------------------
@@ -26,11 +30,15 @@ export interface StepRenderProps {
   step: ReactStepDefinition;
 }
 
+/** A node, or one node per locale tag (`{ en: …, 'pt-BR': … }`). */
+export type LocalizedNode = React.ReactNode | Localized<React.ReactNode>;
+
 export interface ReactStepDefinition<TData = any, TId extends string = string>
   extends StepDefinition<TData, TId> {
-  title?: React.ReactNode;
-  description?: React.ReactNode;
-  content?: React.ReactNode | ((props: StepRenderProps) => React.ReactNode);
+  /** Text, or text per locale (`{ en: 'Mixer', pt: 'Mixer' }`, see `locale`). */
+  title?: LocalizedNode;
+  description?: LocalizedNode;
+  content?: LocalizedNode | ((props: StepRenderProps) => React.ReactNode);
   /** Preferred side of the target for this step (overrides `Tour.Content` `side`). */
   side?: Side;
   /** Preferred alignment for this step (overrides `Tour.Content` `align`). */
@@ -71,6 +79,15 @@ export interface TourProviderProps {
    * parameters. `true` uses the defaults; pass options to rename them. Default: off.
    */
   deepLink?: boolean | DeepLinkOptions;
+  /**
+   * Preview unpublished tours: `?tour-preview=id` loads the draft with `load(id)` and runs it
+   * without saving anything or sending analytics. See `previewFromUrl`.
+   */
+  preview?: PreviewOptions;
+  /** Locale for step content given per locale (`title: { en, pt }`). Default: `<html lang>`. */
+  locale?: string;
+  /** Locale used when a text has no entry for `locale`. Default: `en`. */
+  fallbackLocale?: string;
   children?: React.ReactNode;
 }
 
@@ -86,6 +103,9 @@ export function TourProvider({
   impressions,
   messages,
   deepLink: deepLinkOption,
+  preview,
+  locale,
+  fallbackLocale,
   children,
 }: TourProviderProps) {
   // Initial tours are registered synchronously so children can look them up on the first render;
@@ -112,6 +132,16 @@ export function TourProvider({
     manager.setRouter(router);
   }, [manager, router]);
 
+  // Hand the tours to a health check when a test asked for them (no-op otherwise).
+  React.useEffect(() => exposeForAudit(manager, router), [manager, router]);
+
+  const previewOptions = React.useRef(preview);
+  React.useEffect(() => {
+    const value = previewOptions.current;
+    if (!value) return;
+    return previewFromUrl(manager, value);
+  }, [manager]);
+
   const deepLinkOptions = React.useRef(deepLinkOption);
   React.useEffect(() => {
     const value = deepLinkOptions.current;
@@ -134,7 +164,11 @@ export function TourProvider({
   );
   return (
     <ProviderContext.Provider value={value}>
-      <MessagesScope messages={messages}>{children}</MessagesScope>
+      <MessagesScope messages={messages}>
+        <LocaleScope locale={locale} fallbackLocale={fallbackLocale}>
+          {children}
+        </LocaleScope>
+      </MessagesScope>
     </ProviderContext.Provider>
   );
 }

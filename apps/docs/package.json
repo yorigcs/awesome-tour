@@ -13,6 +13,7 @@
     "@astrojs/react": "^7.1.9",
     "@awesome-tour/core": "workspace:*",
     "@awesome-tour/devtools": "workspace:*",
+    "@awesome-tour/elements": "workspace:*",
     "@awesome-tour/motion": "workspace:*",
     "@awesome-tour/react": "workspace:*",
     "@awesome-tour/three": "workspace:*",

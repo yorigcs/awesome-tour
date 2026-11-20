@@ -1,3 +1,4 @@
+import { warn } from './diagnostics';
 import type { TourManager } from './manager';
 import type { PersistenceAdapter } from './persistence';
 import { createStore } from './store';
@@ -13,8 +14,27 @@ export interface ChecklistItemDefinition {
   signal?: string;
   /** Complete this item when the predicate is true (checked on `refresh()`). */
   when?: () => boolean;
+  /**
+   * Items that must be done (or skipped) first. Until then this item is `locked`: `startItem`
+   * won't start its tour and UIs disable it. Doing the thing anyway still completes it.
+   */
+  after?: string | readonly string[];
+  /** Doesn't count toward progress and `done` (nice-to-haves). */
+  optional?: boolean;
+  /** Section id, to group items (`state.sections`). */
+  section?: string;
   /** Free-form data for rendering (title, description, icon…). */
   meta?: Record<string, unknown>;
+}
+
+export interface ChecklistSectionState {
+  id: string;
+  /** From `options.sections`. */
+  title?: string;
+  items: readonly string[];
+  completed: number;
+  total: number;
+  done: boolean;
 }
 
 export interface ChecklistSnapshot {
@@ -30,8 +50,14 @@ export interface ChecklistState {
   total: number;
   /** 0..1 */
   progress: number;
-  /** Every item is done or skipped. */
+  /** Every required item is done or skipped. */
   done: boolean;
+  /** Items waiting on their `after` dependencies. */
+  locked: Readonly<Record<string, boolean>>;
+  /** The first pending, unlocked, required item: what to do next. */
+  next: string | null;
+  /** Items grouped by `section`, in first-appearance order. */
+  sections: readonly ChecklistSectionState[];
   dismissed: boolean;
   /** Persisted state has been loaded. */
   hydrated: boolean;
@@ -41,6 +67,8 @@ export interface ChecklistOptions {
   id: string;
   items: readonly ChecklistItemDefinition[];
   persistence?: PersistenceAdapter<ChecklistSnapshot>;
+  /** Titles for the `section` ids used by items. */
+  sections?: readonly { id: string; title?: string }[];
   /** Called once when the last item is completed. */
   onComplete?: () => void;
 }
@@ -69,20 +97,61 @@ export interface Checklist {
   destroy(): void;
 }
 
+const finished = (s: ChecklistItemStatus | undefined) => !!s && s !== 'pending';
+const deps = (item: ChecklistItemDefinition) =>
+  item.after === undefined ? [] : typeof item.after === 'string' ? [item.after] : item.after;
+
 function derive(
   items: readonly ChecklistItemDefinition[],
   statuses: Record<string, ChecklistItemStatus>,
   dismissed: boolean,
   hydrated: boolean,
+  sectionTitles: readonly { id: string; title?: string }[] = [],
 ): ChecklistState {
-  const completed = items.filter((i) => statuses[i.id] && statuses[i.id] !== 'pending').length;
-  const total = items.length;
+  const required = items.filter((i) => !i.optional);
+  const completed = required.filter((i) => finished(statuses[i.id])).length;
+  const total = required.length;
+  const locked: Record<string, boolean> = {};
+  for (const item of items) {
+    locked[item.id] = deps(item).some((d) => !finished(statuses[d]));
+  }
+  const next =
+    required.find((i) => !finished(statuses[i.id]) && !locked[i.id])?.id ??
+    items.find((i) => !finished(statuses[i.id]) && !locked[i.id])?.id ??
+    null;
+  const order: string[] = [];
+  const bySection = new Map<string, string[]>();
+  for (const item of items) {
+    if (!item.section) continue;
+    if (!bySection.has(item.section)) {
+      bySection.set(item.section, []);
+      order.push(item.section);
+    }
+    bySection.get(item.section)!.push(item.id);
+  }
+  const sections = order.map((id) => {
+    const ids = bySection.get(id)!;
+    const req = ids.filter((i) => !items.find((it) => it.id === i)?.optional);
+    const done = req.filter((i) => finished(statuses[i])).length;
+    const title = sectionTitles.find((s) => s.id === id)?.title;
+    return {
+      id,
+      ...(title !== undefined ? { title } : {}),
+      items: ids,
+      completed: done,
+      total: req.length,
+      done: req.length > 0 && done === req.length,
+    };
+  });
   return {
     items: statuses,
     completed,
     total,
     progress: total ? completed / total : 0,
     done: total > 0 && completed === total,
+    locked,
+    next,
+    sections,
     dismissed,
     hydrated,
   };
@@ -91,8 +160,20 @@ function derive(
 /** An onboarding checklist: tasks completed by tours, signals, predicates, or by hand. */
 export function createChecklist(options: ChecklistOptions): Checklist {
   const { items, persistence } = options;
+  for (const item of items) {
+    for (const dep of deps(item)) {
+      if (!items.some((i) => i.id === dep)) {
+        warn(
+          'AT008',
+          `checklist "${options.id}": item "${item.id}" comes after "${dep}", which doesn't exist. It stays locked.`,
+        );
+      }
+    }
+  }
   const initial = Object.fromEntries(items.map((i) => [i.id, 'pending' as ChecklistItemStatus]));
-  const store = createStore<ChecklistState>(derive(items, initial, false, !persistence));
+  const store = createStore<ChecklistState>(
+    derive(items, initial, false, !persistence, options.sections),
+  );
   const cleanups: (() => void)[] = [];
   let manager: TourManager | undefined;
   let notifiedComplete = false;
@@ -102,7 +183,7 @@ export function createChecklist(options: ChecklistOptions): Checklist {
     dismissed = store.getState().dismissed,
   ) => {
     const prev = store.getState();
-    const next = derive(items, statuses, dismissed, prev.hydrated);
+    const next = derive(items, statuses, dismissed, prev.hydrated, options.sections);
     store.setState(next);
     if (next.done && !prev.done && !notifiedComplete) {
       notifiedComplete = true;
@@ -155,9 +236,9 @@ export function createChecklist(options: ChecklistOptions): Checklist {
       // Merge with anything completed before hydration finished.
       for (const [id, s] of Object.entries(store.getState().items))
         if (s !== 'pending') statuses[id] = s;
-      const prevDone = derive(items, statuses, false, true).done;
+      const prevDone = derive(items, statuses, false, true, options.sections).done;
       notifiedComplete = prevDone; // don't re-fire onComplete for an already finished checklist
-      store.setState(derive(items, statuses, saved?.dismissed ?? false, true));
+      store.setState(derive(items, statuses, saved?.dismissed ?? false, true, options.sections));
     } catch (error) {
       console.error('[awesome-tour] failed to load checklist state', error);
       store.setState({ hydrated: true });
@@ -224,7 +305,7 @@ export function createChecklist(options: ChecklistOptions): Checklist {
     },
     async startItem(id) {
       const item = items.find((i) => i.id === id);
-      if (!item?.tour) return;
+      if (!item?.tour || store.getState().locked[id]) return;
       hookTours();
       if (typeof item.tour === 'string') {
         if (!manager)

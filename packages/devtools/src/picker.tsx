@@ -20,7 +20,15 @@ export interface PickedTarget {
   quality: 'anchor' | 'stable' | 'structural';
   /** `target` is code (`anchor(…)`, `byTour(…)`, `byRole(…)`), not a selector string. */
   code?: boolean;
+  /** The same target as data: what tours-as-JSON and the recorder use. */
+  locator?: PickedLocator;
 }
+
+export type PickedLocator =
+  | string
+  | { anchor: string }
+  | { tour: string }
+  | { role: string; name: string; exact: true };
 
 const quote = (value: string) => `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 
@@ -30,12 +38,24 @@ const quote = (value: string) => `'${value.replace(/\\/g, '\\\\').replace(/'/g, 
  */
 export function suggestTarget(el: Element): PickedTarget {
   const anchorName = el.closest('[data-tour-anchor]')?.getAttribute('data-tour-anchor');
-  if (anchorName) return { target: `anchor('${anchorName}')`, quality: 'anchor', code: true };
+  if (anchorName) {
+    return {
+      target: `anchor('${anchorName}')`,
+      quality: 'anchor',
+      code: true,
+      locator: { anchor: anchorName },
+    };
+  }
 
   // What a person (and Testing Library) would call it: a data-tour hook, then role + name.
   const tourName = el.getAttribute('data-tour');
   if (tourName && unique(`[data-tour="${esc(tourName)}"]`, el)) {
-    return { target: `byTour(${quote(tourName)})`, quality: 'stable', code: true };
+    return {
+      target: `byTour(${quote(tourName)})`,
+      quality: 'stable',
+      code: true,
+      locator: { tour: tourName },
+    };
   }
   const role = roleOf(el);
   const name = role ? accessibleName(el) : '';
@@ -46,6 +66,7 @@ export function suggestTarget(el: Element): PickedTarget {
         target: `byRole(${quote(role)}, { name: ${quote(name)} })`,
         quality: 'stable',
         code: true,
+        locator: { role, name, exact: true },
       };
     }
   }
@@ -75,7 +96,7 @@ export function suggestTarget(el: Element): PickedTarget {
   };
 
   const direct = own(el);
-  if (direct) return { target: direct, quality: 'stable' };
+  if (direct) return { target: direct, quality: 'stable', locator: direct };
 
   // Walk up to a stable ancestor, then describe the path down with nth-of-type.
   const parts: string[] = [];
@@ -84,7 +105,8 @@ export function suggestTarget(el: Element): PickedTarget {
     const base = own(node);
     if (base) {
       const selector = [base, ...parts].join(' > ');
-      if (unique(selector, el)) return { target: selector, quality: 'structural' };
+      if (unique(selector, el))
+        return { target: selector, quality: 'structural', locator: selector };
       break;
     }
     const tag = node.tagName.toLowerCase();
@@ -93,10 +115,11 @@ export function suggestTarget(el: Element): PickedTarget {
       : [];
     parts.unshift(siblings.length > 1 ? `${tag}:nth-of-type(${siblings.indexOf(node) + 1})` : tag);
     const selector = parts.join(' > ');
-    if (unique(selector, el)) return { target: selector, quality: 'structural' };
+    if (unique(selector, el)) return { target: selector, quality: 'structural', locator: selector };
     node = node.parentElement;
   }
-  return { target: parts.join(' > ') || el.tagName.toLowerCase(), quality: 'structural' };
+  const fallback = parts.join(' > ') || el.tagName.toLowerCase();
+  return { target: fallback, quality: 'structural', locator: fallback };
 }
 
 /** Lets the user hover and click any element of the page; Escape cancels. */

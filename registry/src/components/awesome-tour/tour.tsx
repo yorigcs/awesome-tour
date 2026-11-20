@@ -6,6 +6,7 @@ import {
   type TourIndicatorsProps,
   type TourOverlayProps,
   type TourSpotlightProps,
+  useTour,
   useTourMessages,
   useTourState,
 } from '@awesome-tour/react';
@@ -173,6 +174,29 @@ function TourCardHeader({ className, ...props }: React.ComponentProps<'div'>) {
       className={cn('flex items-center justify-between gap-3', className)}
       {...props}
     />
+  );
+}
+
+/** A "Preview" pill on drafts opened with `?tour-preview=` (nothing is saved or tracked). */
+function TourCardPreviewBadge({
+  className,
+  children = 'Preview',
+}: {
+  className?: string;
+  children?: React.ReactNode;
+}) {
+  const { tour } = useTour();
+  if (!tour.preview) return null;
+  return (
+    <span
+      data-slot="tour-card-preview"
+      className={cn(
+        'rounded-full border border-dashed px-2 py-0.5 text-[11px] font-medium text-muted-foreground',
+        className,
+      )}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -410,7 +434,10 @@ function TourCardContents({
     <>
       <TourCardHeader>
         {progress ? <TourCardProgress /> : <span />}
-        <TourCardClose />
+        <span className="flex items-center gap-1">
+          <TourCardPreviewBadge />
+          <TourCardClose />
+        </span>
       </TourCardHeader>
       <TourCardTitle />
       <TourCardDescription />
@@ -460,6 +487,7 @@ export {
   TourCardMedia,
   TourCardNext,
   TourCardPrev,
+  TourCardPreviewBadge,
   TourCardProgress,
   TourCardSkip,
   TourCardTitle,

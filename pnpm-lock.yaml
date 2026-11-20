@@ -250,6 +250,9 @@ importers:
       '@awesome-tour/devtools':
         specifier: workspace:*
         version: link:../../packages/devtools
+      '@awesome-tour/elements':
+        specifier: workspace:*
+        version: link:../../packages/elements
       '@awesome-tour/motion':
         specifier: workspace:*
         version: link:../../packages/motion
@@ -425,6 +428,12 @@ importers:
       '@awesome-tour/react':
         specifier: workspace:^
         version: link:../react
+
+  packages/elements:
+    devDependencies:
+      '@awesome-tour/core':
+        specifier: workspace:^
+        version: link:../core
 
   packages/motion:
     dependencies:

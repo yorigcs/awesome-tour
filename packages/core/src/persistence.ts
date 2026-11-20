@@ -372,6 +372,7 @@ export function persist(adapter: PersistenceAdapter, options: PersistOptions = {
   return {
     name: 'persist',
     setup(tour: Tour) {
+      if (tour.preview) return; // a draft: never touches saved progress
       const key = keyOf(tour.id);
       let last = '';
       /** Set while another tab takes the tour over: this tab's pause must not be saved. */
@@ -467,6 +468,7 @@ export function persist(adapter: PersistenceAdapter, options: PersistOptions = {
       };
     },
     async beforeStart(tour, startOptions) {
+      if (tour.preview) return;
       const key = keyOf(tour.id);
       let saved: PersistedTourState | null | undefined;
       try {

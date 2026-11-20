@@ -304,6 +304,11 @@ export interface TourOptions<TStep extends StepDefinition<TData, string>, TData 
   id: string;
   /** Bump to invalidate persisted progress when the tour content changes meaningfully. */
   version?: number;
+  /**
+   * A draft being previewed (`previewFromUrl`): it never saves progress or impressions, sends no
+   * analytics, and ignores display rules. UIs can badge it (`data-preview`). Default: false.
+   */
+  preview?: boolean;
   steps: readonly TStep[];
   data?: TData;
   /** Modal tours block the page (overlay + focus trap + inert). Default: true. */
@@ -380,6 +385,23 @@ export interface TourRules<TData = any> {
     delay?: number;
     /** When this target is on the page. */
     targetVisible?: TargetInput;
+    /**
+     * The user lingers on `target` — the pointer rests over it, or focus stays inside it — for
+     * `ms` (default 2000). Help for the thing they're looking at.
+     */
+    dwell?: { target: TargetInput; ms?: number };
+    /** No pointer, key, wheel or scroll activity on the page for this many ms. */
+    idle?: number;
+    /**
+     * Frustration: `clicks` (default 3) clicks within `within` ms (default 800) on the same
+     * element — inside `target` when given.
+     */
+    rageClick?: { target?: TargetInput; clicks?: number; within?: number };
+    /**
+     * `manager.signal(signal)` happened `times` times (default 2) within `within` ms (default: no
+     * limit) — the same error twice, the same undo three times.
+     */
+    repeat?: { signal: string; times?: number; within?: number };
   };
   /** Higher wins when several triggered tours compete. Default: 0. */
   priority?: number;
@@ -392,7 +414,8 @@ export type EligibilityRule =
   | 'maxShows'
   | 'cooldown'
   | 'snooze'
-  | 'cap';
+  | 'cap'
+  | 'preview';
 
 export interface EligibilityReport {
   tourId: string;
@@ -406,6 +429,8 @@ export type Listener = () => void;
 export interface Tour<TStep extends StepDefinition<TData, string> = StepDefinition, TData = any> {
   readonly id: string;
   readonly version: number;
+  /** A draft being previewed: saves nothing, tracks nothing (see `TourOptions.preview`). */
+  readonly preview: boolean;
   readonly modal: boolean;
   readonly layer: 'blocking' | 'ambient';
   /** Display rules from `createTour({ rules })`. */

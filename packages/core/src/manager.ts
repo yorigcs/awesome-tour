@@ -186,19 +186,22 @@ export function createTourManager(options: TourManagerOptions = {}): TourManager
       autoShows++;
       lastAutoShowAt = clock();
     });
-    const offImpressions = trackImpressions(tour, impressions, clock);
-    const triggers = watchTriggers(
-      tour,
-      () => {
-        // Triggered tours never interrupt or queue behind one on screen: the trigger fires
-        // again next time (next route change, signal…).
-        if (ON_SCREEN.has(tour.getState().status)) return;
-        if (tour.layer !== 'ambient' && computeActive() !== null) return;
-        if (queue.some((q) => q.id === tour.id)) return;
-        void manager.startIfEligible(tour.id);
-      },
-      () => router,
-    );
+    // A preview never counts as a show and never starts by itself.
+    const offImpressions = tour.preview ? () => {} : trackImpressions(tour, impressions, clock);
+    const triggers = tour.preview
+      ? { onRoute() {}, onSignal() {}, cleanup() {} }
+      : watchTriggers(
+          tour,
+          () => {
+            // Triggered tours never interrupt or queue behind one on screen: the trigger fires
+            // again next time (next route change, signal…).
+            if (ON_SCREEN.has(tour.getState().status)) return;
+            if (tour.layer !== 'ambient' && computeActive() !== null) return;
+            if (queue.some((q) => q.id === tour.id)) return;
+            void manager.startIfEligible(tour.id);
+          },
+          () => router,
+        );
     entry.live = {
       triggers,
       unsubscribe: () => {
@@ -238,7 +241,7 @@ export function createTourManager(options: TourManagerOptions = {}): TourManager
   const manager: TourManager = {
     register(tour) {
       const previous = tours.get(tour.id);
-      if (previous && previous.tour !== tour) {
+      if (previous && previous.tour !== tour && !tour.preview) {
         warn(
           'AT007',
           `a second tour with the id "${tour.id}" was registered; it replaces the first.`,
@@ -273,6 +276,13 @@ export function createTourManager(options: TourManagerOptions = {}): TourManager
     async explain(id) {
       const tour = tours.get(id)?.tour;
       if (!tour) throw new Error(`[awesome-tour] No tour registered with id "${id}"`);
+      if (tour.preview) {
+        return {
+          tourId: id,
+          eligible: true,
+          checks: [{ rule: 'preview', ok: true, detail: 'a draft in preview: rules are ignored' }],
+        };
+      }
       const report = await evaluateRules(
         tour,
         (await impressions.get(id)) ?? emptyImpression(),

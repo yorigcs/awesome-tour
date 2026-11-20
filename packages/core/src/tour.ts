@@ -892,6 +892,7 @@ export function createTour<
   const tour: Tour<TStep, TData> = {
     id: options.id,
     version: options.version ?? 1,
+    preview: options.preview ?? false,
     modal: options.modal ?? true,
     layer: options.layer ?? 'blocking',
     rules: options.rules,

@@ -76,10 +76,10 @@
           "minLength": 1
         },
         "title": {
-          "type": "string"
+          "$ref": "#/$defs/text"
         },
         "description": {
-          "type": "string"
+          "$ref": "#/$defs/text"
         },
         "target": {
           "oneOf": [
@@ -269,6 +269,24 @@
     "lost": {
       "enum": ["reresolve", "center", "close"],
       "description": "What to do when a shown step's target leaves the page."
+    },
+    "text": {
+      "description": "Text, or text per locale tag (BCP 47).",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      ]
     }
   },
   "properties": {
@@ -378,6 +396,61 @@
             },
             "targetVisible": {
               "$ref": "#/$defs/target"
+            },
+            "dwell": {
+              "type": "object",
+              "required": ["target"],
+              "additionalProperties": false,
+              "properties": {
+                "target": {
+                  "$ref": "#/$defs/target"
+                },
+                "ms": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              },
+              "description": "The pointer rests on (or focus stays in) the target for ms."
+            },
+            "idle": {
+              "type": "number",
+              "minimum": 0,
+              "description": "No user activity for this many ms."
+            },
+            "rageClick": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "target": {
+                  "$ref": "#/$defs/target"
+                },
+                "clicks": {
+                  "type": "integer",
+                  "minimum": 2
+                },
+                "within": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "repeat": {
+              "type": "object",
+              "required": ["signal"],
+              "additionalProperties": false,
+              "properties": {
+                "signal": {
+                  "type": "string"
+                },
+                "times": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "within": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
             }
           }
         },

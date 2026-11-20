@@ -98,3 +98,69 @@ describe('launcher status across sessions', () => {
     expect(screen.getByTestId('fresh-tour').textContent).toBe('new');
   });
 });
+
+describe('checklist UI: locked items', () => {
+  it('marks locked items and keeps their trigger inert', async () => {
+    const { Checklist, createChecklist } = await import('../src');
+    const list = createChecklist({
+      id: 'ui',
+      items: [
+        { id: 'one', meta: { title: 'One' } },
+        { id: 'two', after: 'one', optional: true, meta: { title: 'Two' } },
+      ],
+    });
+    render(
+      <Checklist.Root checklist={list}>
+        <Checklist.List>
+          {list.getItems().map((item) => (
+            <Checklist.Item key={item.id} value={item.id} data-testid={item.id}>
+              <Checklist.ItemIndicator />
+              <Checklist.ItemTrigger>{item.meta?.title as string}</Checklist.ItemTrigger>
+            </Checklist.Item>
+          ))}
+        </Checklist.List>
+      </Checklist.Root>,
+    );
+    expect(screen.getByTestId('two')).toHaveAttribute('data-locked', '');
+    expect(screen.getByTestId('one')).toHaveAttribute('data-next', '');
+    const two = screen.getByRole('button', { name: 'Two' });
+    expect(two).toHaveAttribute('aria-disabled', 'true');
+    expect(two).toHaveAccessibleDescription('Locked: finish the previous steps first (optional)');
+    act(() => list.complete('one'));
+    expect(screen.getByTestId('two')).not.toHaveAttribute('data-locked');
+  });
+});
+
+describe('localized step content', () => {
+  it('renders the text for the locale in effect', async () => {
+    const tour = createTour({
+      id: 'loc',
+      steps: [
+        {
+          id: 'a',
+          title: { en: 'Mixer', pt: 'Mesa de som' },
+          description: { en: 'Set the levels.', pt: 'Ajuste os volumes.' },
+        },
+      ],
+    });
+    const ui = (locale: string) => (
+      <TourProvider tours={[tour]} locale={locale}>
+        <Tour.Root tourId="loc">
+          <Tour.Portal>
+            <Tour.Content>
+              <Tour.Title />
+              <Tour.Description />
+            </Tour.Content>
+          </Tour.Portal>
+        </Tour.Root>
+      </TourProvider>
+    );
+    const { rerender } = render(ui('pt-BR'));
+    await act(() => tour.start());
+    expect(await screen.findByRole('dialog', { name: 'Mesa de som' })).toHaveAccessibleDescription(
+      'Ajuste os volumes.',
+    );
+    rerender(ui('en'));
+    expect(await screen.findByRole('dialog', { name: 'Mixer' })).toBeTruthy();
+  });
+});

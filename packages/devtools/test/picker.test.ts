@@ -19,6 +19,7 @@ describe('suggestTarget', () => {
       target: "anchor('nav')",
       quality: 'anchor',
       code: true,
+      locator: { anchor: 'nav' },
     });
     expect(suggestTarget(document.querySelector('section')!).target).toBe("byTour('mixer')");
     // What the user sees beats markup hooks: role + accessible name.
