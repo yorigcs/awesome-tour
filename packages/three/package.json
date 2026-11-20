@@ -1,6 +1,6 @@
 {
   "name": "@awesome-tour/three",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "react-three-fiber adapter for awesome-tour: highlight 3D objects in tours.",
   "license": "MIT",
   "author": "Yor\u00ed",
