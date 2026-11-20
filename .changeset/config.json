@@ -17,7 +17,8 @@
       "@awesome-tour/router",
       "@awesome-tour/devtools",
       "@awesome-tour/testing",
-      "@awesome-tour/codemod"
+      "@awesome-tour/codemod",
+      "@awesome-tour/elements"
     ]
   ],
   "access": "public",
