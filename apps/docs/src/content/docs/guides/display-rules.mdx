@@ -7,6 +7,8 @@ sidebar:
 
 import Preview from '../../../components/Preview.astro';
 import { Aside } from '~/components/mdx';
+import { BehaviorDemo } from '../../../components/demos/BehaviorDemo';
+import BehaviorDemoSource from '../../../components/demos/BehaviorDemo.tsx?raw';
 import { RulesDemo } from '../../../components/demos/RulesDemo';
 import RulesDemoSource from '../../../components/demos/RulesDemo.tsx?raw';
 
@@ -19,8 +21,10 @@ when it was snoozed.
   <RulesDemo client:visible />
 </Preview>
 
-Try it: on the **free** plan, "Open billing" does nothing — the audience rule blocks it. Switch to
-**pro** and open billing again. Snooze it, and watch the `snooze` rule count down.
+Try it: on the **free** plan, opening the Mix page does nothing — the audience rule blocks it.
+Switch to **pro** and open Mix again. Snooze it, then fast-forward the clock: the snooze, the
+one-day cooldown and the two-week schedule all expire on the demo's clock
+(`createTourManager({ clock })`).
 
 ## Rules
 
@@ -42,7 +46,8 @@ const tour = createTour({
 | ----------- | ----------------------------------------------------------------------------------- |
 | `audience`  | `audience({ data })` returns true (may be async — fetch a feature flag here).        |
 | `schedule`  | Now is between `startsAt` and `endsAt` (`Date`, ISO string or timestamp).            |
-| `once`      | The tour was never completed, skipped or dismissed. On by default; `once: false` to turn off. |
+| `once`      | `true` (default): never completed, skipped or dismissed. `'completed'`: never completed or skipped — closing it with <kbd>Esc</kbd> isn't final. `'seen'`: never shown. `false`: off. |
+| `dismissCooldownMs` | After a dismissal (close, <kbd>Esc</kbd>), at least this long has passed. Pairs with `once: 'completed'`. |
 | `maxShows`  | It was shown fewer than `maxShows` times.                                            |
 | `cooldown`  | At least `cooldownMs` passed since it was last shown.                                |
 | `snooze`    | Any `tour.snooze(ms)` has expired.                                                   |
@@ -64,6 +69,22 @@ triggered tour never interrupts or queues behind another one — it gets its cha
 | `event`         | A DOM event happens on (or inside) a target: `{ type: 'click', target: '#help' }`. |
 | `delay`         | This many ms after the tour is registered.                                 |
 | `targetVisible` | A target appears on the page.                                              |
+| `dwell`         | The pointer rests on (or focus stays in) a target for `ms` (default 2000): `{ target: '#mixer', ms: 1500 }`. |
+| `idle`          | No pointer, key, wheel or scroll activity for this many ms.                |
+| `rageClick`     | `clicks` (3) fast clicks within `within` ms (800) on one element, optionally inside `target`. |
+| `repeat`        | `manager.signal(signal)` happened `times` times (2), optionally `within` ms: the same error twice. |
+
+A **first visit** to a page is `trigger: { route }` with the default `once`.
+
+### Help when they're stuck
+
+The last four don't wait for a page or a button: they react to how people behave. Hover the mixer
+for a moment, triple-click the locked Stems format, or leave the page alone for 8 seconds:
+
+<Preview code={BehaviorDemoSource} title="BehaviorDemo.tsx">
+  <BehaviorDemo client:visible />
+</Preview>
+
 
 ## Snooze
 
@@ -75,6 +96,25 @@ function RemindLater() {
   const { tour } = useTour();
   return <button onClick={() => tour.snooze(24 * 60 * 60 * 1000)}>Remind me tomorrow</button>;
 }
+```
+
+## Across tours
+
+Rules are per tour; users experience all of them together. A manager-wide **cap** keeps automatic
+tours, announcements and surveys from piling up:
+
+```ts
+const manager = createTourManager({
+  tours,
+  cap: { perSession: 1, cooldownMs: 24 * 60 * 60_000 }, // one a session, a day apart
+});
+```
+
+When a tour's content changes, `frequency.perVersion` makes it eligible again for people who
+finished an older `version` — release notes that come back for each release:
+
+```ts
+createTour({ id: 'whats-new', version: 24, rules: { frequency: { once: true, perVersion: true } }, steps });
 ```
 
 ## Remembering impressions

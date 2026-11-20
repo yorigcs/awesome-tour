@@ -16,11 +16,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 export function CssTour() {
   return (
     <Tour.Root id="css-tour" modal={false}>
-      <Tour.Step id="stats" target="#stats" title="Your numbers" side="bottom">
+      <Tour.Step id="arrangement" target="#arrangement-card" title="Your arrangement" side="bottom">
         <p>Declared with &lt;Tour.Step&gt;, animated with plain CSS (tw-animate-css).</p>
       </Tour.Step>
-      <Tour.Step id="reports" target="#reports-card" title="Reports" side="top">
-        <p>Non-modal tours leave the page usable.</p>
+      <Tour.Step id="beat" target="#sequencer-card" title="The beat" side="top">
+        <p>Non-modal tours leave the page usable: keep clicking cells.</p>
       </Tour.Step>
       <Card>
         <CardHeader>

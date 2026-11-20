@@ -32,6 +32,16 @@ app-foreground-dark: "#fafafa"
 app-muted-dark: "#27272a"
 app-muted-foreground-dark: "#a1a1aa"
 app-border-dark: "#33333a"
+track-drums: "oklch(0.66 0.16 58)"
+track-bass: "oklch(0.56 0.19 295)"
+track-keys: "oklch(0.58 0.12 170)"
+track-vox: "oklch(0.6 0.18 15)"
+track-fx: "oklch(0.57 0.16 250)"
+track-drums-dark: "oklch(0.8 0.14 70)"
+track-bass-dark: "oklch(0.72 0.15 295)"
+track-keys-dark: "oklch(0.76 0.12 170)"
+track-vox-dark: "oklch(0.73 0.15 15)"
+track-fx-dark: "oklch(0.74 0.12 250)"
 typography:
 display:
 fontFamily: "Archivo Variable, ui-sans-serif, system-ui, sans-serif"
@@ -237,7 +247,9 @@ A monochrome print palette with a single highlighter and a single warning ink.
 
 ### "Your app" neutrals (`[data-app]` scope)
 
-- A zinc product palette (`app-*` tokens, light and dark) that overrides the shadcn tokens inside demo surfaces and the hero's drawn app: near-black primary buttons, pale grey muted fills, light grey borders, radius 0.5rem. It is deliberately generic so it reads as somebody's product. Green and rose deltas in the mock stat cards (Tailwind `emerald-700`/`rose-700`, `-400` in dark) live only here.
+- A zinc product palette (`app-*` tokens, light and dark) that overrides the shadcn tokens inside demo surfaces and the hero's drawn app: near-black primary buttons, pale grey muted fills, light grey borders, radius 0.5rem.
+- **The app is Loopwork**, one specific, believable product: a beat-maker (`examples/loopwork`) with a transport bar, arrangement lanes, a 16-step sequencer, a mixer with rotary knobs, a virtualized sample browser and an effects dialog. Every demo, the playground and the hero drawing show a scene of it, with product copy (never copy that describes the API). Its character comes from the domain's geometry — lanes, steps, knobs, waveforms, a playhead, tabular timecode — not from a style of its own.
+- **Track colors** (`--chart-1…5` inside `[data-app]`): drums amber, bass violet, keys teal, vox rose, effects blue, each ≥3:1 against the app background in both themes. They only mark channels and their clips, pads and knob arcs; never buttons or text.
 - The registry's own default theme (`registry/src/styles/theme.css`, a violet oklch shadcn theme, radius 0.65rem) is the playground's neutral starting point and is **not** part of this site's world.
 
 ### Named Rules
@@ -246,7 +258,9 @@ A monochrome print palette with a single highlighter and a single warning ink.
 
 **The Red Means No Rule.** `dont` appears only on ✗ marks, struck-through anti-patterns, and caution or danger asides. Never on a button, link, or heading.
 
-**The App Is Not The Manual Rule.** Anything that stands for the user's product goes inside `[data-app]` and uses only shadcn tokens. Ink, marker and line art belong to the tour layer and the docs chrome.
+**The App Is Not The Manual Rule.** Anything that stands for the user's product goes inside `[data-app]` and uses only shadcn tokens. Ink, marker and line art belong to the tour layer and the docs chrome. A tour card rendered inside the app (in a modal dialog's top layer) still wears the world: `[data-app] [data-tour-top-layer]` restores the manual's tokens.
+
+**The One Product Rule.** Demos are scenes of Loopwork, never a new mock app, a grid of labelled boxes, or a generic dashboard. A demo that needs something Loopwork doesn't have adds it to the kit.
 
 ## Typography
 

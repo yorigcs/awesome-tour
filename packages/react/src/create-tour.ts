@@ -1,4 +1,5 @@
 import {
+  type CheckedStep,
   createTour as createCoreTour,
   type Tour as TourInstance,
   type TourOptions,
@@ -13,6 +14,8 @@ import type { ReactStepDefinition } from './context';
 export function createTour<
   const TStep extends ReactStepDefinition<TData, string>,
   TData = Record<string, unknown>,
->(options: TourOptions<TStep, TData>): TourInstance<TStep, TData> {
+>(
+  options: TourOptions<TStep, TData> & { steps: readonly CheckedStep<TStep, TStep['id']>[] },
+): TourInstance<TStep, TData> {
   return createCoreTour(options);
 }

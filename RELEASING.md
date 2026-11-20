@@ -51,7 +51,7 @@ npmjs.com.)
 ### 3. Trusted publishers
 
 For **each** package (`@awesome-tour/core`, `react`, `motion`, `three`, `router`, `devtools`,
-`testing`, `codemod`), on npmjs.com → package → _Settings → Trusted publishing_:
+`testing`, `codemod`, `elements`), on npmjs.com → package → _Settings → Trusted publishing_:
 
 | Field        | Value          |
 | ------------ | -------------- |

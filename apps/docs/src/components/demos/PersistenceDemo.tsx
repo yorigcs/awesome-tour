@@ -1,10 +1,12 @@
 import { createTour, localStorageAdapter, persist, Tour } from '@awesome-tour/react';
+import { LoopworkApp, parts, useCreateLoopwork } from '@loopwork';
 import { RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { TourPopover } from '@/components/awesome-tour/tour';
-import { DemoFrame, MockApp, StartButton, worldButton } from './ui';
+import { DemoFrame, StartButton, worldButton } from './ui';
 
 const adapter = localStorageAdapter({ prefix: 'awesome-tour-docs:' });
+const $ = parts('saved-session');
 
 /** Each "page load" creates a fresh tour instance, exactly like a real reload would. */
 function makeTour() {
@@ -14,29 +16,29 @@ function makeTour() {
     plugins: [persist(adapter)],
     steps: [
       {
-        id: 'one',
-        target: '#persist-nav',
-        side: 'right',
-        title: 'Step one',
-        description: 'Go to step 2 or 3, then hit "Simulate reload".',
+        id: 'kick',
+        target: $('row-kick'),
+        title: 'Lay down the kick',
+        description: 'Go a step or two in, then hit “Simulate reload”.',
       },
       {
-        id: 'two',
-        target: '#persist-search',
-        title: 'Step two',
-        description: 'Progress is saved on every step.',
+        id: 'snare',
+        target: $('row-snare'),
+        title: 'Snare on 2 and 4',
+        description: 'Your place is saved on every step.',
       },
       {
-        id: 'three',
-        target: '#persist-new',
-        title: 'Step three',
-        description: 'Start again after a reload: it resumes here.',
+        id: 'hat',
+        target: $('row-hat'),
+        title: 'Hats keep time',
+        description: 'Start again after a reload: it picks up right here.',
       },
       {
-        id: 'four',
-        target: '#persist-stat-2',
-        title: 'Last step',
-        description: 'Finish it, and once: true keeps it from starting again (unless forced).',
+        id: 'mix',
+        target: $('mixer'),
+        side: 'left',
+        title: 'Balance it',
+        description: 'Finish it, and `once` keeps it from starting again unless forced.',
       },
     ],
   });
@@ -65,6 +67,8 @@ export function PersistenceDemo() {
   const [load, setLoad] = useState(0);
   const [tour, setTour] = useState(makeTour);
   const stored = useStored();
+  // The project outlives the simulated reloads (your app keeps its own data); the tour is rebuilt.
+  const app = useCreateLoopwork();
   const reload = () => {
     tour.destroy();
     setTour(makeTour());
@@ -81,7 +85,7 @@ export function PersistenceDemo() {
             <button
               type="button"
               className={worldButton.secondary}
-              onClick={() => tour.start({ force: true, stepId: 'one' })}
+              onClick={() => tour.start({ force: true, stepId: 'kick' })}
             >
               <RotateCcw />
               Force restart
@@ -109,7 +113,7 @@ export function PersistenceDemo() {
           </pre>
         }
       >
-        <MockApp id="persist" />
+        <LoopworkApp scope="saved-session" layout="compact" app={app} />
       </DemoFrame>
       <TourPopover />
     </Tour.Root>

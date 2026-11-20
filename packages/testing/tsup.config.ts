@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/index.ts', 'src/react.tsx', 'src/playwright.ts'],
+  entry: ['src/index.ts', 'src/react.tsx', 'src/playwright.ts', 'src/cli.ts'],
   format: ['esm', 'cjs'],
   dts: { compilerOptions: { paths: {} } },
   sourcemap: true,

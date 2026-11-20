@@ -1,6 +1,7 @@
 import {
   type AnchorRegistry,
   defaultAnchors,
+  type Feed,
   isElement,
   observeRect,
   type RectLike,
@@ -236,4 +237,9 @@ export function useTargetRect(): RectLike | null {
     return observeRect(targets, setRect, { animationFrame: targets.some((t) => !isElement(t)) });
   }, [targets]);
   return rect;
+}
+
+/** A feed's state (`createFeed`): items newest first, with `read`, and the `unread` count. */
+export function useFeed(feed: Pick<Feed, 'getState' | 'subscribe'>) {
+  return useStoreSelector(feed);
 }

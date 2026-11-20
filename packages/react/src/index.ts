@@ -22,6 +22,7 @@ export {
 } from './checklist';
 export {
   defaultKeyMap,
+  type LocalizedNode,
   type ReactStepDefinition,
   type StepRenderProps,
   TourContext,
@@ -37,6 +38,7 @@ export { createTour } from './create-tour';
 export {
   type ExternalStore,
   type UseTourResult,
+  useFeed,
   useStoreSelector,
   useTargetRect,
   useTargetRects,
@@ -61,9 +63,12 @@ export {
 } from './hotspot';
 export {
   defaultMessages,
+  LocaleScope,
   MessagesScope,
   type TourMessages,
   type TourMessagesInput,
+  useLocale,
+  useLocalize,
   useTourMessages,
 } from './messages';
 export { type UseRouterAdapterOptions, useRouterAdapter } from './router';
@@ -108,7 +113,7 @@ export {
   useTourLayer,
 } from './tour';
 export { composeEventHandlers, composeRefs, useComposedRefs } from './utils/compose';
-export type { Align, PositionerOptions, Side } from './utils/positioner';
+export type { Align, PhysicalSide, PositionerOptions, Side } from './utils/positioner';
 export { Presence, usePresence } from './utils/presence';
 export { Primitive, type PrimitiveProps } from './utils/primitive';
 export { Slot } from './utils/slot';

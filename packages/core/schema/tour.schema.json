@@ -8,14 +8,17 @@
   "additionalProperties": false,
   "$defs": {
     "target": {
-      "description": "A CSS selector, an anchor, or several of them.",
+      "description": "A locator, or several of them (highlighted together).",
       "oneOf": [
-        { "type": "string", "minLength": 1 },
-        { "$ref": "#/$defs/anchor" },
+        {
+          "$ref": "#/$defs/locator"
+        },
         {
           "type": "array",
           "minItems": 1,
-          "items": { "oneOf": [{ "type": "string" }, { "$ref": "#/$defs/anchor" }] }
+          "items": {
+            "$ref": "#/$defs/locator"
+          }
         }
       ]
     },
@@ -23,7 +26,12 @@
       "type": "object",
       "required": ["anchor"],
       "additionalProperties": false,
-      "properties": { "anchor": { "type": "string", "minLength": 1 } }
+      "properties": {
+        "anchor": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
     },
     "action": {
       "type": "string",
@@ -34,105 +42,472 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "event": { "type": "string" },
-        "target": { "$ref": "#/$defs/target" },
-        "signal": { "type": "string" },
-        "delay": { "type": "number", "minimum": 0 },
-        "when": { "$ref": "#/$defs/action" },
-        "to": { "type": "string" }
+        "event": {
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/target"
+        },
+        "signal": {
+          "type": "string"
+        },
+        "delay": {
+          "type": "number",
+          "minimum": 0
+        },
+        "when": {
+          "$ref": "#/$defs/action"
+        },
+        "to": {
+          "type": "string"
+        }
       }
     },
-    "missing": { "enum": ["wait", "skip", "center", "error"] },
+    "missing": {
+      "enum": ["wait", "skip", "center", "error"]
+    },
     "step": {
       "type": "object",
       "required": ["id"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "target": { "oneOf": [{ "$ref": "#/$defs/target" }, { "type": "null" }] },
-        "route": { "type": "string" },
-        "side": { "enum": ["top", "right", "bottom", "left"] },
-        "align": { "enum": ["start", "center", "end"] },
-        "modal": { "type": "boolean" },
-        "interactive": { "type": "boolean" },
-        "scroll": { "type": "boolean" },
-        "onTargetMissing": { "$ref": "#/$defs/missing" },
-        "targetTimeout": { "type": "number", "minimum": 0 },
-        "when": { "$ref": "#/$defs/action" },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "$ref": "#/$defs/text"
+        },
+        "description": {
+          "$ref": "#/$defs/text"
+        },
+        "target": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/target"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "route": {
+          "type": "string"
+        },
+        "side": {
+          "enum": ["top", "right", "bottom", "left", "start", "end"]
+        },
+        "align": {
+          "enum": ["start", "center", "end"]
+        },
+        "modal": {
+          "type": "boolean"
+        },
+        "interactive": {
+          "type": "boolean"
+        },
+        "scroll": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "block": {
+                  "enum": ["start", "center", "end", "nearest"]
+                },
+                "inline": {
+                  "enum": ["start", "center", "end", "nearest"]
+                },
+                "offset": {
+                  "type": "number"
+                }
+              }
+            }
+          ]
+        },
+        "onTargetMissing": {
+          "$ref": "#/$defs/missing"
+        },
+        "targetTimeout": {
+          "type": "number",
+          "minimum": 0
+        },
+        "when": {
+          "$ref": "#/$defs/action"
+        },
         "next": {
           "oneOf": [
-            { "type": "string" },
-            { "type": "null" },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            },
             {
               "type": "object",
               "required": ["action"],
               "additionalProperties": false,
-              "properties": { "action": { "$ref": "#/$defs/action" } }
+              "properties": {
+                "action": {
+                  "$ref": "#/$defs/action"
+                }
+              }
             }
           ]
         },
-        "beforeEnter": { "$ref": "#/$defs/action" },
-        "afterLeave": { "$ref": "#/$defs/action" },
-        "canNext": { "$ref": "#/$defs/action" },
+        "beforeEnter": {
+          "$ref": "#/$defs/action"
+        },
+        "afterLeave": {
+          "$ref": "#/$defs/action"
+        },
+        "canNext": {
+          "$ref": "#/$defs/action"
+        },
         "advanceOn": {
           "oneOf": [
-            { "$ref": "#/$defs/advanceOn" },
-            { "type": "array", "items": { "$ref": "#/$defs/advanceOn" } }
+            {
+              "$ref": "#/$defs/advanceOn"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/advanceOn"
+              }
+            }
           ]
         },
-        "meta": { "type": "object" }
+        "meta": {
+          "type": "object"
+        },
+        "onTargetLost": {
+          "$ref": "#/$defs/lost"
+        },
+        "enterTimeout": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Fail the transition when beforeEnter hasn't settled after this many ms."
+        },
+        "beforeLeave": {
+          "$ref": "#/$defs/action",
+          "description": "Action returning false to keep the user on the step."
+        }
       }
+    },
+    "locator": {
+      "description": "One way to find an element: a CSS selector, an anchor, a data-tour name, a role and accessible name, visible text, or a fallback chain.",
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "$ref": "#/$defs/anchor"
+        },
+        {
+          "type": "object",
+          "required": ["tour"],
+          "additionalProperties": false,
+          "properties": {
+            "tour": {
+              "type": "string",
+              "minLength": 1,
+              "description": "byTour(name): [data-tour=\"name\"]"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["role"],
+          "additionalProperties": false,
+          "properties": {
+            "role": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string"
+            },
+            "exact": {
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["text"],
+          "additionalProperties": false,
+          "properties": {
+            "text": {
+              "type": "string",
+              "minLength": 1
+            },
+            "exact": {
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["firstOf"],
+          "additionalProperties": false,
+          "properties": {
+            "firstOf": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/locator"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "lost": {
+      "enum": ["reresolve", "center", "close"],
+      "description": "What to do when a shown step's target leaves the page."
+    },
+    "text": {
+      "description": "Text, or text per locale tag (BCP 47).",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      ]
     }
   },
   "properties": {
-    "$schema": { "type": "string" },
-    "id": { "type": "string", "minLength": 1 },
-    "version": { "type": "integer", "minimum": 1 },
-    "modal": { "type": "boolean" },
-    "layer": { "enum": ["blocking", "ambient"] },
-    "targetTimeout": { "type": "number", "minimum": 0 },
-    "onTargetMissing": { "$ref": "#/$defs/missing" },
-    "data": { "type": "object" },
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "modal": {
+      "type": "boolean"
+    },
+    "layer": {
+      "enum": ["blocking", "ambient"]
+    },
+    "targetTimeout": {
+      "type": "number",
+      "minimum": 0
+    },
+    "onTargetMissing": {
+      "$ref": "#/$defs/missing"
+    },
+    "data": {
+      "type": "object"
+    },
     "rules": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "audience": { "$ref": "#/$defs/action" },
+        "audience": {
+          "$ref": "#/$defs/action"
+        },
         "schedule": {
           "type": "object",
           "additionalProperties": false,
-          "properties": { "startsAt": { "type": "string" }, "endsAt": { "type": "string" } }
+          "properties": {
+            "startsAt": {
+              "type": "string"
+            },
+            "endsAt": {
+              "type": "string"
+            }
+          }
         },
         "frequency": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "once": { "type": "boolean" },
-            "maxShows": { "type": "integer", "minimum": 1 },
-            "cooldownMs": { "type": "number", "minimum": 0 }
+            "once": {
+              "oneOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "enum": ["completed", "seen"]
+                }
+              ]
+            },
+            "maxShows": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "cooldownMs": {
+              "type": "number",
+              "minimum": 0
+            },
+            "dismissCooldownMs": {
+              "type": "number",
+              "minimum": 0
+            },
+            "perVersion": {
+              "type": "boolean"
+            }
           }
         },
         "trigger": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "route": { "type": "string" },
-            "signal": { "type": "string" },
+            "route": {
+              "type": "string"
+            },
+            "signal": {
+              "type": "string"
+            },
             "event": {
               "type": "object",
               "required": ["type"],
               "additionalProperties": false,
-              "properties": { "type": { "type": "string" }, "target": { "$ref": "#/$defs/target" } }
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "target": {
+                  "$ref": "#/$defs/target"
+                }
+              }
             },
-            "delay": { "type": "number", "minimum": 0 },
-            "targetVisible": { "$ref": "#/$defs/target" }
+            "delay": {
+              "type": "number",
+              "minimum": 0
+            },
+            "targetVisible": {
+              "$ref": "#/$defs/target"
+            },
+            "dwell": {
+              "type": "object",
+              "required": ["target"],
+              "additionalProperties": false,
+              "properties": {
+                "target": {
+                  "$ref": "#/$defs/target"
+                },
+                "ms": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              },
+              "description": "The pointer rests on (or focus stays in) the target for ms."
+            },
+            "idle": {
+              "type": "number",
+              "minimum": 0,
+              "description": "No user activity for this many ms."
+            },
+            "rageClick": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "target": {
+                  "$ref": "#/$defs/target"
+                },
+                "clicks": {
+                  "type": "integer",
+                  "minimum": 2
+                },
+                "within": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "repeat": {
+              "type": "object",
+              "required": ["signal"],
+              "additionalProperties": false,
+              "properties": {
+                "signal": {
+                  "type": "string"
+                },
+                "times": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "within": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            }
           }
         },
-        "priority": { "type": "number" }
+        "priority": {
+          "type": "number"
+        }
       }
     },
-    "steps": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/step" } }
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/step"
+      }
+    },
+    "onTargetLost": {
+      "$ref": "#/$defs/lost"
+    },
+    "enterTimeout": {
+      "type": "number",
+      "minimum": 0
+    },
+    "goal": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The conversion the tour is for.",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "signal": {
+          "type": "string"
+        },
+        "route": {
+          "type": "string"
+        },
+        "when": {
+          "$ref": "#/$defs/action"
+        },
+        "within": {
+          "type": "number",
+          "minimum": 0
+        },
+        "event": {
+          "type": "object",
+          "required": ["type"],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "target": {
+              "$ref": "#/$defs/target"
+            }
+          }
+        }
+      }
+    }
   }
 }

@@ -191,14 +191,43 @@ const statusOf = (status: string): LauncherItemStatus =>
       ? 'new'
       : 'in-progress';
 
-/** The status of a tour (or of a tour id on the `TourProvider`), for launcher items and badges. */
+/**
+ * The status of a tour (or of a tour id on the `TourProvider`), for launcher items and badges.
+ * A tour that hasn't run in this page yet falls back to what the provider's `impressions`
+ * remember, so a tour finished in an earlier session isn't "new" again.
+ */
 export function useLauncherStatus(
   tour: TourInstance<any, any> | string | undefined,
 ): LauncherItemStatus {
   const provider = useTourProvider();
   const instance = typeof tour === 'string' ? provider?.manager.get(tour) : tour;
   const status = useStoreSelector(instance ?? IDLE_STORE, (s: { status: string }) => s.status);
-  return statusOf(status);
+  const [remembered, setRemembered] = React.useState<LauncherItemStatus | null>(null);
+  const manager = provider?.manager;
+  const id = instance?.id;
+  React.useEffect(() => {
+    if (status !== 'idle' || !manager || !id || !manager.get(id)) return;
+    let alive = true;
+    manager
+      .getImpression(id)
+      .then((record) => {
+        if (!alive) return;
+        const outcome = record.outcome;
+        setRemembered(
+          outcome === 'completed' || outcome === 'skipped'
+            ? 'done'
+            : record.shows > 0
+              ? 'in-progress'
+              : null,
+        );
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [status, manager, id]);
+  const current = statusOf(status);
+  return current === 'new' && remembered ? remembered : current;
 }
 
 const IDLE_STATE = { status: 'idle' };

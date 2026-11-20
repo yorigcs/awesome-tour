@@ -6,7 +6,17 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? 'github' : 'list',
   use: { baseURL: 'http://localhost:4174', trace: 'retain-on-failure' },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // The engines differ in focus, top layer, inert and scrolling: the `@cross` tests run there
+    // too — always in CI, locally with PW_CROSS=1 (WebKit needs the host libraries CI installs).
+    ...(process.env.CI || process.env.PW_CROSS
+      ? [
+          { name: 'firefox', use: { ...devices['Desktop Firefox'] }, grep: /@cross/ },
+          { name: 'webkit', use: { ...devices['Desktop Safari'] }, grep: /@cross/ },
+        ]
+      : []),
+  ],
   webServer: [
     {
       command: 'pnpm --filter playground build && pnpm --filter playground preview',

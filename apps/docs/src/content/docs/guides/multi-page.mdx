@@ -6,6 +6,9 @@ sidebar:
 ---
 
 import { Tabs, TabItem, Aside } from '~/components/mdx';
+import Preview from '../../../components/Preview.astro';
+import { MultiPageDemo } from '../../../components/demos/MultiPageDemo';
+import MultiPageDemoSource from '../../../components/demos/MultiPageDemo.tsx?raw';
 
 Give a step a `route` and the tour navigates there before resolving its target:
 
@@ -24,6 +27,10 @@ const onboarding = createTour({
 - If the user **navigates away** while a step is shown, the step is hidden (phase `resolving`) and
   reappears when they return to its route.
 - The new page's targets are awaited like any [async target](../targets/#async-and-missing-targets).
+
+<Preview code={MultiPageDemoSource} title="MultiPageDemo.tsx">
+  <MultiPageDemo client:visible />
+</Preview>
 
 ## Router adapters
 

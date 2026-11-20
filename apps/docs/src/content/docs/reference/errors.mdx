@@ -1,0 +1,58 @@
+---
+title: Warnings & errors
+description: What each AT0xx development warning means and how to fix it.
+sidebar:
+  order: 99
+---
+
+In development, awesome-tour checks your tours and warns in the console with a stable code and a
+link here. The checks are removed from production builds (they're behind
+`process.env.NODE_ENV !== 'production'`, which bundlers replace) and never run in plain browser
+scripts.
+
+## AT001
+
+**Two steps share an id.** Step ids identify steps for `next`, `goTo`, persistence, analytics and
+`advanceOn.to`; the second step with the same id can never be reached. Rename one.
+
+## AT002
+
+**`next` names a step that doesn't exist.** A typo or a step that was removed. Moving forward
+from that step reports an error and stays put. With TypeScript, `createTour` infers step ids and
+flags this at compile time too.
+
+## AT003
+
+**`advanceOn.to` names a step that doesn't exist.** Same as AT002, for interactive steps.
+
+## AT004
+
+**A step's `target` is an invalid CSS selector.** `querySelectorAll` would throw, so the target is
+never found and the step falls back to its `onTargetMissing` policy. Prefer a
+[resilient target](../../guides/targets/#resilient-targets) (`byTour`, `byRole`) to hand-written
+selectors.
+
+## AT005
+
+**A tour failed and nothing listens to its `error` event.** A `beforeEnter` threw or timed out, a
+plugin threw, or a target was missing under `onTargetMissing: 'error'`. The tour recovered (the
+previous step is back on screen), but you probably want to know: `tour.on('error', …)`, or
+`useTourEvent('error', …)` in React. The original error is logged with the warning.
+
+## AT006
+
+**A step has a `route`, but the tour has no router.** Without a [router adapter](../router/), the
+tour can't navigate: the step resolves its target on whatever page the user is on. Pass `router`
+to `createTour` or to `TourProvider`.
+
+## AT007
+
+**Two different tours were registered with the same id.** The second replaces the first in the
+manager: the first can no longer be started by id, and their impressions mix. Usually a tour
+created inside a component body (a new instance per render) — create it at module level, or in
+`useState(() => createTour(…))`.
+
+## AT008
+
+**A checklist item comes `after` an item that doesn't exist.** Its dependency can never be done, so
+the item stays locked forever. Check the id, or remove it from `after`.

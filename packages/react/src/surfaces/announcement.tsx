@@ -1,6 +1,6 @@
 import { createTour, type Tour as TourInstance, type TourOptions } from '@awesome-tour/core';
 import * as React from 'react';
-import type { ReactStepDefinition } from '../context';
+import type { LocalizedNode, ReactStepDefinition } from '../context';
 import { useTourContext } from '../context';
 import { useTourMessages } from '../messages';
 import { Portal, Tour, type TourRootProps } from '../tour';
@@ -14,8 +14,8 @@ export interface AnnouncementOptions<TData = Record<string, unknown>>
   extends Omit<TourOptions<ReactStepDefinition<TData>, TData>, 'steps' | 'layer'> {
   /** Default: `banner`. `modal` is blocking (queues with tours); the others are ambient. */
   variant?: AnnouncementVariant;
-  title?: React.ReactNode;
-  description?: React.ReactNode;
+  title?: LocalizedNode;
+  description?: LocalizedNode;
   content?: ReactStepDefinition<TData>['content'];
   /** Close by itself after this many ms (toasts). Counts as completed. */
   autoDismiss?: number;

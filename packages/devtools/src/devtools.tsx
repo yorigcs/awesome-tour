@@ -16,6 +16,7 @@ import {
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { type PickedTarget, stepSnippet, suggestTarget, usePicker } from './picker';
+import { RecorderPanel, useRecording } from './recorder';
 import { css } from './styles';
 
 export interface TourDevtoolsProps {
@@ -44,6 +45,8 @@ const EVENT_NAMES: (keyof TourEvents)[] = [
   'dataChange',
   'error',
   'snooze',
+  'goal',
+  'targetLost',
 ];
 
 interface LoggedEvent {
@@ -101,6 +104,10 @@ function summarize(name: keyof TourEvents, payload: unknown): string {
       return p.error instanceof Error ? p.error.message : String(p.error);
     case 'dataChange':
       return safeJson(p.data, 0).slice(0, 80);
+    case 'goal':
+      return `${p.name} after ${Math.round(Number(p.afterMs) / 1000)}s (${p.status})`;
+    case 'targetLost':
+      return `${p.stepId} ${p.recovered ? 'recovered' : 'lost'}`;
     default:
       return p.stepId ? String(p.stepId) : '';
   }
@@ -195,7 +202,11 @@ export function TourDevtools({
   }, [shortcut]);
 
   const events = useEventLog(tours);
-  const [tab, setTab] = React.useState<'tours' | 'rules' | 'events' | 'checklists'>('tours');
+  const funnel = useFunnel(tours);
+  const [tab, setTab] = React.useState<
+    'tours' | 'funnel' | 'record' | 'rules' | 'events' | 'checklists'
+  >('tours');
+  const recording = useRecording();
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const selected =
     tours.find((t) => t.id === selectedId) ??
@@ -204,15 +215,20 @@ export function TourDevtools({
     tours[0];
   const anyActive = tours.some((t) => t.getState().status === 'active');
 
-  const [picking, setPicking] = React.useState(false);
+  // One picker, two uses: inspect an element, or record it as the next step.
+  const [picking, setPicking] = React.useState<false | 'inspect' | 'record'>(false);
   const [picked, setPicked] = React.useState<PickedTarget | null>(null);
   const [copied, setCopied] = React.useState(false);
   const hovered = usePicker(
-    picking,
+    picking !== false,
     (el) => {
-      setPicked(suggestTarget(el));
+      const suggestion = suggestTarget(el);
+      if (picking === 'record') recording.addTarget(suggestion);
+      else {
+        setPicked(suggestion);
+        setCopied(false);
+      }
       setPicking(false);
-      setCopied(false);
     },
     () => setPicking(false),
   );
@@ -244,31 +260,37 @@ export function TourDevtools({
           <section className="atd-panel" aria-label="awesome-tour devtools">
             <header className="atd-header">
               <span className="atd-title">awesome-tour</span>
-              {(['tours', 'rules', 'events', 'checklists'] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  className="atd-tab"
-                  aria-pressed={tab === t}
-                  onClick={() => setTab(t)}
-                >
-                  {t === 'tours'
-                    ? `Tours (${tours.length})`
-                    : t === 'rules'
-                      ? 'Rules'
-                      : t === 'events'
-                        ? `Events (${events.length})`
-                        : `Checklists (${checklists.length})`}
-                </button>
-              ))}
+              {(['tours', 'funnel', 'record', 'rules', 'events', 'checklists'] as const).map(
+                (t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    className="atd-tab"
+                    aria-pressed={tab === t}
+                    onClick={() => setTab(t)}
+                  >
+                    {t === 'tours'
+                      ? `Tours (${tours.length})`
+                      : t === 'funnel'
+                        ? 'Funnel'
+                        : t === 'record'
+                          ? `Record${recording.steps.length ? ` (${recording.steps.length})` : ''}`
+                          : t === 'rules'
+                            ? 'Rules'
+                            : t === 'events'
+                              ? `Events (${events.length})`
+                              : `Checklists (${checklists.length})`}
+                  </button>
+                ),
+              )}
               <button
                 type="button"
                 className="atd-tab"
-                aria-pressed={picking}
+                aria-pressed={picking === 'inspect'}
                 title="Click any element on the page to get a stable target for a step"
-                onClick={() => setPicking((p) => !p)}
+                onClick={() => setPicking((p) => (p === 'inspect' ? false : 'inspect'))}
               >
-                {picking ? 'Picking… (Esc)' : 'Pick element'}
+                {picking === 'inspect' ? 'Picking… (Esc)' : 'Pick element'}
               </button>
               <button type="button" className="atd-tab" onClick={exportState}>
                 Export JSON
@@ -339,6 +361,16 @@ export function TourDevtools({
                     No tours. Register tours on a TourProvider or pass `tours`.
                   </p>
                 ))}
+              {tab === 'funnel' && <FunnelPanel tours={tours} funnel={funnel} />}
+              {tab === 'record' && (
+                <RecorderPanel
+                  recording={recording}
+                  manager={provider?.manager ?? null}
+                  picking={picking === 'record'}
+                  onPick={() => setPicking((p) => (p === 'record' ? false : 'record'))}
+                  container={container}
+                />
+              )}
               {tab === 'rules' && <RulesPanel tours={tours} />}
               {tab === 'events' && <EventList events={events} />}
               {tab === 'checklists' &&
@@ -464,6 +496,115 @@ function RulesPanel({ tours }: { tours: TourInstance<any, any>[] }) {
         );
       })}
     </>
+  );
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * Funnel: where people drop off, from this session's runs.
+ * -----------------------------------------------------------------------------------------------*/
+
+export interface TourFunnel {
+  runs: number;
+  /** Step id → runs that reached it (once per run). */
+  reached: Record<string, number>;
+  completed: number;
+  skipped: number;
+  dismissed: number;
+  goals: number;
+}
+
+const emptyFunnel = (): TourFunnel => ({
+  runs: 0,
+  reached: {},
+  completed: 0,
+  skipped: 0,
+  dismissed: 0,
+  goals: 0,
+});
+
+/** Aggregates every run of `tours` seen while mounted. */
+export function useFunnel(tours: TourInstance<any, any>[]) {
+  const [funnel, setFunnel] = React.useState<Record<string, TourFunnel>>({});
+  React.useEffect(() => {
+    const seen = new Map<string, Set<string>>(); // tour id → steps reached in the current run
+    const bump = (id: string, change: (f: TourFunnel) => TourFunnel) =>
+      setFunnel((prev) => ({ ...prev, [id]: change(prev[id] ?? emptyFunnel()) }));
+    const offs = tours.flatMap((tour) => [
+      tour.on('start', () => {
+        seen.set(tour.id, new Set());
+        bump(tour.id, (f) => ({ ...f, runs: f.runs + 1 }));
+      }),
+      tour.on('stepChange', ({ to }) => {
+        const steps = seen.get(tour.id) ?? new Set<string>();
+        seen.set(tour.id, steps);
+        if (steps.has(to)) return;
+        steps.add(to);
+        bump(tour.id, (f) => ({ ...f, reached: { ...f.reached, [to]: (f.reached[to] ?? 0) + 1 } }));
+      }),
+      tour.on('complete', () => bump(tour.id, (f) => ({ ...f, completed: f.completed + 1 }))),
+      tour.on('skip', () => bump(tour.id, (f) => ({ ...f, skipped: f.skipped + 1 }))),
+      tour.on('close', () => bump(tour.id, (f) => ({ ...f, dismissed: f.dismissed + 1 }))),
+      tour.on('goal', () => bump(tour.id, (f) => ({ ...f, goals: f.goals + 1 }))),
+    ]);
+    return () => {
+      for (const off of offs) off();
+    };
+  }, [tours]);
+  return funnel;
+}
+
+function FunnelPanel({
+  tours,
+  funnel,
+}: {
+  tours: TourInstance<any, any>[];
+  funnel: Record<string, TourFunnel>;
+}) {
+  const ran = tours.filter((t) => (funnel[t.id]?.runs ?? 0) > 0);
+  if (ran.length === 0) {
+    return <p className="atd-empty">Run a tour: each step's reach and drop-off shows up here.</p>;
+  }
+  const pct = (n: number, of: number) => `${of ? Math.round((n / of) * 100) : 0}%`;
+  return (
+    <div className="atd-funnels">
+      {ran.map((tour) => {
+        const f = funnel[tour.id]!;
+        const steps = tour.getSteps() as readonly { id: string }[];
+        return (
+          <section key={tour.id} className="atd-section-block" aria-label={`Funnel for ${tour.id}`}>
+            <div className="atd-row">
+              <span className="atd-mono">{tour.id}</span>
+              <span className="atd-pill">
+                {f.runs} run{f.runs === 1 ? '' : 's'}
+              </span>
+            </div>
+            <ol className="atd-funnel">
+              {steps.map((step, i) => {
+                const n = f.reached[step.id] ?? 0;
+                const prev = i === 0 ? f.runs : (f.reached[steps[i - 1]!.id] ?? 0);
+                const drop = prev - n;
+                return (
+                  <li key={step.id}>
+                    <span className="atd-mono">{step.id}</span>
+                    <span className="atd-bar" aria-hidden="true">
+                      <span style={{ width: pct(n, f.runs) }} />
+                    </span>
+                    <span className="atd-mono">
+                      {n} · {pct(n, f.runs)}
+                      {i > 0 && drop > 0 && <span className="atd-drop"> −{drop}</span>}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+            <p className="atd-muted atd-mono">
+              {f.completed} completed · {f.skipped} skipped · {f.dismissed} closed
+              {f.goals ? ` · ${f.goals} reached the goal (${pct(f.goals, f.runs)})` : ''}
+            </p>
+          </section>
+        );
+      })}
+    </div>
   );
 }
 

@@ -1,30 +1,32 @@
 import { fromJSON, type TourJSON } from '@awesome-tour/core/json';
 import { createTour, Tour, type TourInstance } from '@awesome-tour/react';
+import { LoopworkApp } from '@loopwork';
 import { useState } from 'react';
 import { TourPopover } from '@/components/awesome-tour/tour';
-import { DemoFrame, MockApp, worldButton } from './ui';
+import { DemoFrame, worldButton } from './ui';
 
 const initial: TourJSON = {
   id: 'docs-json',
   steps: [
     {
-      id: 'nav',
-      target: '#json-nav',
-      side: 'right',
-      title: 'From JSON',
-      description: 'This tour came from the document on the right.',
+      id: 'transport',
+      target: '#from-json [data-tour=transport]',
+      title: 'Loaded from JSON',
+      description: 'This tour came from the document below. Edit it, then build again.',
     },
     {
-      id: 'search',
-      target: '#json-search',
-      title: 'Edit me',
-      description: 'Change a title, then start again.',
+      id: 'beat',
+      target: ['#from-json [data-tour=row-kick]', '#from-json [data-tour=row-snare]'],
+      title: 'Kick and snare',
+      description: 'Arrays still mean several targets.',
     },
     {
-      id: 'stats',
-      target: ['#json-stat-1', '#json-stat-3'],
-      title: 'Multiple targets',
+      id: 'mixer',
+      target: '#from-json [data-tour=mixer]',
+      side: 'left',
+      title: 'Mixer',
       when: 'wide',
+      description: 'Only on wide screens: `when` names an action.',
     },
   ],
 };
@@ -70,14 +72,14 @@ export function JsonDemo() {
           )
         }
       >
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
-          <MockApp id="json" />
+        <div className="grid gap-3">
+          <LoopworkApp scope="from-json" layout="compact" />
           <textarea
             aria-label="Tour JSON"
             value={text}
             onChange={(e) => setText(e.target.value)}
             spellCheck={false}
-            className="min-h-72 w-full resize-y rounded-sm border-2 border-ink bg-paper p-3 font-mono text-xs leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-marker"
+            className="min-h-64 w-full resize-y rounded-sm border-2 border-ink bg-paper p-3 font-mono text-xs leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-marker"
           />
         </div>
       </DemoFrame>

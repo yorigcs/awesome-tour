@@ -1,4 +1,5 @@
 import { createTour, Tour } from '@awesome-tour/react';
+import { LoopworkApp, parts } from '@loopwork';
 import { Check, Copy } from 'lucide-react';
 import type * as React from 'react';
 import { useEffect, useId, useRef, useState } from 'react';
@@ -11,7 +12,9 @@ import {
 import { TourMotionPopover } from '@/components/awesome-tour/tour-motion';
 import { cn } from '@/lib/utils';
 import { landingTour } from '../demos/LandingTour';
-import { MockApp, StartButton } from '../demos/ui';
+import { StartButton } from '../demos/ui';
+
+const bench = parts('bench');
 
 export const workbenchTour = createTour({
   id: 'workbench',
@@ -21,30 +24,30 @@ export const workbenchTour = createTour({
   scroll: false,
   steps: [
     {
-      id: 'stats',
-      target: ['#bench-stat-1', '#bench-stat-3'],
+      id: 'beat',
+      target: [bench('row-kick'), bench('row-snare')],
       side: 'bottom',
       title: 'Change a part',
       description:
         'Flip any option on the left while this step is open — the tour updates in place.',
     },
     {
-      id: 'search',
-      target: '#bench-search',
-      title: 'Search',
+      id: 'transport',
+      target: bench('transport'),
+      title: 'Transport',
       description: 'Every option maps to a prop or a part. The code below follows along.',
     },
     {
-      id: 'new',
-      target: '#bench-new',
-      title: 'Create a project',
+      id: 'mixer',
+      target: bench('mixer'),
+      side: 'left',
+      title: 'Mixer',
       description: 'It is your component now: copy the code, change any class.',
     },
     {
-      id: 'nav',
-      target: '#bench-nav',
-      side: 'right',
-      title: 'Navigation',
+      id: 'arrangement',
+      target: bench('arrangement'),
+      title: 'Arrangement',
       description: 'Steps can point anywhere: one element, several, or none at all.',
     },
   ],
@@ -284,7 +287,7 @@ export function Workbench() {
         </div>
         <div className="flex min-w-0 flex-col">
           <div className="bg-paper-2 p-3 sm:p-5">
-            <MockApp id="bench" />
+            <LoopworkApp scope="bench" />
           </div>
           <div className="border-t-2 border-ink">
             <div className="flex items-center justify-between border-b border-rule bg-paper-2 py-1 pr-2 pl-4">

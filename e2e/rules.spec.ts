@@ -6,8 +6,8 @@ test('a rule-triggered tour starts on its route, snoozes, and devtools explains 
   await page.goto('/');
   await expect(page.getByRole('dialog')).toHaveCount(0);
 
-  await page.getByRole('link', { name: 'Projects' }).click();
-  const news = page.getByRole('dialog', { name: 'New: project table' });
+  await page.getByRole('link', { name: 'Library' }).click();
+  const news = page.getByRole('dialog', { name: 'New: project folders' });
   await expect(news).toBeVisible();
   // Non-modal: the page stays usable.
   await expect(page.locator('main')).not.toHaveAttribute('inert', '');
@@ -15,8 +15,8 @@ test('a rule-triggered tour starts on its route, snoozes, and devtools explains 
   await news.getByRole('button', { name: 'Remind me tomorrow' }).click();
   await expect(news).toHaveCount(0);
 
-  await page.getByRole('link', { name: 'Home' }).click();
-  await page.getByRole('link', { name: 'Projects' }).click();
+  await page.getByRole('link', { name: 'Arrange' }).click();
+  await page.getByRole('link', { name: 'Library' }).click();
   await page.waitForTimeout(500);
   await expect(news).toHaveCount(0);
 
@@ -33,12 +33,12 @@ test('a rule-triggered tour starts on its route, snoozes, and devtools explains 
 test('a triggered tour never interrupts another tour on screen', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Start onboarding' }).click();
-  await expect(page.getByRole('dialog')).toHaveAccessibleName('Welcome to Acme');
+  await expect(page.getByRole('dialog')).toHaveAccessibleName('Welcome to Loopwork');
   // Navigating to the trigger route while onboarding runs doesn't open "What's new".
   await page.evaluate(() => {
-    history.pushState(null, '', '/projects');
+    history.pushState(null, '', '/library');
     dispatchEvent(new PopStateEvent('popstate'));
   });
   await page.waitForTimeout(500);
-  await expect(page.getByRole('dialog', { name: 'New: project table' })).toHaveCount(0);
+  await expect(page.getByRole('dialog', { name: 'New: project folders' })).toHaveCount(0);
 });

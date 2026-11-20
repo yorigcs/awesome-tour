@@ -43,6 +43,19 @@ const steps = [
     expect(out).toMatch(/TODO\(awesome-tour\): replace <Joyride.* import Joyride/);
   });
 
+  it('maps disableScrolling to scroll and explains spotlightPadding', () => {
+    const out = apply(
+      joyride,
+      `const steps = [
+  { target: '#mixer', content: 'Mixer', disableScrolling: true, spotlightPadding: 8 },
+  { target: '#bpm', content: 'Tempo', disableScrolling: compact },
+];`,
+    )!;
+    expect(out).toContain("target: '#mixer', description: 'Mixer', scroll: false");
+    expect(out).toContain('scroll: !compact');
+    expect(out).toContain('`padding` prop of Tour.Overlay');
+  });
+
   it('leaves unrelated files alone', () => {
     expect(apply(joyride, `const a = { target: 'x' };`)).toBeNull();
   });

@@ -1,14 +1,16 @@
 import { useTourAnchor } from '@awesome-tour/react';
-import { Box, FolderKanban, LayoutDashboard } from 'lucide-react';
+import { LoopworkMark } from '@loopwork';
+import { Box, FolderOpen, LayoutPanelTop, SlidersVertical } from 'lucide-react';
 import { ChecklistPanel } from '@/components/awesome-tour/checklist';
 import { cn } from '@/lib/utils';
 import { navigate, usePath } from '../router';
 import { gettingStarted } from '../tours';
 
 const LINKS = [
-  { href: '/', label: 'Home', icon: LayoutDashboard },
-  { href: '/projects', label: 'Projects', icon: FolderKanban },
-  { href: '/3d', label: '3D scene', icon: Box },
+  { href: '/', label: 'Arrange', icon: LayoutPanelTop },
+  { href: '/library', label: 'Library', icon: FolderOpen },
+  { href: '/mix', label: 'Mix', icon: SlidersVertical },
+  { href: '/studio', label: 'Studio', icon: Box },
 ] as const;
 
 export function AppSidebar() {
@@ -18,10 +20,8 @@ export function AppSidebar() {
     <aside className="flex flex-col gap-4 border-b bg-sidebar p-3 text-sidebar-foreground md:sticky md:top-0 md:h-svh md:border-r md:border-b-0">
       <nav ref={navRef} className="sidebar flex flex-col gap-1" aria-label="Main">
         <span className="mb-3 flex items-center gap-2 px-2 pt-1 font-semibold">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-sm text-primary-foreground">
-            A
-          </span>
-          Acme
+          <LoopworkMark className="size-7" />
+          Loopwork
         </span>
         {LINKS.map(({ href, label, icon: Icon }) => (
           <a
@@ -47,7 +47,7 @@ export function AppSidebar() {
         <ChecklistPanel
           checklist={gettingStarted}
           className="checklist shadow-none"
-          description="Finish these to unlock everything"
+          description="Your first session"
         />
       </div>
     </aside>

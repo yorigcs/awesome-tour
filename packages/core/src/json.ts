@@ -5,17 +5,35 @@
  * through `actions`.
  */
 import { anchor } from './anchors';
+import { isLocalized } from './localize';
+import { byRole, byText, byTour, firstOf } from './locators';
 import type {
   AdvanceOn,
   StepContext,
   StepDefinition,
   TargetInput,
+  TargetLostPolicy,
   TargetMissingPolicy,
+  TourGoal,
   TourOptions,
   TourRules,
 } from './types';
 
-export type TargetJSON = string | { anchor: string } | (string | { anchor: string })[];
+/** One way to find an element, as data. */
+export type LocatorJSON =
+  | string
+  | { anchor: string }
+  /** `byTour(name)`: `[data-tour="name"]`. */
+  | { tour: string }
+  /** `byRole(role, { name, exact })`. */
+  | { role: string; name?: string; exact?: boolean }
+  /** `byText(text, { exact })`. */
+  | { text: string; exact?: boolean }
+  /** `firstOf(...)`: the first locator that finds something. */
+  | { firstOf: LocatorJSON[] };
+
+/** A locator, or an array of them (all highlighted at once). */
+export type TargetJSON = LocatorJSON | LocatorJSON[];
 
 export interface AdvanceJSON {
   event?: string;
@@ -27,19 +45,26 @@ export interface AdvanceJSON {
   to?: string;
 }
 
+/** Text, or text per locale tag: `{ "en": "Mixer", "pt-BR": "Mixer" }`. */
+export type TextJSON = string | Record<string, string>;
+
 export interface StepJSON {
   id: string;
-  title?: string;
-  description?: string;
+  title?: TextJSON;
+  description?: TextJSON;
   target?: TargetJSON | null;
   route?: string;
-  side?: 'top' | 'right' | 'bottom' | 'left';
+  side?: 'top' | 'right' | 'bottom' | 'left' | 'start' | 'end';
   align?: 'start' | 'center' | 'end';
   modal?: boolean;
   interactive?: boolean;
-  scroll?: boolean;
+  scroll?:
+    | boolean
+    | { block?: ScrollLogicalPosition; inline?: ScrollLogicalPosition; offset?: number };
   onTargetMissing?: TargetMissingPolicy;
+  onTargetLost?: TargetLostPolicy;
   targetTimeout?: number;
+  enterTimeout?: number;
   /** Action name: show the step only when it returns true. */
   when?: string;
   /** A step id, `null` to finish, or `{ action }` to decide at runtime. */
@@ -47,6 +72,8 @@ export interface StepJSON {
   /** Action names. */
   beforeEnter?: string;
   afterLeave?: string;
+  /** Action returning `false` to keep the user on the step. */
+  beforeLeave?: string;
   canNext?: string;
   advanceOn?: AdvanceJSON | AdvanceJSON[];
   meta?: Record<string, unknown>;
@@ -59,19 +86,40 @@ export interface TourJSON {
   modal?: boolean;
   layer?: 'blocking' | 'ambient';
   targetTimeout?: number;
+  enterTimeout?: number;
   onTargetMissing?: TargetMissingPolicy;
+  onTargetLost?: TargetLostPolicy;
   data?: Record<string, unknown>;
+  /** The conversion the tour is for. `when` is an action name. */
+  goal?: {
+    name?: string;
+    signal?: string;
+    event?: { type: string; target?: TargetJSON };
+    route?: string;
+    when?: string;
+    within?: number;
+  };
   rules?: {
     /** Action name. */
     audience?: string;
     schedule?: { startsAt?: string; endsAt?: string };
-    frequency?: { once?: boolean; maxShows?: number; cooldownMs?: number };
+    frequency?: {
+      once?: boolean | 'completed' | 'seen';
+      maxShows?: number;
+      cooldownMs?: number;
+      dismissCooldownMs?: number;
+      perVersion?: boolean;
+    };
     trigger?: {
       route?: string;
       signal?: string;
       event?: { type: string; target?: TargetJSON };
       delay?: number;
       targetVisible?: TargetJSON;
+      dwell?: { target: TargetJSON; ms?: number };
+      idle?: number;
+      rageClick?: { target?: TargetJSON; clicks?: number; within?: number };
+      repeat?: { signal: string; times?: number; within?: number };
     };
     priority?: number;
   };
@@ -80,8 +128,8 @@ export interface TourJSON {
 
 /** The step shape `fromJSON` produces (core fields + the React-rendered ones). */
 export type JSONStep = StepDefinition & {
-  title?: string;
-  description?: string;
+  title?: TextJSON;
+  description?: TextJSON;
   side?: StepJSON['side'];
   align?: StepJSON['align'];
   interactive?: boolean;
@@ -108,6 +156,41 @@ export function validateTourJSON(json: unknown, actions: Record<string, unknown>
     return errors;
   }
   const ids = new Set<string>();
+  const oneOf = (path: string, value: unknown, allowed: readonly unknown[]) => {
+    if (value !== undefined && !allowed.includes(value)) {
+      errors.push(`${path} must be one of ${allowed.map((a) => JSON.stringify(a)).join(', ')}`);
+    }
+  };
+  const checkLocator = (path: string, value: unknown): void => {
+    if (typeof value === 'string') return;
+    if (!isObj(value)) {
+      errors.push(`${path} must be a selector string or a locator object`);
+      return;
+    }
+    if (typeof value.anchor === 'string' || typeof value.tour === 'string') return;
+    if (typeof value.role === 'string') return;
+    if (typeof value.text === 'string') return;
+    if (Array.isArray(value.firstOf)) {
+      value.firstOf.forEach((v: unknown, k: number) => {
+        checkLocator(`${path}.firstOf[${k}]`, v);
+      });
+      return;
+    }
+    errors.push(`${path} must have one of: anchor, tour, role, text, firstOf`);
+  };
+  const checkTarget = (path: string, value: unknown) => {
+    if (value == null) return;
+    if (Array.isArray(value)) {
+      value.forEach((v, k) => {
+        checkLocator(`${path}[${k}]`, v);
+      });
+    } else checkLocator(path, value);
+  };
+  const checkText = (path: string, value: unknown) => {
+    if (value === undefined || typeof value === 'string') return;
+    if (isLocalized(value) && Object.values(value).every((v) => typeof v === 'string')) return;
+    errors.push(`${path} must be a string or an object of locale tags to strings`);
+  };
   const needAction = (path: string, name: unknown) => {
     if (name === undefined) return;
     if (typeof name !== 'string') errors.push(`${path} must be an action name (string)`);
@@ -126,6 +209,14 @@ export function validateTourJSON(json: unknown, actions: Record<string, unknown>
     needAction(`${at}.beforeEnter`, step.beforeEnter);
     needAction(`${at}.afterLeave`, step.afterLeave);
     needAction(`${at}.canNext`, step.canNext);
+    needAction(`${at}.beforeLeave`, step.beforeLeave);
+    checkText(`${at}.title`, step.title);
+    checkText(`${at}.description`, step.description);
+    oneOf(`${at}.side`, step.side, ['top', 'right', 'bottom', 'left', 'start', 'end']);
+    oneOf(`${at}.align`, step.align, ['start', 'center', 'end']);
+    oneOf(`${at}.onTargetMissing`, step.onTargetMissing, ['wait', 'skip', 'center', 'error']);
+    oneOf(`${at}.onTargetLost`, step.onTargetLost, ['reresolve', 'center', 'close']);
+    checkTarget(`${at}.target`, step.target);
     if (isObj(step.next)) needAction(`${at}.next.action`, step.next.action);
     const rules = step.advanceOn === undefined ? [] : [step.advanceOn].flat();
     rules.forEach((r, j) => {
@@ -141,14 +232,38 @@ export function validateTourJSON(json: unknown, actions: Record<string, unknown>
         errors.push(`steps[${i}].advanceOn.to: unknown step "${r.to}"`);
     }
   });
-  if (isObj(json.rules)) needAction('rules.audience', json.rules.audience);
+  oneOf('tour.layer', json.layer, ['blocking', 'ambient']);
+  oneOf('tour.onTargetMissing', json.onTargetMissing, ['wait', 'skip', 'center', 'error']);
+  oneOf('tour.onTargetLost', json.onTargetLost, ['reresolve', 'center', 'close']);
+  if (isObj(json.rules)) {
+    needAction('rules.audience', json.rules.audience);
+    if (isObj(json.rules.frequency)) {
+      oneOf('rules.frequency.once', json.rules.frequency.once, [true, false, 'completed', 'seen']);
+    }
+  }
+  if (isObj(json.goal)) needAction('goal.when', json.goal.when);
   return errors;
+}
+
+function locator(input: LocatorJSON): TargetInput {
+  if (typeof input === 'string') return input;
+  if ('anchor' in input) return anchor(input.anchor);
+  if ('tour' in input) return byTour(input.tour);
+  if ('role' in input) {
+    return byRole(input.role, {
+      ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.exact !== undefined ? { exact: input.exact } : {}),
+    });
+  }
+  if ('text' in input)
+    return byText(input.text, input.exact !== undefined ? { exact: input.exact } : {});
+  return firstOf(...input.firstOf.map(locator));
 }
 
 function target(input: TargetJSON | null | undefined): TargetInput | null | undefined {
   if (input == null) return input;
-  if (Array.isArray(input)) return input.map((t) => target(t) as TargetInput);
-  return typeof input === 'string' ? input : anchor(input.anchor);
+  if (Array.isArray(input)) return input.map(locator);
+  return locator(input);
 }
 
 /**
@@ -181,13 +296,16 @@ export function fromJSON(json: TourJSON, options: FromJSONOptions = {}): TourOpt
       ...(s.interactive !== undefined ? { interactive: s.interactive } : {}),
       ...(s.scroll !== undefined ? { scroll: s.scroll } : {}),
       ...(s.onTargetMissing ? { onTargetMissing: s.onTargetMissing } : {}),
+      ...(s.onTargetLost ? { onTargetLost: s.onTargetLost } : {}),
       ...(s.targetTimeout !== undefined ? { targetTimeout: s.targetTimeout } : {}),
+      ...(s.enterTimeout !== undefined ? { enterTimeout: s.enterTimeout } : {}),
       ...(s.meta ? { meta: s.meta } : {}),
     };
     if (s.when) step.when = act(s.when);
     if (s.beforeEnter) step.beforeEnter = act(s.beforeEnter);
     if (s.afterLeave) step.afterLeave = act(s.afterLeave);
     if (s.canNext) step.canNext = act(s.canNext);
+    if (s.beforeLeave) step.beforeLeave = act(s.beforeLeave);
     if (s.next !== undefined) {
       step.next = typeof s.next === 'object' && s.next !== null ? act(s.next.action) : s.next;
     }
@@ -206,6 +324,24 @@ export function fromJSON(json: TourJSON, options: FromJSONOptions = {}): TourOpt
     return step;
   });
 
+  const goalFrom = (g: NonNullable<TourJSON['goal']>): TourGoal => ({
+    ...(g.name ? { name: g.name } : {}),
+    ...(g.signal ? { signal: g.signal } : {}),
+    ...(g.route ? { route: g.route } : {}),
+    ...(g.within !== undefined ? { within: g.within } : {}),
+    ...(g.when ? { when: act<NonNullable<TourGoal['when']>>(g.when) } : {}),
+    ...(g.event
+      ? {
+          event: {
+            type: g.event.type,
+            ...(g.event.target !== undefined
+              ? { target: target(g.event.target) as TargetInput }
+              : {}),
+          },
+        }
+      : {}),
+  });
+
   let rules: TourRules | undefined;
   if (json.rules) {
     const { audience, trigger: t, schedule, frequency, priority } = json.rules;
@@ -220,6 +356,21 @@ export function fromJSON(json: TourJSON, options: FromJSONOptions = {}): TourOpt
     }
     if (t?.targetVisible !== undefined)
       trigger.targetVisible = target(t.targetVisible) as TargetInput;
+    if (t?.dwell) {
+      trigger.dwell = {
+        target: target(t.dwell.target) as TargetInput,
+        ...(t.dwell.ms !== undefined ? { ms: t.dwell.ms } : {}),
+      };
+    }
+    if (t?.idle !== undefined) trigger.idle = t.idle;
+    if (t?.rageClick) {
+      const { target: rt, ...rest } = t.rageClick;
+      trigger.rageClick = {
+        ...rest,
+        ...(rt !== undefined ? { target: target(rt) as TargetInput } : {}),
+      };
+    }
+    if (t?.repeat) trigger.repeat = t.repeat;
     rules = {
       ...(schedule ? { schedule } : {}),
       ...(frequency ? { frequency } : {}),
@@ -237,7 +388,10 @@ export function fromJSON(json: TourJSON, options: FromJSONOptions = {}): TourOpt
     ...(json.layer ? { layer: json.layer } : {}),
     ...(json.targetTimeout !== undefined ? { targetTimeout: json.targetTimeout } : {}),
     ...(json.onTargetMissing ? { onTargetMissing: json.onTargetMissing } : {}),
+    ...(json.onTargetLost ? { onTargetLost: json.onTargetLost } : {}),
+    ...(json.enterTimeout !== undefined ? { enterTimeout: json.enterTimeout } : {}),
     ...(json.data ? { data: json.data } : {}),
+    ...(json.goal ? { goal: goalFrom(json.goal) } : {}),
     ...(rules ? { rules } : {}),
     ...overrides,
   };

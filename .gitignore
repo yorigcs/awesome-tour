@@ -9,3 +9,6 @@ test-results
 apps/docs/public/r
 .playwright-mcp
 apps/docs/public/schema
+
+# Vitest JSON reports (local tooling)
+.vitest/

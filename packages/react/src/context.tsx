@@ -1,9 +1,15 @@
 import {
   type AnchorRegistry,
   createTourManager,
+  type DeepLinkOptions,
+  deepLink,
   defaultAnchors,
+  exposeForAudit,
   type ImpressionRecord,
+  type Localized,
   type PersistenceAdapter,
+  type PreviewOptions,
+  previewFromUrl,
   type RouterAdapter,
   type StepDefinition,
   type Tour,
@@ -11,7 +17,7 @@ import {
   type TourState,
 } from '@awesome-tour/core';
 import * as React from 'react';
-import { MessagesScope, type TourMessagesInput } from './messages';
+import { LocaleScope, MessagesScope, type TourMessagesInput } from './messages';
 import type { Align, Side } from './utils/positioner';
 
 /* -------------------------------------------------------------------------------------------------
@@ -24,11 +30,15 @@ export interface StepRenderProps {
   step: ReactStepDefinition;
 }
 
+/** A node, or one node per locale tag (`{ en: …, 'pt-BR': … }`). */
+export type LocalizedNode = React.ReactNode | Localized<React.ReactNode>;
+
 export interface ReactStepDefinition<TData = any, TId extends string = string>
   extends StepDefinition<TData, TId> {
-  title?: React.ReactNode;
-  description?: React.ReactNode;
-  content?: React.ReactNode | ((props: StepRenderProps) => React.ReactNode);
+  /** Text, or text per locale (`{ en: 'Mixer', pt: 'Mixer' }`, see `locale`). */
+  title?: LocalizedNode;
+  description?: LocalizedNode;
+  content?: LocalizedNode | ((props: StepRenderProps) => React.ReactNode);
   /** Preferred side of the target for this step (overrides `Tour.Content` `side`). */
   side?: Side;
   /** Preferred alignment for this step (overrides `Tour.Content` `align`). */
@@ -64,6 +74,20 @@ export interface TourProviderProps {
   impressions?: PersistenceAdapter<ImpressionRecord>;
   /** Translations for every string the primitives render (merged over the English defaults). */
   messages?: TourMessagesInput;
+  /**
+   * Start the tour named in the URL (`?tour=id&step=x`) once it's registered, then remove the
+   * parameters. `true` uses the defaults; pass options to rename them. Default: off.
+   */
+  deepLink?: boolean | DeepLinkOptions;
+  /**
+   * Preview unpublished tours: `?tour-preview=id` loads the draft with `load(id)` and runs it
+   * without saving anything or sending analytics. See `previewFromUrl`.
+   */
+  preview?: PreviewOptions;
+  /** Locale for step content given per locale (`title: { en, pt }`). Default: `<html lang>`. */
+  locale?: string;
+  /** Locale used when a text has no entry for `locale`. Default: `en`. */
+  fallbackLocale?: string;
   children?: React.ReactNode;
 }
 
@@ -78,25 +102,61 @@ export function TourProvider({
   manager: managerProp,
   impressions,
   messages,
+  deepLink: deepLinkOption,
+  preview,
+  locale,
+  fallbackLocale,
   children,
 }: TourProviderProps) {
-  // Register initial tours synchronously so children can look them up on the first render.
-  const [internal] = React.useState(
-    () =>
-      managerProp ?? createTourManager({ router, tours, ...(impressions ? { impressions } : {}) }),
+  // Initial tours are registered synchronously so children can look them up on the first render;
+  // the manager only starts watching (triggers, router, impressions) once mounted, so a render
+  // StrictMode throws away leaves nothing running.
+  const [internal] = React.useState(() =>
+    managerProp
+      ? null
+      : createTourManager({
+          router,
+          tours,
+          connect: false,
+          ...(impressions ? { impressions } : {}),
+        }),
   );
-  const manager = managerProp ?? internal;
+  const manager = managerProp ?? internal!;
+
+  React.useEffect(() => {
+    if (!internal) return;
+    return internal.connect();
+  }, [internal]);
 
   React.useEffect(() => {
     manager.setRouter(router);
   }, [manager, router]);
 
+  // Hand the tours to a health check when a test asked for them (no-op otherwise).
+  React.useEffect(() => exposeForAudit(manager, router), [manager, router]);
+
+  const previewOptions = React.useRef(preview);
   React.useEffect(() => {
-    const cleanups = (tours ?? []).map((tour) => manager.register(tour));
+    const value = previewOptions.current;
+    if (!value) return;
+    return previewFromUrl(manager, value);
+  }, [manager]);
+
+  const deepLinkOptions = React.useRef(deepLinkOption);
+  React.useEffect(() => {
+    const value = deepLinkOptions.current;
+    if (!value) return;
+    return deepLink(manager, value === true ? {} : value);
+  }, [manager]);
+
+  // An inline `tours={[a, b]}` array is new on every render: only re-register when its tours change.
+  const stableTours = useShallowStable(tours);
+  React.useEffect(() => {
+    const cleanups = (stableTours ?? []).map((tour) => manager.register(tour));
     return () => {
       for (const cleanup of cleanups) cleanup();
     };
-  }, [manager, tours]);
+  }, [manager, stableTours]);
 
   const value = React.useMemo(
     () => ({ manager, anchors: anchors ?? defaultAnchors }),
@@ -104,9 +164,27 @@ export function TourProvider({
   );
   return (
     <ProviderContext.Provider value={value}>
-      <MessagesScope messages={messages}>{children}</MessagesScope>
+      <MessagesScope messages={messages}>
+        <LocaleScope locale={locale} fallbackLocale={fallbackLocale}>
+          {children}
+        </LocaleScope>
+      </MessagesScope>
     </ProviderContext.Provider>
   );
+}
+
+/** Returns the previous array while its items are the same (by identity). */
+function useShallowStable<T>(value: readonly T[] | undefined): readonly T[] | undefined {
+  const ref = React.useRef(value);
+  const prev = ref.current;
+  const same =
+    prev === value ||
+    (!!prev &&
+      !!value &&
+      prev.length === value.length &&
+      prev.every((item, i) => Object.is(item, value[i])));
+  if (!same) ref.current = value;
+  return same ? prev : value;
 }
 
 export function useTourProvider(): ProviderContextValue | null {
@@ -190,6 +268,8 @@ export interface TourContextValue {
   contentId: string;
   contents: ContentStore;
   registerStep(step: () => ReactStepDefinition): () => void;
+  /** Push the latest declarative step definitions to the tour. */
+  syncSteps(): void;
   /** Elements that must stay interactive while the modal tour is open (overlay, spotlight…). */
   registerLayer(element: HTMLElement): () => void;
   layers: ReadonlySet<HTMLElement>;

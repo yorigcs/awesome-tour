@@ -4,6 +4,7 @@ import {
   isAnchorTarget,
   type PersistenceAdapter,
   resolveTarget,
+  subscribeDomActivity,
   type TargetInput,
   type TourTargetNode,
 } from '@awesome-tour/core';
@@ -48,11 +49,10 @@ export function useResolvedTarget(target: TargetInput | null | undefined): TourT
     };
     update();
     const unsubscribe = anchors.subscribe(update);
-    const mo = typeof MutationObserver !== 'undefined' ? new MutationObserver(update) : null;
-    mo?.observe(document.body, { childList: true, subtree: true });
+    const offActivity = subscribeDomActivity(update);
     return () => {
       unsubscribe();
-      mo?.disconnect();
+      offActivity();
     };
   }, [anchors, targetKey(target)]);
   return nodes;
@@ -156,8 +156,16 @@ function HotspotRoot({
       handleChange(next);
       if (next && !seen) {
         setSeen(true);
-        if (persistence && hotspotId)
-          void persistence.set(hotspotId, { seen: true, seenAt: Date.now() });
+        if (persistence && hotspotId) {
+          const warn = (error: unknown) =>
+            console.warn('[awesome-tour] hotspot: saving failed', error);
+          try {
+            const saving = persistence.set(hotspotId, { seen: true, seenAt: Date.now() });
+            if (saving instanceof Promise) saving.catch(warn);
+          } catch (error) {
+            warn(error);
+          }
+        }
       }
       if (!next && seen) setClosedAfterSeen(true);
     },

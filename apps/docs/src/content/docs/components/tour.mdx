@@ -67,7 +67,7 @@ There are three ways to choose the tour:
 | `onStepChange`        | `(stepId: string) => void`                                   | —                        | Called on every `stepChange` event.                                                                               |
 | `modal`               | `boolean`                                                    | tour's `modal`           | Focus trap, `inert` outside, and an overlay that blocks clicks. A step's own `modal` wins.                        |
 | `targetInteraction`   | `boolean`                                                    | —                        | Let users interact with highlighted targets on every step. A step's own `interactive` wins.                       |
-| `dir`                 | `'ltr' \| 'rtl'`                                             | `'ltr'`                  | Reading direction. Flips arrow-key navigation and alignment.                                                      |
+| `dir`                 | `'ltr' \| 'rtl'`                                             | the document's           | Reading direction. Flips arrow-key navigation and alignment. Defaults to `<html dir>` / `<body dir>` (or the computed `direction`), read when the tour opens. |
 | `keyboardNavigation`  | `boolean \| Partial<TourKeyMap>`                            | `true`                   | <kbd>←</kbd> / <kbd>→</kbd> move between steps, <kbd>Home</kbd> / <kbd>End</kbd> jump to the first / last. Pass an object to remap: `{ next: ['ArrowRight', 'j'] }`. |
 | `lockScroll`          | `boolean`                                                    | `false`                  | Lock page scrolling while a modal step is open. The tour still scrolls each target into view.                     |
 | `viewTransition`      | `boolean`                                                    | `false`                  | Morph the card between steps with the View Transitions API (`view-transition-name: tour-content`). Skipped where unsupported and for reduced motion. |
@@ -161,7 +161,7 @@ Renders its children into `document.body`, or into `container`. It renders nothi
 | Prop        | Type                                  | Default         | Description |
 | ----------- | ------------------------------------- | --------------- | ----------- |
 | `container` | `Element \| DocumentFragment \| null` | `document.body` | Where to render. |
-| `strategy`  | `'body' \| 'top-layer'`               | `'body'`        | `top-layer` renders inside a manual popover in the browser's top layer: above every `z-index` and stacking context, and above modal `<dialog>`s opened before it. Falls back to `body` without the Popover API. |
+| `strategy`  | `'auto' \| 'body' \| 'top-layer'`     | `'auto'`        | `auto` behaves like `body`, except when the step's target is inside an open modal dialog (`<dialog>` opened with `showModal()`, or an `aria-modal` dialog such as Radix Dialog or vaul): the tour then renders inside that dialog, in the top layer — above it, clickable, and inside its focus scope. `top-layer` renders inside a manual popover in the browser's top layer: above every `z-index` and stacking context, and above modal `<dialog>`s opened before it. Falls back to `body` without the Popover API. |
 
 ```tsx
 // A tour that must sit above a modal <dialog> or a z-index war you don't control:
@@ -243,6 +243,8 @@ The dialog sits inside a positioned wrapper `div`, marked `data-tour-content-wra
 | `hideWhenDetached` | `boolean`                                  | `false`     | Hide the content when the target is clipped out of view.                            |
 | `autoFocus`        | `boolean`                                  | `true`      | Focus the dialog on every step (unless focus is already inside).                    |
 | `onEscapeKeyDown`  | `(event: KeyboardEvent) => void`           | —           | Called on <kbd>Esc</kbd>. `event.preventDefault()` keeps the tour open.             |
+| `layout`           | `'popover' \| 'sheet' \| 'auto'`          | `'popover'` | `sheet` docks the content to the bottom edge, full width, without an arrow — the mobile hint. `auto` is a sheet below `sheetBreakpoint`. Exposed as `data-layout` (and `data-placement="sheet"`). |
+| `sheetBreakpoint`  | `number`                                   | `640`       | Viewport width (px) under which `layout="auto"` becomes a sheet.                    |
 | `forceMount`       | `boolean`                                  | —           | Keep it mounted while closed.                                                       |
 | `asChild`          | `boolean`                                  | `false`     | Render the child element instead.                                                   |
 
@@ -430,7 +432,8 @@ These are active while `Tour.Content` is open.
 
 Some key presses are ignored:
 
-- Arrow keys pressed with a modifier, or while focus is in an editable element (input, textarea, contenteditable).
+- Arrow keys pressed with a modifier, or while focus is in an editable element (input, textarea, contenteditable), a range input, media, or a composite widget that owns arrow keys (`role` slider, spinbutton, listbox, menu, grid, tree, tablist, radiogroup, combobox, toolbar). Mark anything else with `data-tour-keys="ignore"`.
+- Keys while another tour or hint opened later is on screen: only the most recently opened one handles the keyboard.
 - Every key whose event comes from inside a `data-tour-keep` element.
 - Every key event that is already `defaultPrevented`.
 

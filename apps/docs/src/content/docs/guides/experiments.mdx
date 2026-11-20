@@ -1,0 +1,55 @@
+---
+title: Experiments
+description: A/B test your onboarding — stable assignment per user, a control group, goals as conversions, and the variant on every analytics event.
+sidebar:
+  order: 8.5
+---
+
+import Preview from '../../../components/Preview.astro';
+import { ExperimentsDemo } from '../../../components/demos/ExperimentsDemo';
+import ExperimentsDemoSource from '../../../components/demos/ExperimentsDemo.tsx?raw';
+
+Is a tour that explains the screen better than one that gets people doing something? Don't argue,
+measure. `createExperiment` gives each user one variant of a tour (or none, for a control group),
+the same one on every visit, and every analytics event says which.
+
+<Preview code={ExperimentsDemoSource} title="ExperimentsDemo.tsx">
+  <ExperimentsDemo client:visible />
+</Preview>
+
+```ts
+import { analytics, createExperiment, createTour } from '@awesome-tour/react';
+
+const explain = createTour({ id: 'explain', goal: { signal: 'played' }, steps, plugins });
+const doIt = createTour({ id: 'do', goal: { signal: 'played' }, steps: interactiveSteps, plugins });
+
+export const firstSession = createExperiment({
+  id: 'first-session-copy',
+  variants: { explain, do: doIt, control: null }, // control: no tour at all
+  weights: { explain: 1, do: 1, control: 1 },     // optional, equal by default
+  userId: () => session.user?.id,                  // stable across devices
+  onExposure: ({ variant }) => posthog.capture('exposure', { variant }),
+});
+
+// Register every variant with your provider, then:
+await firstSession.start((id) => manager.start(id));
+```
+
+## Assignment
+
+| Source                 | How the variant is picked                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------------------------- |
+| `userId`               | A stable hash of `experiment:user` (FNV-1a), weighted. Same answer on every device, no storage.   |
+| no `userId`            | Random, weighted, then remembered in `localStorage` (`awesome-tour-experiment:<id>`).             |
+| `assign(info)`         | Yours: return the variant name from your feature-flag service.                                    |
+
+`experiment.variant()` is synchronous and stable for the instance; `experiment.reset()` forgets a
+locally remembered assignment.
+
+## Measuring it
+
+Give each variant the same [`goal`](../analytics/#goals): the action the tour exists to cause. The
+[analytics plugin](../analytics/) then reports `tour_started` and `tour_goal_reached` with
+`experimentId` and `variant` on each event, so the conversion rate per variant is one query in
+your analytics tool. The goal is counted even when the user closes the tour first and does the
+thing later — which is exactly the case a "completed the tour" metric gets wrong.

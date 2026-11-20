@@ -20,7 +20,7 @@ const onboarding = createTour({
 
 ## persist(adapter, options?)
 
-A [plugin](../plugins/) that writes `{ status, stepId, version }` to the adapter whenever the status or step changes, and reads it back in `beforeStart`.
+A [plugin](../plugins/) that writes `{ status, stepId, version }` to the adapter whenever the status or step changes, and reads it back in `beforeStart`. For tours with a [`goal`](../../guides/analytics/#goals) it also saves when the last run started and whether the goal was reached, and resumes watching it on the next visit (`tour.trackGoal`).
 
 | Option        | Type                         | Default        | Description                                                                                                         |
 | ------------- | ---------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------- |
@@ -28,16 +28,18 @@ A [plugin](../plugins/) that writes `{ status, stepId, version }` to the adapter
 | `resume`      | `boolean`                    | `true`         | Start again from the last saved step.                                                                               |
 | `once`        | `boolean`                    | `true`         | Don't start tours saved as `completed` or `skipped`. `start({ force: true })` / `restart()` still work.             |
 | `persistData` | `boolean`                    | `false`        | Also save `tour.data` (on every change) and restore it on start.                                                    |
-| `sync`        | `boolean`                    | `true`         | When the adapter supports `subscribe`: if the tour is completed or skipped elsewhere (another tab), finish it here too. |
+| `sync`        | `boolean`                    | `true`         | Keep tabs in sync. When the adapter supports `subscribe`, a tour completed or skipped in another tab finishes here too; and starting (or resuming) the tour in one tab pauses it in the others (`BroadcastChannel`), so it never runs twice at once. |
+| `onError`     | `(error, { key, operation }) => void` | console warning | A failed read, a rejected write, or a malformed saved value. A failed read blocks automatic starts (progress is unknown) but never `start({ force: true })`. |
 | `migrate`     | `Record<number, (saved) => PersistedTourState \| null>` | — | Upgrade progress saved by an older `version` instead of dropping it. `migrate[v]` turns a `v` state into a `v + 1` one; steps chain up to the current version. |
 
 ### What happens on `start()`
 
 1. The saved value is read (`adapter.get(key)`). Nothing saved → normal start.
-2. Saved `version` differs from `tour.version` → it's upgraded through `migrate` (and saved back); without a path to the current version, the entry is removed and the tour starts fresh.
-3. `force: true` → normal start (saved progress ignored).
-4. `once` and the saved status is `completed` / `skipped` → the start is blocked (status stays as it was).
-5. Otherwise the tour resumes at the saved `stepId` (if `resume`) with the saved `data` (if `persistData`).
+2. A value that isn't a saved tour state (hand-edited storage, another app's key) is reported to `onError`, removed, and ignored.
+3. Saved `version` is older than `tour.version` → it's upgraded through `migrate` (and saved back); without a path to the current version, the entry is removed and the tour starts fresh. Saved by a **newer** version (an older build still running somewhere) → it's ignored and left untouched: this tour won't overwrite it.
+4. `force: true` → normal start (saved progress ignored).
+5. `once` and the saved status is `completed` / `skipped` → the start is blocked (status stays as it was).
+6. Otherwise the tour resumes at the saved `stepId` (if `resume`) with the saved `data` (if `persistData`).
 
 States `active`, `paused`, `closed`, `completed` and `skipped` are written; `idle` and `starting` are not.
 
@@ -118,9 +120,16 @@ createTour({ id: 'onboarding', steps, plugins: [persist(server, { key: (id) => `
 | `headers`  | `HeadersInit \| () => HeadersInit \| Promise` | —              | Sent with every request.                       |
 | `fetch`    | `typeof fetch`                               | global `fetch` | Custom fetch (tests, SSR, interceptors).       |
 | `debounce` | `number`                                     | `300`          | Coalesce rapid writes per key (ms).            |
+| `retries`  | `number`                                     | `3`            | Retries for a failed write (network error, 5xx, 429), with exponential backoff. |
+| `retryDelay` | `number`                                   | `500`          | First retry delay (ms); doubles each time.     |
+| `pollInterval` | `number`                                 | —              | Poll subscribed keys (ms), so progress made on another device reaches this one (enables `sync`). |
+| `readErrors` | `'empty' \| 'throw'`                        | `'empty'`      | A failed read: behave like "nothing saved" (not cached, so the next read retries), or reject. |
+| `onError`  | `(error, { key, method }) => void`           | —              | Every request that finally failed.             |
 
-Reads hit the network once per key, then a cache. Writes are optimistic (cached immediately) and
-debounced. Network failures behave like "nothing saved", so a flaky API never breaks the app.
+Reads hit the network once per key, then a cache. Writes are optimistic (cached immediately),
+debounced, retried with backoff, and flushed with `keepalive` when the page is hidden, so closing the
+tab doesn't lose the last step. Call `adapter.flush()` to send pending writes yourself (before a
+logout, say). A 404 means "nothing saved"; any other failure is never cached.
 
 Anything else — Supabase, Firebase, your own store — is a `PersistenceAdapter`: `get`, `set`,
 `remove` (sync or async) and an optional `subscribe`.

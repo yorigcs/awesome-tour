@@ -122,6 +122,21 @@
           "target": "components/awesome-tour/launcher.tsx"
         }
       ]
+    },
+    {
+      "name": "help-center",
+      "type": "registry:component",
+      "title": "Help center",
+      "description": "A resource center behind one button: what's new with an unread badge, the onboarding checklist, tours to replay and help links.",
+      "dependencies": ["@awesome-tour/react", "lucide-react"],
+      "registryDependencies": ["{{REGISTRY_URL}}/checklist.json"],
+      "files": [
+        {
+          "path": "src/components/awesome-tour/help-center.tsx",
+          "type": "registry:component",
+          "target": "components/awesome-tour/help-center.tsx"
+        }
+      ]
     }
   ]
 }

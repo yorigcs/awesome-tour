@@ -3,7 +3,7 @@ import {
   type CutoutShape,
   getSpotlightPath,
   type Padding,
-  type Side,
+  type PhysicalSide as Side,
   Tour,
   type TourContentProps,
   useComposedRefs,

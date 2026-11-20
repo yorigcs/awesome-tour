@@ -4,6 +4,8 @@ export interface Store<T> {
   getState(): T;
   setState(update: Partial<T> | ((state: T) => Partial<T>)): void;
   subscribe(listener: Listener): () => void;
+  /** Drop every listener (used on destroy). */
+  clear(): void;
 }
 
 /**
@@ -34,6 +36,9 @@ export function createStore<T extends object>(initial: T): Store<T> {
       return () => {
         listeners.delete(listener);
       };
+    },
+    clear() {
+      listeners.clear();
     },
   };
 }

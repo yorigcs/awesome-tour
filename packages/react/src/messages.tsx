@@ -1,3 +1,4 @@
+import { type Localized, localize } from '@awesome-tour/core';
 import * as React from 'react';
 
 /**
@@ -24,6 +25,10 @@ export interface TourMessages {
   checklistValue: (completed: number, total: number) => string;
   /** `Checklist.ItemIndicator` screen-reader status, per item status. */
   itemStatus: { pending: string; done: string; skipped: string };
+  /** `Checklist.ItemIndicator` status of a pending item waiting on its `after` items. */
+  itemLocked: string;
+  /** `Checklist.ItemIndicator` status suffix of an `optional` item. */
+  itemOptional: string;
   /** `Checklist.Dismiss` accessible name. */
   dismissChecklist: string;
   /** `Announcement.Dismiss` / `Survey.Dismiss` accessible name. */
@@ -48,6 +53,8 @@ export const defaultMessages: TourMessages = {
   checklistProgress: 'Checklist progress',
   checklistValue: (completed, total) => `${completed} of ${total} completed`,
   itemStatus: { pending: 'Not completed', done: 'Completed', skipped: 'Skipped' },
+  itemLocked: 'Locked: finish the previous steps first',
+  itemOptional: 'optional',
   dismissChecklist: 'Dismiss checklist',
   dismiss: 'Dismiss',
   scaleLow: 'Not at all likely',
@@ -82,4 +89,63 @@ export function MessagesScope({
     [parent, messages],
   );
   return <MessagesContext.Provider value={value}>{children}</MessagesContext.Provider>;
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * Locale: which language step content (`title: { en, pt }`) is shown in.
+ * -----------------------------------------------------------------------------------------------*/
+
+interface LocaleValue {
+  locale: string | null;
+  fallback: string;
+}
+
+const LocaleContext = React.createContext<LocaleValue | null>(null);
+
+const subscribeLang = (onChange: () => void) => {
+  if (typeof MutationObserver === 'undefined' || typeof document === 'undefined') return () => {};
+  const mo = new MutationObserver(onChange);
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+  return () => mo.disconnect();
+};
+const documentLang = () => document.documentElement.lang || null;
+
+/** The locale in effect: the nearest `locale` prop, else `<html lang>` (read after hydration). */
+export function useLocale(): LocaleValue {
+  const scoped = React.useContext(LocaleContext);
+  const lang = React.useSyncExternalStore(subscribeLang, documentLang, () => null);
+  return scoped?.locale ? scoped : { locale: lang, fallback: scoped?.fallback ?? 'en' };
+}
+
+/** `(value) => text`: resolves locale maps (`{ en, pt }`) for the locale in effect. */
+export function useLocalize() {
+  const { locale, fallback } = useLocale();
+  return React.useCallback(
+    <T,>(value: T | Localized<T> | undefined) => localize(value, locale, fallback),
+    [locale, fallback],
+  );
+}
+
+/** Sets the content locale for its subtree. */
+export function LocaleScope({
+  locale,
+  fallbackLocale,
+  children,
+}: {
+  locale: string | undefined;
+  fallbackLocale?: string | undefined;
+  children?: React.ReactNode;
+}) {
+  const parent = React.useContext(LocaleContext);
+  const value = React.useMemo<LocaleValue | null>(
+    () =>
+      locale || fallbackLocale
+        ? {
+            locale: locale ?? parent?.locale ?? null,
+            fallback: fallbackLocale ?? parent?.fallback ?? 'en',
+          }
+        : parent,
+    [locale, fallbackLocale, parent],
+  );
+  return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }

@@ -21,28 +21,28 @@ const track = (event: TourAnalyticsEvent) => {
 };
 
 export interface OnboardingData {
-  role: 'admin' | 'member';
+  plan: 'pro' | 'free';
 }
 
 const steps = [
   {
     id: 'welcome',
-    title: 'Welcome to Acme',
-    description: 'A 60-second tour of the essentials. Use ← → or the buttons to move around.',
+    title: 'Welcome to Loopwork',
+    description: 'A one-minute tour of the studio. Use ← → or the buttons to move around.',
   },
   {
     id: 'sidebar',
     target: anchor('nav'),
     side: 'right',
-    title: 'Navigation',
+    title: 'Your studio',
     description:
-      'Every area of the app lives here. Targets are registered with anchors, not selectors.',
+      'Arrange, Library, Mix and Studio. Targets are registered with anchors, not selectors.',
   },
   {
     id: 'search',
     target: '#search',
     interactive: true,
-    title: 'Try the search',
+    title: 'Find a sound',
     description: 'Type at least 3 characters — the tour continues by itself.',
     advanceOn: {
       when: () =>
@@ -52,54 +52,54 @@ const steps = [
   {
     id: 'create',
     target: anchor('create'),
-    title: 'Create a project',
+    title: 'Start a pattern',
     description: 'Click the button to continue.',
     advanceOn: { event: 'click' },
   },
   {
-    id: 'admin',
-    target: '#admin-panel',
-    when: (ctx) => ctx.data.role === 'admin',
-    title: 'Admin panel',
-    description: 'Only admins see this step — steps can be conditional.',
+    id: 'mastering',
+    target: '#mastering-panel',
+    when: (ctx) => ctx.data.plan === 'pro',
+    title: 'Mastering (Pro)',
+    description: 'Only Pro plans see this step — steps can be conditional.',
   },
   {
-    id: 'projects',
-    route: '/projects',
+    id: 'library',
+    route: '/library',
     target: '#project-list',
     side: 'left',
-    title: 'Projects page',
+    title: 'Your projects',
     description:
       'Tours can span pages: the router adapter navigates here before resolving the target.',
   },
   {
     id: 'late',
-    route: '/projects',
-    target: '#analytics-widget',
+    route: '/library',
+    target: '#loudness-widget',
     onTargetMissing: 'wait',
-    title: 'Lazy content',
-    description: 'This widget loads asynchronously. The tour waited for it to appear.',
+    title: 'Loudness, measured',
+    description: 'This panel loads asynchronously. The tour waited for it to appear.',
   },
   {
     id: 'scroll',
-    route: '/projects',
+    route: '/library',
     target: '#deep-item',
-    title: 'Scroll containers',
+    title: 'Inside a scroll box',
     description: 'Targets inside nested scroll containers are scrolled into view.',
   },
   {
     id: 'model',
-    route: '/3d',
-    target: anchor('engine'),
-    title: '3D targets',
+    route: '/studio',
+    target: anchor('lw16'),
+    title: 'The LW-16, in 3D',
     description:
-      'With @awesome-tour/three, objects inside a react-three-fiber scene can be highlighted.',
+      'With @awesome-tour/three, objects inside a react-three-fiber scene are targets too.',
   },
   {
-    id: 'stats',
+    id: 'lanes',
     route: '/',
-    target: ['#stat-1', '#stat-3'],
-    title: 'Multiple targets',
+    target: ['[data-tour="lane-drums"]', '[data-tour="lane-keys"]'],
+    title: 'Drums and keys',
     description: 'A step can highlight several elements at once.',
   },
   {
@@ -112,7 +112,7 @@ const steps = [
 export const onboarding = createTour({
   id: 'onboarding',
   version: 1,
-  data: { role: 'admin' } as OnboardingData,
+  data: { plan: 'pro' } as OnboardingData,
   steps,
   router,
   plugins: [persist(localStorageAdapter()), analytics(track)],
@@ -122,15 +122,15 @@ export const gettingStarted = createChecklist({
   id: 'getting-started',
   persistence: localStorageAdapter<ChecklistSnapshot>({ prefix: 'awesome-checklist:' }),
   items: [
-    { id: 'onboarding', tour: 'onboarding', meta: { title: 'Take the product tour' } },
+    { id: 'onboarding', tour: 'onboarding', meta: { title: 'Take the studio tour' } },
     { id: 'css-tour', tour: 'css-tour', meta: { title: 'Try the CSS-only tour' } },
-    { id: 'search', signal: 'searched', meta: { title: 'Search for something' } },
-    { id: 'project', signal: 'project-created', meta: { title: 'Create a project' } },
+    { id: 'search', signal: 'searched', meta: { title: 'Search for a sound' } },
+    { id: 'pattern', signal: 'pattern-created', meta: { title: 'Start a pattern' } },
   ],
 });
 
 /**
- * A one-step announcement with display rules: it starts by itself on /projects (when no other
+ * A one-step announcement with display rules: it starts by itself on /library (when no other
  * tour is on screen), at most once, and "Remind me later" snoozes it. See devtools → Rules.
  */
 export const whatsNew = createTour({
@@ -141,12 +141,12 @@ export const whatsNew = createTour({
       id: 'table',
       target: '#project-list',
       side: 'bottom',
-      title: 'New: project table',
-      description: 'Owners and status at a glance. Sorting and filters are next.',
+      title: 'New: project folders',
+      description: 'Group sketches by album or client. Drag a project onto a folder.',
     },
   ],
   rules: {
-    trigger: { route: '/projects' },
+    trigger: { route: '/library' },
     frequency: { once: true, maxShows: 3 },
   },
 });
@@ -155,19 +155,23 @@ export const impressions = localStorageAdapter<ImpressionRecord>({
   prefix: 'awesome-impressions:',
 });
 
-/** An ambient banner: shows on Home until dismissed or acted on. */
-export const reportsBanner = createAnnouncement({
-  id: 'reports-banner',
-  title: 'Weekly reports are here',
-  description: 'Every Monday, a summary of your projects lands in your inbox.',
+/** An ambient banner: shows on Arrange until dismissed or acted on. */
+export const stemsBanner = createAnnouncement({
+  id: 'stems-banner',
+  title: 'Stems export is here',
+  description: 'Bounce one file per channel from the Mix page.',
   rules: { trigger: { route: '/' } },
 });
 
-/** Asked once the product tour is completed (`manager.signal('onboarding-complete')`). */
-export const npsSurvey = createSurvey({
-  id: 'nps',
+/** Asked once the studio tour is completed (`manager.signal('onboarding-complete')`). */
+export const feedbackSurvey = createSurvey({
+  id: 'first-session-feedback',
   questions: [
-    { id: 'score', type: 'nps', prompt: 'How likely are you to recommend Acme to a colleague?' },
+    {
+      id: 'score',
+      type: 'nps',
+      prompt: 'How likely are you to recommend Loopwork to a friend who makes music?',
+    },
     {
       id: 'reason',
       type: 'text',
@@ -183,7 +187,7 @@ export const npsSurvey = createSurvey({
       events: [
         {
           type: 'survey_submitted',
-          tourId: 'nps',
+          tourId: 'first-session-feedback',
           stepId: String(answers.score),
           timestamp: Date.now(),
         } as never,

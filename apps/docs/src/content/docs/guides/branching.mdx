@@ -20,34 +20,34 @@ Every tour carries typed `data` — the user's role, answers from a step, featur
 
 ```tsx
 interface Data {
-  role: 'developer' | 'designer' | null;
+  making: 'beats' | 'podcast' | null;
 }
 
 const tour = createTour({
   id: 'welcome',
-  data: { role: null } as Data,
+  data: { making: null } as Data,
   steps: [
     {
-      id: 'role',
-      title: 'What do you do?',
-      content: <RolePicker />, // calls setData({ role }) then next()
-      next: (ctx) => (ctx.data.role === 'designer' ? 'tokens' : 'api'),
+      id: 'making',
+      title: 'What are you making?',
+      content: <MakingPicker />, // calls setData({ making }) then next()
+      next: (ctx) => (ctx.data.making === 'podcast' ? 'voice' : 'beat'),
     },
-    { id: 'api', target: '#api-keys', next: 'webhooks' },
-    { id: 'tokens', target: '#tokens', next: null }, // null completes the tour
-    { id: 'webhooks', target: '#webhooks', when: (ctx) => ctx.data.role === 'developer' },
+    { id: 'beat', target: '#sequencer', next: 'mixer' },
+    { id: 'voice', target: '#lane-vox', next: null }, // null completes the tour
+    { id: 'mixer', target: '#mixer', when: (ctx) => ctx.data.making !== 'podcast' },
   ],
 });
 
-function RolePicker() {
+function MakingPicker() {
   const { setData, next } = useTour<Data>();
   return (
-    <button onClick={() => { setData({ role: 'designer' }); next(); }}>Designer</button>
+    <button onClick={() => { setData({ making: 'podcast' }); next(); }}>A podcast</button>
   );
 }
 ```
 
-Start with data from your app: `tour.start({ data: { role: user.role } })`.
+Start with data from your app: `tour.start({ data: { making: user.goal } })`.
 
 ## Conditional steps — `when`
 

@@ -22,6 +22,48 @@ import { Tabs, TabItem } from '~/components/mdx';
   </TabItem>
 </Tabs>
 
+## Tour health checks
+
+Tours break quietly: someone renames a button, moves a panel to another page, and the tour that
+pointed at it falls back to a centered card in production. A health check walks every step of
+every tour your app registers — on the page the step shows on, through your own router — and fails
+when a target is gone:
+
+```bash
+npx awesome-tour-check http://localhost:3000
+```
+
+```
+✓ onboarding
+    ○ welcome (/)
+    ✓ sidebar (/)
+    ✓ library (/library)
+    ✗ export (/mix) — not on the page after 3000ms
+    – mastering (/) — `when` is false for the current data
+
+1 of 5 tours have missing targets.
+```
+
+It exits with `1` when a target is missing, so it fails CI. Options: `--tour <id>` (repeatable),
+`--param id=42` to visit pattern routes such as `/projects/:id`, `--timeout <ms>`, `--json`.
+
+The same check inside your Playwright suite:
+
+```ts
+import { expectToursHealthy } from '@awesome-tour/testing/playwright';
+
+test('tours still find their targets', async ({ page }) => {
+  await expectToursHealthy(page, { url: '/', params: { id: 'demo-project' } });
+});
+```
+
+How it works: the test asks the page for its tours (an init script creates
+`window.__AWESOME_TOUR_HOOK__`), and `TourProvider` hands over its manager and router only when that
+hook exists — nothing is exposed in normal use. Steps without a `route` are checked on the previous
+step's page (or the tour's `trigger.route`), steps whose `when` is false for the current data are
+reported as hidden, and the app is left on the page it started on. Without a provider, call
+`auditTours(manager, { router })` from `@awesome-tour/core` yourself.
+
 ## Playwright
 
 `@awesome-tour/testing/playwright` exports Playwright's `test` with a `tour` fixture. It works on

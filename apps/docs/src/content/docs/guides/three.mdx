@@ -5,9 +5,17 @@ sidebar:
   order: 12
 ---
 
+import Preview from '../../../components/Preview.astro';
+import { ThreeDemo } from '../../../components/demos/ThreeDemo';
+import ThreeDemoSource from '../../../components/demos/ThreeDemo.tsx?raw';
+
 `@awesome-tour/three` lets steps target **objects inside a WebGL scene**. The object's bounding box
 is projected to the screen on demand, so the regular DOM overlay and card follow it as the camera
 moves — no special UI needed.
+
+<Preview code={ThreeDemoSource} title="ThreeDemo.tsx">
+  <ThreeDemo client:visible />
+</Preview>
 
 ```bash
 pnpm add @awesome-tour/three   # peers: @react-three/fiber, three
@@ -19,17 +27,17 @@ import { TourTarget3D, useTourCamera } from '@awesome-tour/three';
 import { Canvas } from '@react-three/fiber';
 
 const tour = createTour({
-  id: 'car',
+  id: 'lw-16',
   steps: [
-    { id: 'engine', target: anchor('engine'), title: 'V8 engine' },
-    { id: 'wheels', target: anchor('wheels'), title: 'Carbon wheels' },
+    { id: 'pads', target: anchor('pads'), title: 'Sixteen pads' },
+    { id: 'knobs', target: anchor('knobs'), title: 'Hands-on knobs' },
   ],
 });
 
 function CameraRig() {
   useTourCamera({
-    engine: { position: [3, 2, 4], lookAt: [0, 0.5, 0] },
-    wheels: { position: [-4, 1, 2], lookAt: [-1, 0, 0] },
+    pads: { position: [-0.5, 3.1, 3.1], lookAt: [-0.5, 0, -0.1] },
+    knobs: { position: [1.5, 2.1, 2.9], lookAt: [0.9, 0, 0.2] },
   });
   return null;
 }
@@ -38,11 +46,11 @@ export function Showroom() {
   return (
     <Tour.Root tour={tour}>
       <Canvas>
-        <TourTarget3D name="engine">
-          <Engine />
+        <TourTarget3D name="pads">
+          <Pads />
         </TourTarget3D>
-        <TourTarget3D name="wheels">
-          <Wheels />
+        <TourTarget3D name="knobs">
+          <Knobs />
         </TourTarget3D>
         <CameraRig />
       </Canvas>

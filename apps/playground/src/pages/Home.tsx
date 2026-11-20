@@ -1,5 +1,6 @@
 import { useStoreSelector, useTourState } from '@awesome-tour/react';
-import { Activity, CreditCard, ShieldCheck, TrendingUp, Users } from 'lucide-react';
+import { Arrangement, Sequencer } from '@loopwork';
+import { Gauge } from 'lucide-react';
 import { AnnouncementBanner } from '@/components/awesome-tour/announcement';
 import { HotspotHint } from '@/components/awesome-tour/hotspot';
 import { Badge } from '@/components/ui/badge';
@@ -12,14 +13,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { CssTour } from '../tour/CssTour';
-import { eventLog, type OnboardingData, reportsBanner } from '../tours';
+import { eventLog, type OnboardingData, stemsBanner } from '../tours';
 import { PageHeader } from '.';
-
-const STATS = [
-  { label: 'Revenue', value: '$48,210', delta: '+12.4% from last month', icon: CreditCard },
-  { label: 'Active users', value: '1,284', delta: '+3.1% from last month', icon: Users },
-  { label: 'Conversion', value: '4.7%', delta: '+0.6% from last month', icon: Activity },
-];
 
 function AnalyticsLog() {
   const events = useStoreSelector(eventLog, (s) => s.events);
@@ -49,61 +44,42 @@ function AnalyticsLog() {
 }
 
 export function Home() {
-  const role = useTourState((s) => (s.data as OnboardingData).role);
+  const plan = useTourState((s) => (s.data as OnboardingData).plan);
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Dashboard" description="Welcome back — here's what happened this week." />
+      <PageHeader
+        title="night-drive"
+        description="8 bars at 92 BPM. Sketch the beat, then arrange it."
+      />
       <AnnouncementBanner
-        announcement={reportsBanner}
-        actionLabel="Set up"
+        announcement={stemsBanner}
+        actionLabel="Open Mix"
         snooze={60 * 60 * 1000}
       />
-      <section id="stats" className="grid gap-4 sm:grid-cols-3">
-        {STATS.map(({ label, value, delta, icon: Icon }, i) => (
-          <Card key={label} id={`stat-${i + 1}`} className="gap-2">
-            <CardHeader>
-              <CardDescription>{label}</CardDescription>
-              <CardAction>
-                <Icon className="size-4 text-muted-foreground" />
-              </CardAction>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-1">
-              <span className="text-2xl font-semibold tracking-tight tabular-nums">{value}</span>
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <TrendingUp className="size-3 text-emerald-600 dark:text-emerald-400" />
-                {delta}
-              </span>
-            </CardContent>
-          </Card>
-        ))}
-      </section>
+      <Card id="arrangement-card" className="gap-0 overflow-hidden py-0">
+        <Arrangement />
+      </Card>
       <section className="grid gap-4 lg:grid-cols-2">
-        <Card id="reports-card" className="relative">
-          <CardHeader>
-            <CardTitle>Reports</CardTitle>
-            <CardDescription>Weekly summaries for your team.</CardDescription>
-            <CardAction>
-              <Badge variant="secondary">New</Badge>
-            </CardAction>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Sales, retention and usage reports are generated every Monday.
-          </CardContent>
-          <HotspotHint target="#reports-card" title="New: reports">
-            Export any report as a PDF, ready to share.
+        <Card id="sequencer-card" className="relative gap-0 py-0">
+          <Sequencer />
+          <HotspotHint target="#sequencer-card" title="New: swing per row">
+            Give the hats their own shuffle while the kick stays straight.
           </HotspotHint>
         </Card>
-        {role === 'admin' && (
-          <Card id="admin-panel">
+        {plan === 'pro' && (
+          <Card id="mastering-panel">
             <CardHeader>
-              <CardTitle>Admin</CardTitle>
-              <CardDescription>Members, billing and audit log.</CardDescription>
+              <CardTitle>Mastering</CardTitle>
+              <CardDescription>Loudness targets for every platform.</CardDescription>
               <CardAction>
-                <ShieldCheck className="size-4 text-muted-foreground" />
+                <Badge variant="secondary">
+                  <Gauge aria-hidden="true" />
+                  Pro
+                </Badge>
               </CardAction>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              Only admins see this card — and the onboarding step that points at it.
+              Only Pro plans see this panel — and the onboarding step that points at it.
             </CardContent>
           </Card>
         )}

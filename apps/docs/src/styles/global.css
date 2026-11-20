@@ -9,6 +9,7 @@
 @import "@fontsource-variable/jetbrains-mono";
 
 @source "../../../../registry/src";
+@source "../../../../examples/loopwork/src";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -91,6 +92,13 @@
   --sidebar-accent: #f0f0f2;
   --sidebar-accent-foreground: #18181b;
   --radius: 0.5rem;
+  /* Loopwork's track colors (drums, bass, keys, vox, fx): ≥3:1 against the app background. */
+  --chart-1: oklch(0.66 0.16 58);
+  --chart-2: oklch(0.56 0.19 295);
+  --chart-3: oklch(0.58 0.12 170);
+  --chart-4: oklch(0.6 0.18 15);
+  --chart-5: oklch(0.57 0.16 250);
+  --destructive: oklch(0.58 0.22 27);
 }
 .dark [data-app] {
   --background: #18181b;
@@ -112,6 +120,52 @@
   --sidebar-foreground: #fafafa;
   --sidebar-accent: #2a2a2e;
   --sidebar-accent-foreground: #fafafa;
+  --chart-1: oklch(0.8 0.14 70);
+  --chart-2: oklch(0.72 0.15 295);
+  --chart-3: oklch(0.76 0.12 170);
+  --chart-4: oklch(0.73 0.15 15);
+  --chart-5: oklch(0.74 0.12 250);
+  --destructive: oklch(0.7 0.19 25);
+}
+
+/*
+ * A tour rendered inside the app (e.g. into a modal dialog that holds its target) is still the
+ * tour layer: it wears the world, not the app's tokens.
+ */
+[data-app] [data-tour-top-layer] {
+  --radius: 0.375rem;
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--paper);
+  --card-foreground: var(--ink);
+  --popover: var(--paper);
+  --popover-foreground: var(--ink);
+  --primary: var(--marker);
+  --primary-foreground: var(--marker-ink);
+  --secondary: var(--paper-2);
+  --secondary-foreground: var(--ink);
+  --muted: var(--paper-2);
+  --muted-foreground: var(--ink-2);
+  --accent: var(--paper-2);
+  --accent-foreground: var(--ink);
+  --border: var(--ink);
+  --input: var(--ink);
+  --ring: var(--ink);
+  color: var(--ink);
+}
+
+/* @awesome-tour/elements' card (shadow DOM), themed through its custom properties. */
+awesome-tour-layer {
+  --tour-bg: var(--paper);
+  --tour-fg: var(--ink);
+  --tour-muted: var(--ink-2);
+  --tour-border: var(--ink);
+  --tour-accent: var(--marker);
+  --tour-accent-fg: var(--marker-ink);
+  --tour-radius: 6px;
+  --tour-button-radius: 4px;
+  --tour-overlay: var(--tour-overlay-color);
+  --tour-font: 15px / 1.5 "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
 }
 
 @theme inline {

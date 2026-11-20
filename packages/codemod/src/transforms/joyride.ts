@@ -19,7 +19,6 @@ const DROPPED = new Set([
   'disableBeacon',
   'disableOverlay',
   'disableOverlayClose',
-  'disableScrolling',
   'floaterProps',
   'hideBackButton',
   'hideCloseButton',
@@ -70,6 +69,15 @@ export default function transform(file: FileInfo, api: API) {
         } else if (name === 'title') out.push(p);
         else if (name === 'spotlightClicks') out.push(prop(j, 'interactive', p.value));
         else if (name === 'data') out.push(prop(j, 'meta', p.value));
+        else if (name === 'disableScrolling') {
+          // `disableScrolling: true` → `scroll: false` (any other expression is negated).
+          const literal = p.value.type === 'BooleanLiteral' || p.value.type === 'Literal';
+          const value = literal
+            ? j.booleanLiteral(!(p.value as { value: boolean }).value)
+            : j.unaryExpression('!', p.value as never);
+          out.push(prop(j, 'scroll', value));
+        } else if (name === 'spotlightPadding')
+          todos.push('`spotlightPadding` → the `padding` prop of Tour.Overlay / Tour.Spotlight');
         else if (DROPPED.has(name))
           todos.push(`\`${name}\` has no step option: style or configure Tour.* parts`);
         else todos.push(`unknown Joyride option \`${name}\``);

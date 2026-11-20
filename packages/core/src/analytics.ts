@@ -1,3 +1,4 @@
+import { getExperiment } from './experiments';
 import type { Tour, TourDirection, TourPlugin } from './types';
 
 export type TourAnalyticsEventType =
@@ -9,6 +10,7 @@ export type TourAnalyticsEventType =
   | 'tour_paused'
   | 'tour_resumed'
   | 'target_missing'
+  | 'tour_goal_reached'
   | 'tour_error';
 
 export interface TourAnalyticsEvent {
@@ -33,6 +35,12 @@ export interface TourAnalyticsEvent {
   /** Tour data (only when `includeData` is set). */
   data?: unknown;
   error?: string;
+  /** tour_goal_reached: the goal's name and how the run stood when it was reached. */
+  goal?: string;
+  outcome?: string;
+  /** Set when the tour is a variant of an experiment (`createExperiment`). */
+  experimentId?: string;
+  variant?: string;
 }
 
 export interface AnalyticsOptions {
@@ -40,6 +48,8 @@ export interface AnalyticsOptions {
   includeData?: boolean;
   /** Drop events you don't care about. */
   filter?: (event: TourAnalyticsEvent) => boolean;
+  /** Also report tours in preview (drafts). Default: false — previews don't skew your data. */
+  includePreviews?: boolean;
 }
 
 /**
@@ -56,6 +66,7 @@ export function analytics(
   return {
     name: 'analytics',
     setup(tour: Tour) {
+      if (tour.preview && !options.includePreviews) return;
       let startedAt = 0;
       let stepStartedAt = 0;
       const now = () => Date.now();
@@ -73,6 +84,7 @@ export function analytics(
           timestamp: now(),
           ...(step?.meta ? { meta: step.meta } : {}),
           ...(options.includeData ? { data: state.data } : {}),
+          ...getExperiment(tour),
           ...extra,
         };
         if (options.filter && !options.filter(event)) return;
@@ -108,6 +120,9 @@ export function analytics(
         tour.on('pause', () => emit('tour_paused', ending())),
         tour.on('resume', () => emit('tour_resumed')),
         tour.on('targetMissing', ({ stepId }) => emit('target_missing', { stepId })),
+        tour.on('goal', ({ name, status, afterMs }) =>
+          emit('tour_goal_reached', { goal: name, outcome: status, durationMs: afterMs }),
+        ),
         tour.on('error', ({ error }) =>
           emit('tour_error', { error: error instanceof Error ? error.message : String(error) }),
         ),

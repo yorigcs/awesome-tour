@@ -9,8 +9,9 @@ import Preview from '../../../components/Preview.astro';
 import { ChecklistDemo } from '../../../components/demos/ChecklistDemo';
 import ChecklistDemoSource from '../../../components/demos/ChecklistDemo.tsx?raw';
 
-A checklist tracks onboarding across tours and actions: "Take the tour", "Invite a teammate",
-"Connect your data". It is headless like tours: `createChecklist` holds the state, `Checklist.*`
+A checklist tracks onboarding across tours and what the user does in your app: "Learn the beat
+grid", "Fill the bar", "Bounce your first loop". In the demo, each item completes a different
+way — with a tour, a predicate over the app's state, a signal, and by hand. It is headless like tours: `createChecklist` holds the state, `Checklist.*`
 renders it.
 
 <Preview code={ChecklistDemoSource} title="ChecklistDemo.tsx">
@@ -43,6 +44,29 @@ export const gettingStarted = createChecklist({
 | —                    | You call `gettingStarted.complete('billing')`.                                      |
 
 Users can also `skip(id)` items, and `dismiss()` / `restore()` the whole checklist.
+
+## Order, optional items and sections
+
+Real onboarding has an order: you can't bounce a loop you haven't made. `after` locks an item
+until its dependencies are done, `optional` keeps nice-to-haves out of the progress count, and
+`section` groups items under a heading:
+
+```ts
+createChecklist({
+  id: 'first-loop',
+  sections: [{ id: 'make', title: 'Make a beat' }, { id: 'release', title: 'Release it' }],
+  items: [
+    { id: 'tour', tour: gridTour, section: 'make' },
+    { id: 'drums', after: 'tour', section: 'make', when: () => hits() >= 20 },
+    { id: 'bounce', after: ['drums'], section: 'release' },
+    { id: 'sound', optional: true, section: 'release' },
+  ],
+});
+```
+
+`state.next` is the item to do next — put a "Continue" button on it. Locked items get
+`data-locked`, the next one `data-next`, and screen readers hear "Locked: finish the previous steps
+first" (the `itemLocked` message).
 
 ## Rendering
 

@@ -62,12 +62,12 @@ const maxKb = Math.max(...parts.map((p) => p.kb));
 const defineCode = `import { anchor, createTour } from '@awesome-tour/react';
 
 export const onboarding = createTour({
-  id: 'onboarding',
+  id: 'first-session',
   steps: [
-    { id: 'welcome', title: 'Welcome to Acme' },
-    { id: 'search', target: '#search', title: 'Find anything' },
-    { id: 'create', target: anchor('create'), title: 'Create a project',
-      advanceOn: { event: 'click' } },
+    { id: 'welcome', title: 'Your first session' },
+    { id: 'transport', target: '#transport', title: 'Press play' },
+    { id: 'kick', target: anchor('kick-row'), title: 'Lay down four kicks',
+      advanceOn: { when: () => kicks() >= 4 } },
   ],
 });`;
 

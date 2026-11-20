@@ -1,29 +1,42 @@
 import { type AnchorRegistry, isAnchorTarget } from './anchors';
-import { isBrowser, isElement, isVirtualElement } from './dom';
-import type { TargetInput, TourTargetNode } from './types';
+import {
+  isBrowser,
+  isElement,
+  isTargetConnected,
+  isVirtualElement,
+  observeShadowRoot,
+  subscribeDomActivity,
+  subscribeTicker,
+} from './dom';
+import type { FallbackTarget, TargetInput, TourTargetNode } from './types';
 
-/** querySelectorAll that also pierces open shadow roots. */
+/**
+ * querySelectorAll that also pierces open shadow roots. Light DOM matches win; otherwise matches
+ * from every open shadow root (nested ones included) are returned, and those roots are watched for
+ * mutations from then on.
+ */
 export function deepQuerySelectorAll(selector: string, root: ParentNode = document): Element[] {
   const results = Array.from(root.querySelectorAll(selector));
   if (results.length > 0) return results;
-  const walker = (node: ParentNode): Element[] => {
+  const found: Element[] = [];
+  const walk = (node: ParentNode) => {
     for (const el of Array.from(node.querySelectorAll('*'))) {
       const shadow = (el as Element).shadowRoot;
-      if (shadow) {
-        const found = Array.from(shadow.querySelectorAll(selector));
-        if (found.length > 0) return found;
-        const nested = walker(shadow);
-        if (nested.length > 0) return nested;
+      if (!shadow) continue;
+      const matches = shadow.querySelectorAll(selector);
+      if (matches.length > 0) {
+        observeShadowRoot(shadow);
+        found.push(...Array.from(matches));
       }
+      walk(shadow);
     }
-    return [];
   };
-  return walker(root);
+  walk(root);
+  return found;
 }
 
-function isConnected(node: TourTargetNode): boolean {
-  if (isElement(node)) return node.isConnected;
-  return node.contextElement ? node.contextElement.isConnected : true;
+function isFallbackTarget(value: unknown): value is FallbackTarget {
+  return typeof value === 'object' && value !== null && '__tourFirstOf' in value;
 }
 
 /** Resolve a target description into concrete nodes (synchronously). */
@@ -48,8 +61,15 @@ export function resolveTarget(
     }
     return out;
   }
+  if (isFallbackTarget(input)) {
+    for (const candidate of input.__tourFirstOf) {
+      const nodes = resolveTarget(candidate, anchors);
+      if (nodes.length > 0) return nodes;
+    }
+    return [];
+  }
   if (isElement(input)) return input.isConnected ? [input] : [];
-  if (isAnchorTarget(input)) return anchors.get(input.__tourAnchor).filter(isConnected);
+  if (isAnchorTarget(input)) return anchors.get(input.__tourAnchor).filter(isTargetConnected);
   if (isVirtualElement(input)) return [input];
   if (typeof input === 'object' && 'current' in input) {
     const current = input.current;
@@ -96,15 +116,10 @@ export function waitForTarget(
       if (nodes.length >= expected) finish(nodes);
     };
 
-    if (typeof MutationObserver !== 'undefined') {
-      const mo = new MutationObserver(check);
-      mo.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
-      cleanups.push(() => mo.disconnect());
-    }
+    cleanups.push(subscribeDomActivity(check));
     cleanups.push(anchors.subscribe(check));
     // Function / ref targets may change without DOM mutations.
-    const interval = setInterval(check, 100);
-    cleanups.push(() => clearInterval(interval));
+    cleanups.push(subscribeTicker(100, check));
     const timer = setTimeout(() => finish(resolveTarget(input, anchors)), timeout);
     cleanups.push(() => clearTimeout(timer));
 

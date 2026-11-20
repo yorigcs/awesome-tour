@@ -1,3 +1,4 @@
+import { SampleBrowser } from '@loopwork';
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,10 +14,15 @@ import {
 import { PageHeader } from '.';
 
 const PROJECTS = [
-  { name: 'Website redesign', owner: 'Ana', status: 'In progress' },
-  { name: 'Mobile app', owner: 'Bruno', status: 'Planning' },
-  { name: 'Q3 analytics', owner: 'Carla', status: 'Done' },
+  { name: 'night-drive', bpm: 92, status: 'Sketch' },
+  { name: 'tape-dreams', bpm: 84, status: 'Mixing' },
+  { name: 'rooftop-demo', bpm: 100, status: 'Bounced' },
 ];
+
+const BOUNCES = Array.from({ length: 30 }, (_, i) => `night-drive v${30 - i}.wav`);
+
+/** Integrated loudness bars (illustrative), loaded after a delay like a real measurement. */
+const LOUDNESS = [-18, -14, -11, -9.5, -10, -9, -12];
 
 export function Projects() {
   const [loaded, setLoaded] = useState(false);
@@ -26,19 +32,19 @@ export function Projects() {
   }, []);
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Projects" description="Everything your team is working on." />
+      <PageHeader title="Library" description="Your projects, bounces and 400 samples." />
       <section className="grid gap-4 lg:grid-cols-3">
         <Card id="project-list" className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Projects</CardTitle>
-            <CardDescription>3 active projects</CardDescription>
+            <CardDescription>3 projects</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Owner</TableHead>
+                  <TableHead>Tempo</TableHead>
                   <TableHead className="text-right">Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -46,9 +52,9 @@ export function Projects() {
                 {PROJECTS.map((p) => (
                   <TableRow key={p.name}>
                     <TableCell className="font-medium">{p.name}</TableCell>
-                    <TableCell>{p.owner}</TableCell>
+                    <TableCell className="font-mono tabular-nums">{p.bpm} BPM</TableCell>
                     <TableCell className="text-right">
-                      <Badge variant={p.status === 'Done' ? 'secondary' : 'outline'}>
+                      <Badge variant={p.status === 'Bounced' ? 'secondary' : 'outline'}>
                         {p.status}
                       </Badge>
                     </TableCell>
@@ -60,18 +66,19 @@ export function Projects() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Analytics</CardTitle>
-            <CardDescription>Loaded asynchronously.</CardDescription>
+            <CardTitle>Loudness</CardTitle>
+            <CardDescription>Measured after each bounce.</CardDescription>
           </CardHeader>
           <CardContent>
             {loaded ? (
-              <div id="analytics-widget" className="flex items-end gap-1.5 h-24">
-                {[40, 65, 50, 80, 72, 95, 60].map((h, i) => (
+              <div id="loudness-widget" className="flex h-24 items-end gap-1.5">
+                {LOUDNESS.map((lufs, i) => (
                   <span
                     // biome-ignore lint/suspicious/noArrayIndexKey: static bars
                     key={i}
-                    className="flex-1 rounded-t bg-primary/80"
-                    style={{ height: `${h}%` }}
+                    title={`${lufs} LUFS`}
+                    className="flex-1 rounded-t bg-[var(--chart-2)]"
+                    style={{ height: `${100 - (Math.abs(lufs) - 8) * 7}%` }}
                   />
                 ))}
               </div>
@@ -79,7 +86,7 @@ export function Projects() {
               <div
                 role="status"
                 aria-busy="true"
-                aria-label="Loading analytics"
+                aria-label="Measuring loudness"
                 className="flex flex-col gap-2"
               >
                 <Skeleton className="h-4 w-2/3" />
@@ -88,18 +95,18 @@ export function Projects() {
             )}
           </CardContent>
         </Card>
-        <Card className="lg:col-span-3">
+        <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Activity</CardTitle>
+            <CardTitle>Bounces</CardTitle>
             <CardDescription>A nested scroll container.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-40 overflow-y-auto rounded-md border" data-testid="scroller">
-              {Array.from({ length: 30 }, (_, i) => `Item ${i + 1}`).map((label, i) => (
+              {BOUNCES.map((label, i) => (
                 <p
                   key={label}
                   id={i === 26 ? 'deep-item' : undefined}
-                  className="border-b px-3 py-2 text-sm last:border-b-0 data-[deep]:bg-accent data-[deep]:font-medium"
+                  className="border-b px-3 py-2 font-mono text-sm last:border-b-0 data-[deep]:bg-accent data-[deep]:font-medium"
                   data-deep={i === 26 ? '' : undefined}
                 >
                   {label}
@@ -107,6 +114,9 @@ export function Projects() {
               ))}
             </div>
           </CardContent>
+        </Card>
+        <Card className="gap-0 py-0">
+          <SampleBrowser height={200} />
         </Card>
       </section>
     </div>

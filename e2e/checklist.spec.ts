@@ -11,16 +11,16 @@ test('checklist completes from signals and tours, persists, and is accessible', 
 
   // Signals from app code.
   await page.locator('#search').fill('abc');
-  await page.getByRole('button', { name: /New project/ }).click();
+  await page.getByRole('button', { name: /New pattern/ }).click();
   await expect(progress).toHaveAttribute('aria-valuenow', '2');
   await expect(
-    checklist.getByRole('button', { name: 'Create a project' }),
+    checklist.getByRole('button', { name: 'Start a pattern' }),
   ).toHaveAccessibleDescription('Completed');
 
   // Item linked to a tour: starting it from the checklist, finishing completes the item.
   await checklist.getByRole('button', { name: 'Try the CSS-only tour' }).click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog).toHaveAccessibleName('Your numbers');
+  await expect(dialog).toHaveAccessibleName('Your arrangement');
   await dialog.getByRole('button', { name: /^(Next|Finish)$/ }).click();
   await dialog.getByRole('button', { name: /^(Next|Finish)$/ }).click();
   await expect(dialog).toHaveCount(0);
@@ -45,7 +45,7 @@ test('analytics plugin reports tour events in order', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Start onboarding' }).click();
   await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('dialog')).toHaveAccessibleName('Navigation');
+  await expect(page.getByRole('dialog')).toHaveAccessibleName('Your studio');
   await page.keyboard.press('Escape');
   const log = page.getByTestId('event-log');
   await expect(log.locator('li code')).toHaveText([

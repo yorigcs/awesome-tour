@@ -1,4 +1,4 @@
-import type { RectLike, TourTargetNode, VirtualElement } from './types';
+import type { RectLike, ScrollOffset, TourTargetNode, VirtualElement } from './types';
 
 export const isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
 
@@ -89,6 +89,121 @@ export function prefersReducedMotion(): boolean {
 }
 
 /* -------------------------------------------------------------------------------------------------
+ * Shared DOM activity hub
+ * -----------------------------------------------------------------------------------------------*/
+
+type ActivityListener = () => void;
+
+const activityListeners = new Set<ActivityListener>();
+let activityObserver: MutationObserver | null = null;
+const observedRoots = new WeakSet<Node>();
+let activityQueued = false;
+
+const MUTATION_INIT: MutationObserverInit = {
+  childList: true,
+  subtree: true,
+  attributes: true,
+  characterData: true,
+};
+
+function flushActivity() {
+  activityQueued = false;
+  for (const listener of [...activityListeners]) listener();
+}
+
+function onActivity() {
+  if (activityQueued) return;
+  activityQueued = true;
+  queueMicrotask(flushActivity);
+}
+
+const ACTIVITY_EVENTS = ['input', 'change'] as const;
+
+/**
+ * Calls `listener` (batched per microtask) on any DOM mutation in the document — and in every
+ * shadow root registered with `observeShadowRoot` — and on `input`/`change` events (form values
+ * don't mutate the DOM). One `MutationObserver` serves every subscriber, however many steps,
+ * hotspots and rect observers are alive.
+ */
+export function subscribeDomActivity(listener: ActivityListener): () => void {
+  if (!isBrowser) return () => {};
+  activityListeners.add(listener);
+  if (activityListeners.size === 1) {
+    if (typeof MutationObserver !== 'undefined') {
+      activityObserver = new MutationObserver(onActivity);
+      activityObserver.observe(document.documentElement, MUTATION_INIT);
+    }
+    for (const type of ACTIVITY_EVENTS) document.addEventListener(type, onActivity, true);
+  }
+  let active = true;
+  return () => {
+    if (!active) return;
+    active = false;
+    activityListeners.delete(listener);
+    if (activityListeners.size === 0) {
+      activityObserver?.disconnect();
+      activityObserver = null;
+      for (const type of ACTIVITY_EVENTS) document.removeEventListener(type, onActivity, true);
+    }
+  };
+}
+
+/** Also report mutations inside `root` (an open shadow root) to `subscribeDomActivity` listeners. */
+export function observeShadowRoot(root: ShadowRoot) {
+  if (!activityObserver || observedRoots.has(root)) return;
+  observedRoots.add(root);
+  activityObserver.observe(root, MUTATION_INIT);
+}
+
+const tickers = new Map<
+  number,
+  { listeners: Set<ActivityListener>; timer: ReturnType<typeof setInterval> }
+>();
+
+/**
+ * Shared interval: every subscriber with the same `ms` rides one timer. For checks that can change
+ * without DOM activity (refs, function targets, app state read by predicates).
+ */
+export function subscribeTicker(ms: number, listener: ActivityListener): () => void {
+  let entry = tickers.get(ms);
+  if (!entry) {
+    const listeners = new Set<ActivityListener>();
+    entry = {
+      listeners,
+      timer: setInterval(() => {
+        for (const l of [...listeners]) l();
+      }, ms),
+    };
+    tickers.set(ms, entry);
+  }
+  const current = entry;
+  current.listeners.add(listener);
+  return () => {
+    current.listeners.delete(listener);
+    if (current.listeners.size === 0 && tickers.get(ms) === current) {
+      clearInterval(current.timer);
+      tickers.delete(ms);
+    }
+  };
+}
+
+/** Number of live hub subscribers (for leak tests and devtools). */
+export function getObserverStats() {
+  return {
+    activity: activityListeners.size,
+    tickers: [...tickers.values()].reduce((n, t) => n + t.listeners.size, 0),
+  };
+}
+
+/** Whether a resolved target is still in its document. */
+export function isTargetConnected(node: TourTargetNode): boolean {
+  if (isElement(node)) return node.isConnected;
+  const real = (node as VirtualElement).element;
+  if (real) return real.isConnected;
+  return node.contextElement ? node.contextElement.isConnected : true;
+}
+
+/* -------------------------------------------------------------------------------------------------
  * Geometry observation
  * -----------------------------------------------------------------------------------------------*/
 
@@ -138,11 +253,7 @@ export function observeRect(
       for (const t of targets) if (isElement(t)) ro.observe(t);
       cleanups.push(() => ro.disconnect());
     }
-    if (typeof MutationObserver !== 'undefined') {
-      const mo = new MutationObserver(schedule);
-      mo.observe(document.body, { attributes: true, childList: true, subtree: true });
-      cleanups.push(() => mo.disconnect());
-    }
+    cleanups.push(subscribeDomActivity(schedule));
   }
 
   return () => {
@@ -174,13 +285,17 @@ export function getScrollPadding(): { top: number; right: number; bottom: number
   };
 }
 
-function isInViewport(rect: RectLike, margin = 0): boolean {
+function isInViewport(rect: RectLike, margin = 0, offset: ScrollOffset = 0): boolean {
   const pad = getScrollPadding();
+  const o =
+    typeof offset === 'number'
+      ? { top: offset, right: offset, bottom: offset, left: offset }
+      : { top: 0, right: 0, bottom: 0, left: 0, ...offset };
   return (
-    rect.top >= pad.top + margin &&
-    rect.left >= pad.left + margin &&
-    rect.bottom <= window.innerHeight - pad.bottom - margin &&
-    rect.right <= window.innerWidth - pad.right - margin
+    rect.top >= pad.top + o.top + margin &&
+    rect.left >= pad.left + o.left + margin &&
+    rect.bottom <= window.innerHeight - pad.bottom - o.bottom - margin &&
+    rect.right <= window.innerWidth - pad.right - o.right - margin
   );
 }
 
@@ -192,19 +307,46 @@ export async function scrollTargetsIntoView(
   targets: readonly TourTargetNode[],
   options: ScrollIntoViewOptions = {},
   maxWait = 800,
+  offset?: ScrollOffset,
 ): Promise<void> {
   if (!isBrowser) return;
-  const el = targets.find(isElement);
   const rect = getTargetsRect(targets);
-  if (!el || !rect || isInViewport(rect, 8)) return;
-  if (typeof el.scrollIntoView !== 'function') return;
-  el.scrollIntoView({
+  if (!rect || isInViewport(rect, 8, offset)) return;
+  const el = targets.find(isElement);
+  const scrollOptions: ScrollIntoViewOptions = {
     block: 'center',
     inline: 'nearest',
     behavior: prefersReducedMotion() ? 'auto' : 'smooth',
     ...options,
-  });
+  };
+  if (el) {
+    if (typeof el.scrollIntoView !== 'function') return;
+    el.scrollIntoView(scrollOptions);
+  } else {
+    // A virtual element standing for an element in another document (an iframe): bring the
+    // frame into view, then the element inside it.
+    const virtual = targets.find((t) => (t as VirtualElement).element) as
+      | VirtualElement
+      | undefined;
+    if (!virtual) return;
+    virtual.contextElement?.scrollIntoView?.({ ...scrollOptions, block: 'nearest' });
+    virtual.element?.scrollIntoView?.(scrollOptions);
+  }
   await waitForStableRect(targets, maxWait);
+  if (offset == null) return;
+  // `scrollIntoView` knows scroll-padding but not `offset`: nudge the page if a sticky bar still
+  // covers the target.
+  const after = getTargetsRect(targets);
+  if (!after) return;
+  const o = typeof offset === 'number' ? { top: offset, bottom: offset } : offset;
+  const pad = getScrollPadding();
+  const coveredTop = pad.top + (o.top ?? 0) + 8 - after.top;
+  const coveredBottom = after.bottom - (window.innerHeight - pad.bottom - (o.bottom ?? 0) - 8);
+  const delta = coveredTop > 0 ? -coveredTop : Math.max(coveredBottom, 0);
+  if (delta !== 0 && typeof window.scrollBy === 'function') {
+    window.scrollBy({ top: delta, behavior: 'auto' });
+    await waitForStableRect(targets, maxWait);
+  }
 }
 
 export function waitForStableRect(
@@ -285,15 +427,22 @@ export function isFromKeptElement(event: Event): boolean {
 export function inertOthers(keep: readonly Element[]): () => void {
   if (!isBrowser || keep.length === 0) return () => {};
   const keepSet = new Set<Element>();
+  const keepRoots = new Set<ShadowRoot>();
   for (const el of keep) {
     let node: Element | null = el;
     while (node && node !== document.body) {
       keepSet.add(node);
-      node = node.parentElement;
+      // Climb out of shadow roots through their host: a target inside a web component is kept.
+      const root: Node | null = node.parentElement ? null : node.getRootNode();
+      if (root instanceof ShadowRoot) keepRoots.add(root);
+      node = node.parentElement ?? (root instanceof ShadowRoot ? root.host : null);
     }
   }
   const marked: Element[] = [];
-  const visit = (parent: Element) => {
+  const visit = (parent: Element | ShadowRoot) => {
+    if (parent instanceof Element && parent.shadowRoot && keepRoots.has(parent.shadowRoot)) {
+      visit(parent.shadowRoot);
+    }
     for (const child of Array.from(parent.children)) {
       if (keep.includes(child)) continue;
       if (keepSet.has(child)) {

@@ -3,11 +3,11 @@ import { expect, test } from '@playwright/test';
 
 test('an ambient banner shows on Home alongside a tour, and is dismissible', async ({ page }) => {
   await page.goto('/');
-  const banner = page.getByRole('region', { name: 'Weekly reports are here' });
+  const banner = page.getByRole('region', { name: 'Stems export is here' });
   await expect(banner).toBeVisible();
   // Ambient: a tour can still start while the banner is up.
   await page.getByRole('button', { name: 'Start onboarding' }).click();
-  await expect(page.getByRole('dialog')).toHaveAccessibleName('Welcome to Acme');
+  await expect(page.getByRole('dialog')).toHaveAccessibleName('Welcome to Loopwork');
   await page.keyboard.press('Escape');
   const results = await new AxeBuilder({ page })
     .include('[data-slot=announcement-banner]')
@@ -17,7 +17,7 @@ test('an ambient banner shows on Home alongside a tour, and is dismissible', asy
   await expect(banner).toHaveCount(0);
   await page.reload();
   await page.waitForTimeout(400);
-  await expect(page.getByRole('region', { name: 'Weekly reports are here' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Stems export is here' })).toHaveCount(0);
 });
 
 test('the NPS survey gates Next on a score, skips the follow-up for promoters, and submits', async ({
@@ -49,8 +49,8 @@ test('the help launcher replays tours and shows what is new', async ({ page }) =
   await help.click();
   const panel = page.getByRole('dialog', { name: 'Help center' });
   await expect(panel).toBeVisible();
-  await expect(panel.getByRole('button', { name: /Product tour/ })).toContainText('New');
-  await panel.getByRole('button', { name: /Product tour/ }).click();
+  await expect(panel.getByRole('button', { name: /Studio tour/ })).toContainText('New');
+  await panel.getByRole('button', { name: /Studio tour/ }).click();
   await expect(panel).toHaveCount(0);
-  await expect(page.getByRole('dialog')).toHaveAccessibleName('Welcome to Acme');
+  await expect(page.getByRole('dialog')).toHaveAccessibleName('Welcome to Loopwork');
 });

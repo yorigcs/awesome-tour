@@ -14,14 +14,19 @@ export function createBrowserRouter(
     match?: (route: string, path: string) => boolean;
   } = {},
 ): RouterAdapter {
-  const base = options.base ?? '';
+  const base = (options.base ?? '').replace(/\/$/, '');
   const listeners = new Set<() => void>();
   const notify = () => {
     for (const listener of [...listeners]) listener();
   };
   return {
     ...(options.match ? { match: options.match } : {}),
-    getPath: () => (isBrowser ? window.location.pathname.slice(base.length) || '/' : '/'),
+    getPath: () => {
+      if (!isBrowser) return '/';
+      const { pathname } = window.location;
+      const path = base && pathname.startsWith(base) ? pathname.slice(base.length) : pathname;
+      return path || '/';
+    },
     navigate(path) {
       if (!isBrowser) return;
       window.history.pushState(null, '', base + path);
@@ -39,10 +44,26 @@ export function createBrowserRouter(
   };
 }
 
-/** Route matcher supporting `:params` and a trailing `*` wildcard. */
+const segments = (value: string) =>
+  value
+    .replace(/[?#].*$/, '')
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => {
+      try {
+        return decodeURIComponent(segment);
+      } catch {
+        return segment;
+      }
+    });
+
+/**
+ * Route matcher supporting `:params` and a trailing `*` wildcard. Query strings, hashes, repeated
+ * and trailing slashes are ignored; segments are compared URL-decoded.
+ */
 export function matchRoute(route: string, path: string): boolean {
-  const r = route.split('/').filter(Boolean);
-  const p = path.split('/').filter(Boolean);
+  const r = segments(route);
+  const p = segments(path);
   for (let i = 0; i < r.length; i++) {
     const segment = r[i]!;
     if (segment === '*') return true;

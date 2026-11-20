@@ -12,6 +12,7 @@ import {
   type Tour as TourInstance,
   type TourPlugin,
   type TourState,
+  type TourTargetNode,
 } from '@awesome-tour/core';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
@@ -27,17 +28,30 @@ import {
   useTourProvider,
 } from './context';
 import { useTargetRect, useTargetRects, useTourAnchor, useTourSelector } from './hooks';
-import { MessagesScope, type TourMessagesInput, useTourMessages } from './messages';
+import {
+  LocaleScope,
+  MessagesScope,
+  type TourMessagesInput,
+  useLocalize,
+  useTourMessages,
+} from './messages';
 import { composeEventHandlers, useComposedRefs } from './utils/compose';
 import {
   getTabbables,
-  isEditable,
+  ownsKeys,
   useCallbackRef,
   useIsMounted,
   useIsomorphicLayoutEffect,
+  useKeyboardOwner,
   visuallyHidden,
 } from './utils/hooks';
-import { type Align, type PositionerOptions, type Side, usePositioner } from './utils/positioner';
+import {
+  type Align,
+  type PhysicalSide,
+  type PositionerOptions,
+  type Side,
+  usePositioner,
+} from './utils/positioner';
 import { Presence } from './utils/presence';
 import { Primitive, type PrimitiveProps } from './utils/primitive';
 
@@ -72,6 +86,10 @@ export interface TourRootProps<TData = any> {
   modal?: boolean;
   /** Let users interact with highlighted targets on every step. */
   targetInteraction?: boolean;
+  /**
+   * Reading direction for placement and arrow keys. Default: the document's (`<html dir>`, or the
+   * computed `direction`), read each time the tour opens.
+   */
   dir?: 'ltr' | 'rtl';
   /**
    * Keyboard navigation: ←/→ for next/previous (mirrored in RTL), Home/End for first/last.
@@ -97,6 +115,11 @@ export interface TourRootProps<TData = any> {
     | ((info: { state: TourState; step: ReactStepDefinition | undefined }) => string);
   /** Translations for the strings this tour's parts render (merged over inherited messages). */
   messages?: TourMessagesInput;
+  /**
+   * Locale for step content given per locale (`title: { en, pt }`). Default: the provider's, else
+   * `<html lang>`.
+   */
+  locale?: string;
   children?: React.ReactNode;
 }
 
@@ -105,6 +128,8 @@ function hasEventAdvance(step: ReactStepDefinition | undefined) {
   const rules = Array.isArray(step.advanceOn) ? step.advanceOn : [step.advanceOn];
   return rules.some((r) => !!r.event && !r.target);
 }
+
+const destroyTimers = new WeakMap<object, ReturnType<typeof setTimeout>>();
 
 function TourRoot<TData = any>(props: TourRootProps<TData>) {
   const {
@@ -122,7 +147,7 @@ function TourRoot<TData = any>(props: TourRootProps<TData>) {
     onStepChange,
     modal: modalProp,
     targetInteraction,
-    dir = 'ltr',
+    dir: dirProp,
     keyboardNavigation = true,
     lockScroll: lockScrollProp = false,
     viewTransition = false,
@@ -131,18 +156,20 @@ function TourRoot<TData = any>(props: TourRootProps<TData>) {
     restoreFocus = true,
     announce,
     messages,
+    locale,
     children,
   } = props;
 
   const provider = useTourProvider();
   const generatedId = React.useId();
+  // Inline tours are created without plugins: render must stay side-effect free (StrictMode may
+  // discard this render). Plugins attach in an effect, before the tour can start.
   const [inlineTour] = React.useState(() =>
     tourProp || tourId
       ? null
       : createTour({
           id: id ?? `tour${generatedId}`,
           steps: steps ?? [],
-          plugins: plugins ?? [],
           data: data ?? ({} as TData),
           anchors: provider?.anchors,
         }),
@@ -153,6 +180,29 @@ function TourRoot<TData = any>(props: TourRootProps<TData>) {
   if (!tour) {
     throw new Error(`[awesome-tour] <Tour.Root tourId="${tourId}"> not found on <TourProvider>`);
   }
+
+  const initialPlugins = React.useRef(plugins);
+  React.useEffect(() => {
+    if (!inlineTour) return;
+    const detach = (initialPlugins.current ?? []).map((plugin) => inlineTour.use(plugin));
+    return () => {
+      for (const off of detach) off();
+    };
+  }, [inlineTour]);
+
+  // An inline tour dies with its Root. Deferred so StrictMode's simulated unmount/remount (which
+  // re-runs this effect right away) doesn't tear it down.
+  React.useEffect(() => {
+    if (!inlineTour) return;
+    const pending = destroyTimers.get(inlineTour);
+    if (pending) clearTimeout(pending);
+    return () => {
+      destroyTimers.set(
+        inlineTour,
+        setTimeout(() => inlineTour.destroy(), 0),
+      );
+    };
+  }, [inlineTour]);
 
   // Register instance/inline tours with the provider's manager (queueing, router).
   React.useEffect(() => {
@@ -167,8 +217,11 @@ function TourRoot<TData = any>(props: TourRootProps<TData>) {
   if (configSteps.current === null) {
     configSteps.current = steps ?? (tour.getSteps() as readonly ReactStepDefinition[]);
   }
+  // Bumped when steps are re-synced so parts reading step fields (Title, Content…) re-render.
+  const [, setStepsVersion] = React.useState(0);
   const syncSteps = React.useCallback(() => {
     tour.setSteps([...(configSteps.current ?? []), ...declared.current.map((get) => get())]);
+    setStepsVersion((v) => v + 1);
   }, [tour]);
   useIsomorphicLayoutEffect(() => {
     if (!steps || steps === configSteps.current) return;
@@ -190,6 +243,7 @@ function TourRoot<TData = any>(props: TourRootProps<TData>) {
   /* State ------------------------------------------------------------------------------------*/
   const state = useTourSelector(tour);
   const open = state.status === 'active' && state.phase !== 'resolving';
+  const dir = useDocumentDir(dirProp, open);
   const step = tour.getStep(state.stepId as string) as ReactStepDefinition | undefined;
   const modal = step?.modal ?? modalProp ?? tour.modal;
   const interactive = step?.interactive ?? targetInteraction ?? hasEventAdvance(step);
@@ -321,6 +375,7 @@ function TourRoot<TData = any>(props: TourRootProps<TData>) {
     contentId,
     contents,
     registerStep,
+    syncSteps,
     registerLayer,
     layers,
     layersVersion,
@@ -328,14 +383,34 @@ function TourRoot<TData = any>(props: TourRootProps<TData>) {
 
   return (
     <MessagesScope messages={messages}>
-      <TourContext.Provider value={value}>
-        {children}
-        {announce !== false && (
-          <Announcer announce={announce} open={open} state={state} step={step} />
-        )}
-      </TourContext.Provider>
+      <LocaleScope locale={locale}>
+        <TourContext.Provider value={value}>
+          {children}
+          {announce !== false && (
+            <Announcer announce={announce} open={open} state={state} step={step} />
+          )}
+        </TourContext.Provider>
+      </LocaleScope>
     </MessagesScope>
   );
+}
+
+/** `dir` prop, else the document's direction (re-read when the tour opens). */
+function useDocumentDir(dirProp: 'ltr' | 'rtl' | undefined, open: boolean): 'ltr' | 'rtl' {
+  const [docDir, setDocDir] = React.useState<'ltr' | 'rtl'>('ltr');
+  useIsomorphicLayoutEffect(() => {
+    if (dirProp || !open) return;
+    const root = document.documentElement;
+    const attr = (document.body?.getAttribute('dir') || root.getAttribute('dir'))?.toLowerCase();
+    const next =
+      attr === 'rtl' || attr === 'ltr'
+        ? attr
+        : getComputedStyle(root).direction === 'rtl'
+          ? 'rtl'
+          : 'ltr';
+    setDocDir(next);
+  }, [dirProp, open]);
+  return dirProp ?? docDir;
 }
 
 function Announcer({
@@ -373,28 +448,55 @@ export interface TourStepProps extends ReactStepDefinition {
  * Declare a step in JSX. Steps register in render order; render nothing by themselves — their
  * children are rendered by `<Tour.StepContent />`.
  */
+const STEP_CALLBACKS = ['when', 'beforeEnter', 'afterLeave', 'beforeLeave', 'canNext'] as const;
+
 function TourStep({ children, ...definition }: TourStepProps) {
-  const { registerStep, contents } = useTourContext('<Tour.Step>');
+  const { registerStep, syncSteps, contents } = useTourContext('<Tour.Step>');
   const latest = React.useRef(definition);
   latest.current = definition;
   const { id } = definition;
 
+  // Callbacks are stable wrappers over the latest props: inline functions never go stale, and
+  // re-renders don't look like step changes.
+  const callbacks = React.useMemo(() => {
+    const out: Record<string, unknown> = {};
+    for (const key of STEP_CALLBACKS) {
+      out[key] = (...args: unknown[]) =>
+        (latest.current[key] as ((...a: unknown[]) => unknown) | undefined)?.(...args);
+    }
+    out.next = (ctx: unknown) =>
+      (latest.current.next as (c: unknown) => string | null | undefined)(ctx);
+    return out;
+  }, []);
+
+  const build = React.useCallback((): ReactStepDefinition => {
+    const d = latest.current;
+    const step: Record<string, unknown> = { ...d };
+    for (const key of STEP_CALLBACKS) if (d[key]) step[key] = callbacks[key];
+    if (typeof d.next === 'function') step.next = callbacks.next;
+    return step as unknown as ReactStepDefinition;
+  }, [callbacks]);
+
+  // Re-registers only when the id changes: `build` reads the latest props itself.
+  useIsomorphicLayoutEffect(() => registerStep(build), [id, registerStep, build]);
+
+  // Any other prop change (target, route, title, side, advanceOn…) is pushed to the tour.
+  const synced = React.useRef(definition);
   useIsomorphicLayoutEffect(() => {
-    // Functions delegate to the latest props so inline callbacks never go stale.
-    const get = (): ReactStepDefinition => {
-      const d = latest.current;
-      return {
-        ...d,
-        ...(d.when ? { when: (ctx) => latest.current.when!(ctx) } : {}),
-        ...(typeof d.next === 'function'
-          ? { next: (ctx) => (latest.current.next as (c: typeof ctx) => string | null)(ctx) }
-          : {}),
-        ...(d.beforeEnter ? { beforeEnter: (ctx) => latest.current.beforeEnter!(ctx) } : {}),
-        ...(d.afterLeave ? { afterLeave: (ctx) => latest.current.afterLeave!(ctx) } : {}),
-      };
-    };
-    return registerStep(get);
-  }, [id, registerStep]);
+    const prev = synced.current;
+    synced.current = definition;
+    if (prev === definition) return;
+    const keys = new Set([...Object.keys(prev), ...Object.keys(definition)]);
+    for (const key of keys) {
+      const a = prev[key as keyof typeof prev];
+      const b = definition[key as keyof typeof definition];
+      if (typeof a === 'function' && typeof b === 'function' && key !== 'next') continue;
+      if (!Object.is(a, b)) {
+        syncSteps();
+        return;
+      }
+    }
+  });
 
   useIsomorphicLayoutEffect(() => {
     contents.set(id, children);
@@ -443,25 +545,58 @@ const TourTrigger = React.forwardRef<HTMLButtonElement, TourTriggerProps>(functi
  * -----------------------------------------------------------------------------------------------*/
 
 export interface PortalProps {
-  /** Where to render. Default: `document.body`. */
+  /** Where to render. Default: `document.body` (or the modal dialog holding the target). */
   container?: Element | DocumentFragment | null;
   /**
-   * `body` (default): a regular portal, stacked with `z-index`. `top-layer`: render inside a
+   * `auto` (default): like `body`, unless the step's target sits inside a modal dialog (`<dialog>`
+   * opened with `showModal()`, or an `aria-modal` dialog such as Radix/vaul) — then the tour renders
+   * inside that dialog, in the top layer where supported, so it is above it, clickable, and inside
+   * its focus scope. `body`: a regular portal, stacked with `z-index`. `top-layer`: render inside a
    * manual popover in the browser's top layer, above every z-index and stacking context (and above
    * modal `<dialog>`s opened before it). Falls back to `body` where the Popover API is missing.
    */
-  strategy?: 'body' | 'top-layer';
+  strategy?: 'auto' | 'body' | 'top-layer';
   children?: React.ReactNode;
 }
 
 const supportsPopover = () =>
   typeof HTMLElement !== 'undefined' && 'showPopover' in HTMLElement.prototype;
 
-export function Portal({ container, strategy = 'body', children }: PortalProps) {
+/**
+ * Dialogs a target can live in. Radix and vaul don't set `aria-modal` (they hide the rest with
+ * `aria-hidden` and `pointer-events: none` on <body>), so any open dialog role counts: rendering
+ * inside a non-modal one is harmless (the top layer escapes its clipping and stacking).
+ */
+const MODAL_HOST = 'dialog[open], [aria-modal="true"], [role="dialog"], [role="alertdialog"]';
+
+/** The open modal dialog containing one of `targets`, if any (shadow DOM aware). */
+export function findModalHost(targets: readonly TourTargetNode[]): Element | null {
+  for (const target of targets) {
+    let node: Element | null = isElement(target) ? target : (target.contextElement ?? null);
+    while (node) {
+      const host: Element | null = node.closest(MODAL_HOST);
+      // Another tour's card isn't a host (a hint pointing into an open tour step).
+      if (host && !host.closest('[data-tour-content-wrapper]')) return host;
+      const root = node.getRootNode();
+      node = root instanceof ShadowRoot ? root.host : null;
+    }
+  }
+  return null;
+}
+
+export function Portal({ container, strategy = 'auto', children }: PortalProps) {
   const mounted = useIsMounted();
+  const tourCtx = React.useContext(TourContext);
+  const targets = tourCtx?.state.targets;
+  const host = React.useMemo(
+    () => (strategy === 'auto' && !container && targets ? findModalHost(targets) : null),
+    [strategy, container, targets],
+  );
+  const useTopLayer = (strategy === 'top-layer' || !!host) && supportsPopover();
+  const parent = container ?? host;
   const [layer, setLayer] = React.useState<HTMLElement | null>(null);
   useIsomorphicLayoutEffect(() => {
-    if (strategy !== 'top-layer' || !supportsPopover()) return;
+    if (!useTopLayer) return;
     const el = document.createElement('div');
     el.setAttribute('popover', 'manual');
     el.setAttribute('data-tour-top-layer', '');
@@ -478,20 +613,19 @@ export function Portal({ container, strategy = 'body', children }: PortalProps) 
       background: 'transparent',
       overflow: 'visible',
       color: 'inherit',
+      pointerEvents: 'auto',
     });
-    (container ?? document.body).appendChild(el);
+    (parent ?? document.body).appendChild(el);
     (el as HTMLElement & { showPopover(): void }).showPopover();
     setLayer(el);
     return () => {
       el.remove();
       setLayer(null);
     };
-  }, [strategy, container]);
+  }, [useTopLayer, parent]);
   if (!mounted) return null;
-  if (strategy === 'top-layer' && supportsPopover()) {
-    return layer ? createPortal(children, layer) : null;
-  }
-  const target = container ?? globalThis.document?.body;
+  if (useTopLayer) return layer ? createPortal(children, layer) : null;
+  const target = parent ?? globalThis.document?.body;
   return target ? createPortal(children, target) : null;
 }
 
@@ -642,9 +776,10 @@ const TourOverlayImpl = React.forwardRef<HTMLDivElement, Omit<TourOverlayProps, 
             onClick={handleClick as unknown as React.MouseEventHandler<SVGPathElement>}
           />
           {!ctx.interactive &&
-            holes.map((hole) => (
+            holes.map((hole, i) => (
               <rect
-                key={`${hole.x},${hole.y}`}
+                // biome-ignore lint/suspicious/noArrayIndexKey: holes have no identity; two may share a corner
+                key={i}
                 x={hole.x}
                 y={hole.y}
                 width={hole.width}
@@ -714,7 +849,7 @@ const TourSpotlightImpl = React.forwardRef<HTMLDivElement, Omit<TourSpotlightPro
  * -----------------------------------------------------------------------------------------------*/
 
 export interface ContentContextValue {
-  placedSide: Side | 'none';
+  placedSide: PhysicalSide | 'none';
   placedAlign: Align;
   setArrow: (node: HTMLElement | null) => void;
   arrowX?: number;
@@ -741,6 +876,34 @@ export interface TourContentProps
   autoFocus?: boolean;
   /** Called on Escape. `event.preventDefault()` keeps the tour open. */
   onEscapeKeyDown?: (event: KeyboardEvent) => void;
+  /**
+   * `popover` (default): next to the target. `sheet`: docked to the bottom edge of the viewport,
+   * full width (no arrow), the way mobile apps show hints. `auto`: a sheet below
+   * `sheetBreakpoint`, a popover above it. Exposed as `data-layout`.
+   */
+  layout?: 'popover' | 'sheet' | 'auto';
+  /** Viewport width (px) under which `layout="auto"` becomes a sheet. Default: 640. */
+  sheetBreakpoint?: number;
+}
+
+function useMediaQuery(query: string | null): boolean {
+  const subscribe = React.useCallback(
+    (onChange: () => void) => {
+      if (!query || typeof window === 'undefined' || !window.matchMedia) return () => {};
+      const list = window.matchMedia(query);
+      list.addEventListener('change', onChange);
+      return () => list.removeEventListener('change', onChange);
+    },
+    [query],
+  );
+  return React.useSyncExternalStore(
+    subscribe,
+    () =>
+      query && typeof window !== 'undefined' && window.matchMedia
+        ? window.matchMedia(query).matches
+        : false,
+    () => false,
+  );
 }
 
 /** Maps a key to a tour action. In RTL, the keys bound to next/prev swap (→ goes back). */
@@ -812,6 +975,8 @@ const TourContentImpl = React.forwardRef<HTMLDivElement, Omit<TourContentProps, 
       hideWhenDetached,
       autoFocus = true,
       onEscapeKeyDown,
+      layout = 'popover',
+      sheetBreakpoint = 640,
       onKeyDown,
       style,
       ...contentProps
@@ -854,10 +1019,11 @@ const TourContentImpl = React.forwardRef<HTMLDivElement, Omit<TourContentProps, 
 
     // Keyboard: Escape, arrows.
     const handleEscape = useCallbackRef(onEscapeKeyDown);
+    const isKeyboardOwner = useKeyboardOwner(open);
     React.useEffect(() => {
       if (!open) return;
       const onKey = (event: KeyboardEvent) => {
-        if (event.defaultPrevented || isFromKeptElement(event)) return;
+        if (event.defaultPrevented || isFromKeptElement(event) || !isKeyboardOwner()) return;
         if (event.key === 'Escape') {
           handleEscape(event);
           if (!event.defaultPrevented && ctx.closeOnEscape) {
@@ -867,7 +1033,7 @@ const TourContentImpl = React.forwardRef<HTMLDivElement, Omit<TourContentProps, 
           return;
         }
         const keys = ctx.keyMap;
-        if (!keys || isEditable(event.target)) return;
+        if (!keys || ownsKeys(event)) return;
         if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
         const action = keyAction(keys, event.key, dir);
         if (!action) return;
@@ -882,7 +1048,7 @@ const TourContentImpl = React.forwardRef<HTMLDivElement, Omit<TourContentProps, 
       };
       document.addEventListener('keydown', onKey);
       return () => document.removeEventListener('keydown', onKey);
-    }, [open, tour, dir, ctx.closeOnEscape, ctx.keyMap, handleEscape]);
+    }, [open, tour, dir, ctx.closeOnEscape, ctx.keyMap, handleEscape, isKeyboardOwner]);
 
     // Modal: make everything else inert (targets and registered layers stay interactive).
     const { layers, layersVersion } = ctx;
@@ -938,16 +1104,22 @@ const TourContentImpl = React.forwardRef<HTMLDivElement, Omit<TourContentProps, 
       },
     );
 
-    const placedSide = centered ? 'none' : positioner.placedSide;
-    const wrapperStyle: React.CSSProperties = centered
-      ? { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }
-      : {
-          ...positioner.floatingStyles,
-          transform: positioner.isPositioned
-            ? positioner.floatingStyles.transform
-            : 'translate(0, -200%)',
-          visibility: positioner.isReferenceHidden ? 'hidden' : undefined,
-        };
+    const narrow = useMediaQuery(
+      layout === 'auto' ? `(max-width: ${sheetBreakpoint - 1}px)` : null,
+    );
+    const sheet = layout === 'sheet' || (layout === 'auto' && narrow);
+    const placedSide = centered || sheet ? 'none' : positioner.placedSide;
+    const wrapperStyle: React.CSSProperties = sheet
+      ? { position: 'fixed', left: 0, right: 0, bottom: 0 }
+      : centered
+        ? { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }
+        : {
+            ...positioner.floatingStyles,
+            transform: positioner.isPositioned
+              ? positioner.floatingStyles.transform
+              : 'translate(0, -200%)',
+            visibility: positioner.isReferenceHidden ? 'hidden' : undefined,
+          };
 
     // `advanceOn: { delay }` → expose the duration so CSS can draw a countdown.
     const autoAdvance = React.useMemo(() => {
@@ -976,7 +1148,7 @@ const TourContentImpl = React.forwardRef<HTMLDivElement, Omit<TourContentProps, 
       setArrow: positioner.setArrow,
       arrowX: positioner.arrowX,
       arrowY: positioner.arrowY,
-      shouldHideArrow: centered || positioner.shouldHideArrow,
+      shouldHideArrow: centered || sheet || positioner.shouldHideArrow,
       setTitleId,
       setDescriptionId,
     };
@@ -1005,7 +1177,9 @@ const TourContentImpl = React.forwardRef<HTMLDivElement, Omit<TourContentProps, 
             data-state={open ? 'open' : 'closed'}
             data-side={placedSide}
             data-align={centered ? 'center' : positioner.placedAlign}
-            data-placement={centered ? 'center' : 'anchored'}
+            data-placement={sheet ? 'sheet' : centered ? 'center' : 'anchored'}
+            data-layout={sheet ? 'sheet' : 'popover'}
+            data-preview={tour.preview ? '' : undefined}
             data-step={state.stepId ?? undefined}
             data-phase={state.phase ?? undefined}
             data-direction={state.direction ?? undefined}
@@ -1032,7 +1206,12 @@ export interface TourArrowProps extends React.SVGProps<SVGSVGElement> {
   asChild?: boolean;
 }
 
-const OPPOSITE: Record<Side, Side> = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
+const OPPOSITE: Record<PhysicalSide, PhysicalSide> = {
+  top: 'bottom',
+  bottom: 'top',
+  left: 'right',
+  right: 'left',
+};
 
 const TourArrow = React.forwardRef<HTMLSpanElement, TourArrowProps>(function TourArrow(
   { width = 10, height = 5, asChild, children, style, ...props },
@@ -1105,11 +1284,12 @@ const TourTitle = React.forwardRef<HTMLHeadingElement, PrimitiveProps<'h2'>>(fun
   ref,
 ) {
   const { step } = useTourContext('<Tour.Title>');
+  const localizeNode = useLocalize();
   const content = useTourContentContext();
   const id = useRegisteredId(content.setTitleId, idProp);
   return (
     <Primitive.h2 id={id} {...props} ref={ref}>
-      {children ?? step?.title}
+      {children ?? localizeNode(step?.title)}
     </Primitive.h2>
   );
 });
@@ -1117,11 +1297,12 @@ const TourTitle = React.forwardRef<HTMLHeadingElement, PrimitiveProps<'h2'>>(fun
 const TourDescription = React.forwardRef<HTMLParagraphElement, PrimitiveProps<'p'>>(
   function TourDescription({ children, id: idProp, ...props }, ref) {
     const { step } = useTourContext('<Tour.Description>');
+    const localizeNode = useLocalize();
     const content = useTourContentContext();
     const id = useRegisteredId(content.setDescriptionId, idProp);
     return (
       <Primitive.p id={id} {...props} ref={ref}>
-        {children ?? step?.description}
+        {children ?? localizeNode(step?.description)}
       </Primitive.p>
     );
   },
@@ -1137,6 +1318,7 @@ export interface TourStepContentProps {
 /** Renders the current step's content: `<Tour.Step>` children, or the step's `content` field. */
 function TourStepContent({ fallback = null, children }: TourStepContentProps) {
   const { tour, state, step, contents } = useTourContext('<Tour.StepContent>');
+  const localizeNode = useLocalize();
   const declared = React.useSyncExternalStore(
     contents.subscribe,
     () => (state.stepId ? contents.get(state.stepId) : undefined),
@@ -1147,7 +1329,9 @@ function TourStepContent({ fallback = null, children }: TourStepContentProps) {
   let node: React.ReactNode;
   if (children) node = children(renderProps);
   else if (declared !== undefined) node = declared;
-  else node = typeof step.content === 'function' ? step.content(renderProps) : step.content;
+  else
+    node =
+      typeof step.content === 'function' ? step.content(renderProps) : localizeNode(step.content);
   return <React.Suspense fallback={fallback}>{node}</React.Suspense>;
 }
 

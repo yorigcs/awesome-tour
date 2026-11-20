@@ -6,22 +6,33 @@ afterEach(() => {
 });
 
 describe('suggestTarget', () => {
-  it('prefers tour anchors, then test ids, ids and accessible names', () => {
+  it('prefers tour anchors, then data-tour, role + name, test ids and ids', () => {
     document.body.innerHTML = `
       <div data-tour-anchor="nav"><a id="home">Home</a></div>
+      <section data-tour="mixer"></section>
       <button data-testid="save">Save</button>
       <input id="search" />
       <input id=":r1:" aria-label="Email" />
+      <div data-testid="panel"></div>
     `;
     expect(suggestTarget(document.querySelector('#home')!)).toEqual({
       target: "anchor('nav')",
       quality: 'anchor',
+      code: true,
+      locator: { anchor: 'nav' },
     });
-    expect(suggestTarget(document.querySelector('button')!).target).toBe('[data-testid="save"]');
-    expect(suggestTarget(document.querySelector('#search')!).target).toBe('#search');
-    // Auto-generated ids are skipped in favour of the accessible name.
+    expect(suggestTarget(document.querySelector('section')!).target).toBe("byTour('mixer')");
+    // What the user sees beats markup hooks: role + accessible name.
+    expect(suggestTarget(document.querySelector('button')!).target).toBe(
+      "byRole('button', { name: 'Save' })",
+    );
     expect(suggestTarget(document.querySelector('[aria-label]')!).target).toBe(
-      'input[aria-label="Email"]',
+      "byRole('textbox', { name: 'Email' })",
+    );
+    // No name: an id, or a test id.
+    expect(suggestTarget(document.querySelector('#search')!).target).toBe('#search');
+    expect(suggestTarget(document.querySelector('[data-testid=panel]')!).target).toBe(
+      '[data-testid="panel"]',
     );
   });
 
@@ -36,7 +47,7 @@ describe('suggestTarget', () => {
 
   it('prints a step snippet', () => {
     expect(stepSnippet({ target: '#search', quality: 'stable' })).toContain("target: '#search'");
-    expect(stepSnippet({ target: "anchor('nav')", quality: 'anchor' })).toContain(
+    expect(stepSnippet({ target: "anchor('nav')", quality: 'anchor', code: true })).toContain(
       "target: anchor('nav')",
     );
   });

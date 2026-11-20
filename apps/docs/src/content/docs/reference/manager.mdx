@@ -25,6 +25,9 @@ In React, [`TourProvider`](../../components/provider/) creates a manager for you
 | `tours`  | `Tour[]`         | Tours to register immediately.                          |
 | `router` | `RouterAdapter`  | Router adapter given to every registered tour (`tour.setRouter`). |
 | `impressions` | `PersistenceAdapter<ImpressionRecord>` | Where [display rules](../../guides/display-rules/) remember shows, outcome and snooze. Default: in memory. `TourProvider` takes it as a prop. |
+| `cap`         | `{ perSession?, cooldownMs? }`         | A frequency cap across every tour, announcement and survey the manager starts by itself (triggers, `startIfEligible`): at most `perSession` per page session, `cooldownMs` between two. Reported as the `cap` rule by `explain()`. Explicit `start()` is never capped. |
+| `clock`       | `() => number`                         | The manager's "now" for rules: schedules, cooldowns, snoozes and recorded show times. Default: `Date.now`. A fake clock previews a campaign or tests rules. |
+| `connect`     | `boolean`                              | Connect on creation (see `connect()`). Default: `true`. |
 
 ## TourManager
 
@@ -41,6 +44,7 @@ In React, [`TourProvider`](../../components/provider/) creates a manager for you
 | `setRouter(router)`       | `void`             | Set the router on the manager and every registered tour. `undefined` only resets tours the manager had routed.      |
 | `getState()`              | `TourManagerState` | Immutable snapshot.                                                                                                 |
 | `subscribe(listener)`     | `() => void`       | Called when `activeId`, `queue` or `tourIds` change.                                                                |
+| `connect()`               | `() => void`       | Start watching: triggers, router, impressions and queue hand-off. Managers connect on creation unless created with `connect: false` (what `TourProvider` does, so a render React throws away leaves nothing running). Returns `disconnect`. |
 | `destroy()`               | `void`             | Unsubscribe from all tours and clear the queue (doesn't destroy the tours).                                         |
 
 ### QueueOptions

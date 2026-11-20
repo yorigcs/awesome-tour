@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Plus, Search, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Download, X } from 'lucide-react';
 import type * as React from 'react';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { cn } from '@/lib/utils';
@@ -120,7 +120,7 @@ export function HeroAssembly() {
         aria-label={
           exploded
             ? 'Exploded view of a tour: overlay, content card, arrow, progress, previous and next buttons, close button.'
-            : 'The parts assembled: a tour card points at the “New project” button of a small app, the rest of the app dimmed.'
+            : 'The parts assembled: a tour card points at the “Export” button of a beat-making app, the rest of the app dimmed.'
         }
       >
         {/* The app being toured (drawn neutral: it's "your app") */}
@@ -131,60 +131,80 @@ export function HeroAssembly() {
             exploded && 'opacity-30 grayscale',
           )}
         >
-          <div className="flex h-full">
-            <div className="flex w-[22%] flex-col gap-[1.6cqw] border-r bg-sidebar p-[2.4cqw]">
-              <span className="mb-[1cqw] flex items-center gap-[1.2cqw] text-[2.2cqw] font-bold">
-                <span className="size-[3.6cqw] rounded-[0.8cqw] bg-primary" />
-                Acme
+          <div className="flex h-full flex-col">
+            {/* Transport: Export sits where the tour's cutout is. */}
+            <div className="flex h-[10.6cqw] items-center gap-[1.6cqw] border-b px-[2.6cqw]">
+              <span className="flex items-center gap-[1.2cqw] text-[2.2cqw] font-bold">
+                <span className="relative size-[3.6cqw] rounded-[0.8cqw] bg-foreground">
+                  <span className="absolute inset-[0.8cqw] rounded-full border-[0.45cqw] border-background" />
+                </span>
+                Loopwork
               </span>
-              {[70, 55, 62, 48].map((w, i) => (
+              <span className="ml-[2cqw] flex gap-[0.8cqw]">
+                {[0, 1, 2].map((i) => (
+                  <span
+                    key={i}
+                    className={cn('size-[3.4cqw] rounded-[0.6cqw] border', i === 1 && 'bg-muted')}
+                  />
+                ))}
+              </span>
+              <span className="rounded-[0.8cqw] border px-[1cqw] py-[0.5cqw] font-mono text-[1.7cqw] tabular-nums">
+                003.2.1
+              </span>
+              <span className="ml-auto flex h-[5.4cqw] w-[20.4cqw] items-center justify-center gap-[0.8cqw] rounded-[1cqw] bg-primary text-[1.9cqw] font-semibold text-primary-foreground">
+                <Download className="size-[2.2cqw]" />
+                Export
+              </span>
+            </div>
+            {/* Lanes */}
+            <div className="flex flex-col">
+              {[
+                {
+                  name: 'Drums',
+                  hue: 1,
+                  clips: [
+                    [0, 48],
+                    [52, 46],
+                  ],
+                },
+                { name: 'Bass', hue: 2, clips: [[24, 74]] },
+                { name: 'Keys', hue: 3, clips: [[0, 98]] },
+              ].map((lane) => (
+                <div key={lane.name} className="flex h-[7.4cqw] border-b">
+                  <span className="flex w-[17%] items-center border-r px-[1.6cqw] text-[1.8cqw] font-medium">
+                    {lane.name}
+                  </span>
+                  <span className="relative flex-1">
+                    {lane.clips.map(([left, width]) => (
+                      <span
+                        key={left}
+                        className="absolute inset-y-[1cqw] rounded-[0.8cqw] border-[0.25cqw]"
+                        style={{
+                          left: `${left}%`,
+                          width: `${width}%`,
+                          borderColor: `var(--chart-${lane.hue})`,
+                          background: `color-mix(in oklab, var(--chart-${lane.hue}) 18%, transparent)`,
+                        }}
+                      />
+                    ))}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {/* Step sequencer */}
+            <div className="grid flex-1 grid-cols-16 content-center gap-[0.7cqw] px-[2.6cqw]">
+              {Array.from({ length: 48 }, (_, i) => (
                 <span
                   // biome-ignore lint/suspicious/noArrayIndexKey: static drawing
                   key={i}
-                  className={cn(
-                    'h-[1.6cqw] rounded-full border-[0.25cqw] border-foreground/25',
-                    i === 0 && 'border-foreground/60',
-                  )}
-                  style={{ width: `${w}%` }}
+                  className="aspect-square rounded-[0.4cqw] border"
+                  style={
+                    [0, 6, 8, 11, 20, 28, 32, 34, 36, 38, 40, 42, 44, 46].includes(i)
+                      ? { background: 'var(--chart-1)', borderColor: 'transparent' }
+                      : undefined
+                  }
                 />
               ))}
-            </div>
-            <div className="flex flex-1 flex-col gap-[2.4cqw] p-[2.6cqw]">
-              <div className="flex items-center gap-[1.6cqw]">
-                <span className="flex h-[5.4cqw] flex-1 items-center gap-[1cqw] rounded-[1cqw] border px-[1.4cqw] text-[1.9cqw] text-muted-foreground">
-                  <Search className="size-[2.2cqw]" />
-                  Search…
-                </span>
-                <span className="flex h-[5.4cqw] w-[30%] items-center justify-center gap-[0.8cqw] rounded-[1cqw] bg-primary text-[1.9cqw] font-semibold text-primary-foreground">
-                  <Plus className="size-[2.2cqw]" />
-                  New project
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-[1.6cqw]">
-                {['Revenue', 'Users', 'Churn'].map((label, i) => (
-                  <div
-                    key={label}
-                    className="flex flex-col gap-[0.8cqw] rounded-[1cqw] border p-[1.6cqw]"
-                  >
-                    <span className="text-[1.6cqw] text-muted-foreground">{label}</span>
-                    <span className="text-[3cqw] font-bold tabular-nums">
-                      {['$48.2k', '1,284', '2.1%'][i]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex-1 rounded-[1cqw] border p-[1.6cqw]">
-                <div className="flex h-full items-end gap-[1.2cqw]">
-                  {[38, 52, 45, 70, 62, 84, 58, 76, 66, 90].map((h, i) => (
-                    <span
-                      // biome-ignore lint/suspicious/noArrayIndexKey: static drawing
-                      key={i}
-                      className="flex-1 rounded-t-[0.5cqw] border-[0.3cqw] border-b-0 border-foreground/35"
-                      style={{ height: `${h}%` }}
-                    />
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -247,9 +267,9 @@ export function HeroAssembly() {
                 ),
               )}
             />
-            <p className="font-display text-[3.4cqw] leading-tight">Create a project</p>
+            <p className="font-display text-[3.4cqw] leading-tight">Bounce your first loop</p>
             <p className="text-[2.15cqw] leading-snug text-ink-2">
-              Projects group your reports. Click the button to continue.
+              Export renders the loop to one file. Click it to continue.
             </p>
             <div
               className={cn(

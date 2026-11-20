@@ -3,6 +3,7 @@
 @import "../../../registry/src/styles/theme.css";
 
 @source "../../../registry/src";
+@source "../../../examples/loopwork/src";
 
 @custom-variant dark (&:is(.dark *));
 

@@ -37,28 +37,33 @@ export const onboarding = createTour(
 ```json
 {
   "$schema": "https://yorigcs.github.io/awesome-tour/schema/tour.schema.json",
-  "id": "onboarding",
+  "id": "first-session",
   "version": 2,
-  "rules": { "trigger": { "route": "/projects" }, "frequency": { "maxShows": 2 } },
+  "rules": { "trigger": { "route": "/studio" }, "frequency": { "maxShows": 2 } },
   "steps": [
-    { "id": "welcome", "title": "Welcome to Acme" },
-    { "id": "nav", "target": { "anchor": "nav" }, "side": "right", "title": "Navigation" },
-    { "id": "admin", "target": "#admin", "when": "isAdmin", "title": "Admin panel" },
-    { "id": "create", "target": "#new", "advanceOn": { "event": "click" }, "title": "Create a project" }
+    { "id": "welcome", "title": "Your first session" },
+    { "id": "mixer", "target": { "anchor": "mixer" }, "side": "left", "title": "Mixer" },
+    { "id": "stems", "target": "#format-stems", "when": "isPro", "title": "Stems export" },
+    { "id": "play", "target": "#play", "advanceOn": { "event": "click" }, "title": "Now play it" }
   ]
 }
 ```
 
 Everything a step can do is available, with two translations:
 
-- **Targets** are selectors, `{ "anchor": "name" }`, or arrays of them.
-- **Functions** — `when`, `canNext`, `beforeEnter`, `afterLeave`, `advanceOn.when`, a computed
-  `next` (`{ "action": "pick" }`) and `rules.audience` — are action names resolved from `actions`.
+- **Targets** are selectors or [resilient locators](../targets/#resilient-targets) as objects —
+  `{ "anchor": "mixer" }`, `{ "tour": "mixer" }` (`byTour`), `{ "role": "button", "name": "Export" }`
+  (`byRole`), `{ "text": "Bounce" }` (`byText`), `{ "firstOf": [ … ] }` — or arrays of them. Content
+  editors can point at what they see instead of writing CSS.
+- **Functions** — `when`, `canNext`, `beforeEnter`, `beforeLeave`, `afterLeave`, `advanceOn.when`,
+  a computed `next` (`{ "action": "pick" }`), `rules.audience` and `goal.when` — are action names
+  resolved from `actions`.
 
 ## Validation
 
 `fromJSON` validates first and throws one error listing every problem — unknown action names,
-duplicate ids, `next`/`advanceOn.to` pointing at missing steps. Validate without throwing (e.g. in
+duplicate ids, `next`/`advanceOn.to` pointing at missing steps, values outside an enum (`side`,
+`onTargetMissing`, `onTargetLost`, `layer`, `rules.frequency.once`) and malformed locators. Validate without throwing (e.g. in
 a CMS preview) with `validateTourJSON(doc, actions)`, which returns the list.
 
 The JSON Schema ships with the package — point your editor or CMS at it for autocomplete:
@@ -68,3 +73,31 @@ The JSON Schema ships with the package — point your editor or CMS at it for au
   A tour document controls what your users see. Load it from a source you trust, the same way you
   would load any remote configuration.
 </Aside>
+
+## Previewing drafts
+
+Tours that live in a CMS need a way to try a draft on the real app before publishing it. Open any
+page with `?tour-preview=<id>` and the provider loads the draft and runs it:
+
+```tsx
+import { fromJSON } from '@awesome-tour/core/json';
+
+<TourProvider
+  tours={publishedTours}
+  preview={{
+    // Fetch the draft (and check the user may preview it): return tour options, or null.
+    load: async (id) => {
+      const res = await fetch(`/api/tours/${id}/draft`, { credentials: 'include' });
+      return res.ok ? fromJSON(await res.json(), { actions }) : null;
+    },
+  }}
+>
+  …
+</TourProvider>;
+```
+
+A preview replaces the published tour with the same id while it runs, starts at `?step=` if
+given, and is marked `tour.preview`: it saves no progress, records no impressions, sends no
+analytics and ignores display rules — so previewing on production touches nobody's data. The
+registry card shows a dashed "Preview" pill (`data-preview` on `Tour.Content`). Without React, use
+`previewFromUrl(manager, { load })`.

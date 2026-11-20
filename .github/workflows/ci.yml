@@ -68,11 +68,12 @@ jobs:
         id: browsers
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+          key: playwright-all-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      # Chromium runs everything; Firefox and WebKit run the `@cross` subset.
       - if: steps.browsers.outputs.cache-hit != 'true'
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
       - if: steps.browsers.outputs.cache-hit == 'true'
-        run: pnpm exec playwright install-deps chromium
+        run: pnpm exec playwright install-deps chromium firefox webkit
       - run: pnpm e2e
       - if: failure()
         uses: actions/upload-artifact@v7

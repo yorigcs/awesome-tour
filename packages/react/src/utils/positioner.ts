@@ -15,7 +15,9 @@ import {
 import * as React from 'react';
 import { useIsomorphicLayoutEffect } from './hooks';
 
-export type Side = 'top' | 'right' | 'bottom' | 'left';
+export type PhysicalSide = 'top' | 'right' | 'bottom' | 'left';
+/** A physical side, or a logical one: `start`/`end` follow the reading direction. */
+export type Side = PhysicalSide | 'start' | 'end';
 export type Align = 'start' | 'center' | 'end';
 
 export interface PositionerOptions {
@@ -24,7 +26,7 @@ export interface PositionerOptions {
   sideOffset?: number;
   alignOffset?: number;
   avoidCollisions?: boolean;
-  collisionPadding?: number | Partial<Record<Side, number>>;
+  collisionPadding?: number | Partial<Record<PhysicalSide, number>>;
   arrowPadding?: number;
   /** Keep the content attached even when the target is partially out of view. */
   sticky?: 'partial' | 'always';
@@ -38,7 +40,7 @@ export interface PositionerResult {
   setFloating: (node: HTMLElement | null) => void;
   setArrow: (node: HTMLElement | null) => void;
   floatingStyles: React.CSSProperties;
-  placedSide: Side;
+  placedSide: PhysicalSide;
   placedAlign: Align;
   arrowX?: number;
   arrowY?: number;
@@ -52,7 +54,17 @@ export interface PositionerResult {
   referenceHeight?: number;
 }
 
-function toPlacement(side: Side, align: Align, dir: 'ltr' | 'rtl'): Placement {
+function toPlacement(logical: Side, align: Align, dir: 'ltr' | 'rtl'): Placement {
+  const side: PhysicalSide =
+    logical === 'start'
+      ? dir === 'rtl'
+        ? 'right'
+        : 'left'
+      : logical === 'end'
+        ? dir === 'rtl'
+          ? 'left'
+          : 'right'
+        : logical;
   let a = align;
   if (dir === 'rtl' && (side === 'top' || side === 'bottom')) {
     a = align === 'start' ? 'end' : align === 'end' ? 'start' : 'center';
@@ -60,8 +72,8 @@ function toPlacement(side: Side, align: Align, dir: 'ltr' | 'rtl'): Placement {
   return (a === 'center' ? side : `${side}-${a}`) as Placement;
 }
 
-function fromPlacement(placement: Placement): [Side, Align] {
-  const [side, align = 'center'] = placement.split('-') as [Side, Align | undefined];
+function fromPlacement(placement: Placement): [PhysicalSide, Align] {
+  const [side, align = 'center'] = placement.split('-') as [PhysicalSide, Align | undefined];
   return [side, align];
 }
 

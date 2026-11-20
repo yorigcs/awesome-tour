@@ -108,3 +108,28 @@ describe('TourDevtools', () => {
     ).toBeInTheDocument();
   });
 });
+
+describe('funnel', () => {
+  it('shows how many runs reached each step and how they ended', async () => {
+    const tour = createTour({ id: 'f', steps: [{ id: 'one' }, { id: 'two' }, { id: 'three' }] });
+    render(
+      <TourProvider tours={[tour]}>
+        <TourDevtools isolate={false} defaultOpen />
+      </TourProvider>,
+    );
+    await act(() => tour.start());
+    await act(() => tour.next());
+    act(() => tour.close());
+    await act(() => tour.start({ force: true }));
+    act(() => tour.close());
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Funnel' }));
+    const funnel = screen.getByRole('region', { name: 'Funnel for f' });
+    expect(funnel).toHaveTextContent('2 runs');
+    expect(
+      within(funnel)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['one2 · 100%', 'two1 · 50% −1', 'three0 · 0% −1']);
+    expect(funnel).toHaveTextContent('0 completed · 0 skipped · 2 closed');
+  });
+});
