@@ -17,7 +17,7 @@
     "@awesome-tour/three": "workspace:*",
     "@react-three/fiber": "^9.8.2",
     "@tailwindcss/vite": "^4.3.5",
-    "lucide-react": "^1.73.0",
+    "lucide-react": "^1.77.0",
     "motion": "^14.14.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
